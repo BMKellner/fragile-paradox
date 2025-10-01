@@ -36,6 +36,11 @@ yarn-error.log*
 # backend virtual environment
 backend/.venv/
 
+# frontend build and dependencies
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
 # vercel
 .vercel
 
