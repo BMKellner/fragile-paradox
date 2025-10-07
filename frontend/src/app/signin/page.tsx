@@ -36,6 +36,7 @@ export default function SignInPage() {
   return (
     <button
       type="button"
+      className="border-1"
       onClick={signInWithGoogle}
       disabled={isGoogleLoading}
     >
