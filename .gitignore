@@ -1,0 +1,85 @@
+# dependencies - root level
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# dependencies - frontend
+frontend/node_modules/
+frontend/.pnp
+frontend/.pnp.*
+
+# dependencies - backend  
+backend/node_modules/
+
+# testing
+/coverage
+frontend/coverage/
+backend/coverage/
+
+# next.js
+frontend/.next/
+frontend/out/
+frontend/build/
+
+# production
+frontend/build
+backend/dist/
+backend/build/
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env*
+frontend/.env*
+backend/.env*
+
+# backend specific
+backend/.venv/
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/*.pyo
+backend/*.pyd
+backend/.Python
+backend/pip-log.txt
+backend/pip-delete-this-directory.txt
+
+# frontend specific  
+frontend/.next/
+frontend/out/
+frontend/.vercel
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
