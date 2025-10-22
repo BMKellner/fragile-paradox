@@ -3,6 +3,9 @@
 import { useState } from "react";
 import FileUpload from "./components/FileUpload";
 
+import { useUser } from "@/hooks/use-user";
+import { createClient } from "@/utils/supabase/client";
+import Link from "next/link";
 export default function Home() {
   const [resumeData, setResumeData] = useState<object | null>(null);
 
@@ -14,9 +17,33 @@ export default function Home() {
     console.error('Upload error:', error);
   };
 
+  const session = createClient()
+
+  const info = useUser()
+
+  const handleSignOut = async () => {
+    await session.auth.signOut();
+    window.location.reload();
+  }
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-16">
+
+      {
+        info.user ? <div className="text-gray-900">
+          <p>Welcome, {info.user.email}</p>
+          <button onClick={() => handleSignOut()}>Sign Out</button>
+        </div> : <div>
+          <Link
+            href={"/signin"}
+              className="text-gray-900 underline"
+          >
+            login
+          </Link>
+        </div>
+      }
+
       <div className="max-w-2xl mx-auto px-6">
+
         <FileUpload 
           onUploadComplete={handleUploadComplete}
           onError={handleError}
