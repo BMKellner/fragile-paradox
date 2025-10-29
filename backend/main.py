@@ -4,6 +4,8 @@ from pdfminer.high_level import extract_text
 import docx, uuid, json, os
 from openai import OpenAI
 from dotenv import load_dotenv
+from routes import supabase_routes
+import os
 
 # Load environment variables
 load_dotenv()
@@ -23,6 +25,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(supabase_routes.router)
 # Initialize OpenAI client
 openai_api_key = os.getenv("OPENAI_API_KEY")
 if not openai_api_key:
@@ -34,6 +37,8 @@ client = OpenAI(api_key=openai_api_key) if openai_api_key else None
 @app.get("/")
 async def root():
     return {"message": "Resume Parser API is running!"}
+
+
 
 '''
 TESTING FUNCTION FOR THE API KEY, NOT IN USE RN
