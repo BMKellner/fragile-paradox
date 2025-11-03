@@ -1,7 +1,10 @@
-'use client';
+"use client";
+import Image from "next/image";
+import TabbedResume from "./components/TabbedResume";
+import { Resume } from "./constants/ResumeFormat";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
+import FileUpload from "./components/FileUpload";
 import { useUser } from "@/hooks/use-user";
 
 export default function Home() {
