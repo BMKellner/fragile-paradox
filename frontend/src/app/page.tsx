@@ -1,3 +1,6 @@
+import Image from "next/image";
+import TabbedResume from "./components/TabbedResume";
+import { Resume } from "./constants/ResumeFormat";
 'use client';
 
 import { useState } from "react";
