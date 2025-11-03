@@ -1,11 +1,10 @@
+"use client";
 import Image from "next/image";
 import TabbedResume from "./components/TabbedResume";
 import { Resume } from "./constants/ResumeFormat";
-'use client';
 
 import { useState } from "react";
 import FileUpload from "./components/FileUpload";
-
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
