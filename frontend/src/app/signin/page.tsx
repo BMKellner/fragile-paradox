@@ -39,7 +39,7 @@ export default function SignInPage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-2">Fragile Paradox</h1>
           <h2 className="text-2xl font-semibold text-gray-700 mb-2">Create Your Portfolio</h2>
           <p className="text-gray-600">
-            Upload your resume and we'll create a beautiful portfolio website for you
+            Upload your resume and we&apos;ll create a beautiful portfolio website for you
           </p>
         </div>
 

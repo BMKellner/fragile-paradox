@@ -3,12 +3,10 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
-import { createClient } from "@/utils/supabase/client";
 
 export default function Home() {
   const router = useRouter();
   const info = useUser();
-  const session = createClient();
 
   useEffect(() => {
     if (!info.loading) {
@@ -21,11 +19,6 @@ export default function Home() {
       }
     }
   }, [info.loading, info.user, router]);
-
-  const handleSignOut = async () => {
-    await session.auth.signOut();
-    router.push('/signin');
-  };
 
   if (info.loading) {
     return (

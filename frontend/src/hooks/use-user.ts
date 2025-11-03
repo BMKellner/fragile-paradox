@@ -27,7 +27,7 @@ export function useUser() {
           error,
         } = await supabase.auth.getSession()
         if (error) throw error
- 
+
         if (session) {
           setSession(session)
           setUser(session.user)
@@ -41,6 +41,7 @@ export function useUser() {
       }
     }
     fetchUser()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
  
   return { loading, error, session, user, role }

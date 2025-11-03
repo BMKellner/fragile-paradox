@@ -1,19 +1,16 @@
 'use client';
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
 import FileUpload from "../components/FileUpload";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
 
 export default function UploadPage() {
-  const [resumeData, setResumeData] = useState<object | null>(null);
   const router = useRouter();
   const info = useUser();
   const session = createClient();
 
   const handleUploadComplete = (data: object) => {
-    setResumeData(data);
     localStorage.setItem('resumeData', JSON.stringify(data));
     router.push('/templates');
   };
@@ -68,7 +65,7 @@ export default function UploadPage() {
             Upload Your Resume
           </h2>
           <p className="text-gray-600 text-center mb-8">
-            Upload a PDF or DOCX file of your resume. We'll parse it and help you create a beautiful portfolio website.
+            Upload a PDF or DOCX file of your resume. We&apos;ll parse it and help you create a beautiful portfolio website.
           </p>
           
           <FileUpload 
