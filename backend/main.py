@@ -4,7 +4,7 @@ from pdfminer.high_level import extract_text
 import docx, uuid, json, os
 from openai import OpenAI
 from dotenv import load_dotenv
-from routes import supabase_routes
+from app import supabase_routes
 import os
 
 # Load environment variables
