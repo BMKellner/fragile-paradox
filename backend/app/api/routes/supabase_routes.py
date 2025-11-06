@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, UploadFile, File
 from openai import OpenAI
 from pdfminer.high_level import extract_text
 import json, uuid, docx, os
-from app.authenticate_user import verify_token
-from app.supabase_client import get_supabase_client
+from app.core.authenticate_user import verify_token
+from app.core.supabase_client import get_supabase_client
 from app.core.config import Settings
 
 

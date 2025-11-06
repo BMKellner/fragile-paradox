@@ -3,12 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pdfminer.high_level import extract_text
 import docx, uuid, json, os
 from openai import OpenAI
-from dotenv import load_dotenv
-from app import supabase_routes
+from app.api.routes import supabase_routes
 import os
 
-# Load environment variables
-load_dotenv()
 
 app = FastAPI()
 
@@ -39,33 +36,6 @@ async def root():
     return {"message": "Resume Parser API is running!"}
 
 
-
-'''
-TESTING FUNCTION FOR THE API KEY, NOT IN USE RN
-
-@app.get("/test-openai")
-async def test_openai():
-    """Simple endpoint to test OpenAI connection"""
-    if not client:
-        return {"error": "OpenAI API key not configured. Please set OPENAI_API_KEY in your .env file"}
-    
-    try:
-        # Simple test prompt
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that responds with JSON."},
-                {"role": "user", "content": "Return a simple JSON object with a greeting message and current status."}
-            ],
-            response_format={"type": "json_object"}
-        )
-        
-        result = json.loads(response.choices[0].message.content)
-        return {"success": True, "openai_response": result}
-        
-    except Exception as e:
-        return {"error": f"OpenAI API error: {str(e)}"}
-'''
 
 '''
 MAIN PARSING FUNCTION
