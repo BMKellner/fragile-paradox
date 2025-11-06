@@ -3,6 +3,37 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
+import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+export default function Home() {
+  const [resumeData, setResumeData] = useState<object | null>(null);
+
+  const handleError = (error: string) => {
+    console.error('Upload error:', error);
+  };
+
+  const session = createClient();
+  const router = useRouter();
+  const info = useUser();
+
+  const handleUploadComplete = (data: object) => {
+    // store the parsed resume so the next route can read it
+    try {
+      sessionStorage.setItem("resumeData", JSON.stringify(data));
+    } catch (e) {
+      console.error("Failed to save resumeData to sessionStorage", e);
+    }
+    setResumeData(data);
+    router.push('/tabbedresume')
+  };
+
+  const handleSignOut = async () => {
+    await session.auth.signOut();
+    window.location.reload();
+  }
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-16">
 
 export default function Home() {
   const router = useRouter();

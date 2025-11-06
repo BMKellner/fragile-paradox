@@ -1,31 +1,50 @@
 
-export interface Experience {
-	'title': string,
-	'organization': string,
-	'date_started': string,
-	'date_finished': string,
-	'description': string
-};
+// Updated to match requested JSON schema for parsed resumes
+
+export interface ContactInfo {
+	email: string;
+	linkedin: string;
+	phone: string;
+	address: string;
+}
+
+export interface EducationInfo {
+	school: string;
+	majors: string[];
+	minors: string[];
+	expected_grad: string;
+}
+
+export interface PersonalInformation {
+	full_name: string;
+	contact_info: ContactInfo;
+	education: EducationInfo;
+}
+
+export interface OverviewData {
+	career_name: string;
+	resume_summary: string;
+}
 
 export interface Project {
-    'title': string,
-    'date': string,
-    'description': string,
-    'external_url': string
-};
+	title: string;
+	description: string;
+}
 
-export interface Resume {
-	'resume_pdf': string, /* url or file type object */
-	'portfolio_id': string, /* uuid or some unique identifier */
-	'personal_information': {
-		'full_name': string,
-		'contact_info': {'email': string, 'linkedin': string, 'phone':	string, 'address': string },
-		'education': {'school': string, 'majors': string[], 'minors': string[], 'grad': string},
-		
-	},
-	'skills': string[],
-	'experience': Experience[],
-    'projects': Project[],
-	'narrative': string
+export interface Experience {
+	company: string;
+	description: string;
+	employed_dates: string;
+}
 
-};
+export interface ParsedResume {
+	// URL or identifier for the uploaded/processed resume PDF
+	resume_pdf: string;
+	// unique id linking this parsed resume to a portfolio or user
+	portfolio_id: string;
+	personal_information: PersonalInformation;
+	overview: OverviewData;
+	projects: Project[];
+	skills: string[];
+	experience: Experience[]
+}

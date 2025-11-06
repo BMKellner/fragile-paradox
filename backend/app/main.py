@@ -65,56 +65,64 @@ async def parse_resume(file: UploadFile):
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=[
-                {"role": "system", "content": "You are a resume parser that outputs JSON only."},
+                {"role": "system", "content": "You are a resume parser that outputs JSON only. Return strictly valid JSON and nothing else."},
                 {"role": "user", "content": f"""
-                    Parse this resume into JSON with this schema:
-                    {{
-                      "resume_pdf": "string",
-                      "portfolio_id": "string",
-                      "personal_information": {{
-                        "full_name": "string",
-                        "contact_info": {{
-                          "email": "string",
-                          "linkedin": "string",
-                          "phone": "string",
-                          "address": "string"
-                        }},
-                        "education": {{
-                          "school": "string",
-                          "majors": ["string"],
-                          "minors": ["string"],
-                          "expected_grad": "string"
-                        }}
-                      }},
-                      "section_data": [
-                        {{
-                          "name": "string",
-                          "items": ["string"]
-                        }}
-                      ]
-                    }}
+Parse the resume below into JSON that exactly matches this schema. Use empty strings ("") for missing string fields and empty arrays ([]) for missing lists. Do NOT include any additional top-level keys. Please include a general summary of the user's resume for the resume_summary section 
+{{
+  "resume_pdf": "string",
+  "portfolio_id": "string",
+  "personal_information": {{
+    "full_name": "string",
+    "contact_info": {{
+      "email": "string",
+      "linkedin": "string",
+      "phone": "string",
+      "address": "string"
+    }},
+    "education": {{
+      "school": "string",
+      "majors": ["string"],
+      "minors": ["string"],
+      "expected_grad": "string"
+    }}
+  }},
+  "overview": {{
+    "career_name": "string",
+    "resume_summary": "string"
+  }},
+  "projects": [
+    {{
+      "title": "string",
+      "description": "string"
+    }}
+  ],
+  "skills": ["string"],
+  "experience": [
+    {{
+      "company": "string",
+      "description": "string",
+      "employed_dates": "string"
+    }}
+  ]
+}}
 
-                    Resume text:
-                    {text}
-                """}
+Resume text:
+{text}
+"""}
             ],
             response_format={"type": "json_object"}
         )
 
+        # Parse the model response into JSON and attach file metadata
         parsed_json = json.loads(response.choices[0].message.content)
         parsed_json["resume_pdf"] = file.filename
         parsed_json["portfolio_id"] = str(uuid.uuid4())
 
-        # Later: Store in Supabase (commented out)
-        # supabase.storage.upload(file)
-        # supabase.db.insert(parsed_json)
-
         return parsed_json
 
     except Exception as e:
-        return {"error": f"Error processing file: {str(e)}"}
-    
+        return {"error": f"Error processing resume: {str(e)}"}
     finally:
-        # Clean up temporary file
+        # Clean up: remove the temporary file
         if os.path.exists(file_path):
             os.remove(file_path)
