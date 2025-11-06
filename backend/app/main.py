@@ -1,10 +1,6 @@
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pdfminer.high_level import extract_text
-import docx, uuid, json, os
-from openai import OpenAI
 from app.api.routes import supabase_routes
-import os
 
 
 app = FastAPI()
@@ -23,106 +19,8 @@ app.add_middleware(
 )
 
 app.include_router(supabase_routes.router)
-# Initialize OpenAI client
-openai_api_key = os.getenv("OPENAI_API_KEY")
-if not openai_api_key:
-    print("Warning: OPENAI_API_KEY not found in environment variables")
-    print("Please copy .env.example to .env and add your OpenAI API key")
-
-client = OpenAI(api_key=openai_api_key) if openai_api_key else None
 
 @app.get("/")
 async def root():
     return {"message": "Resume Parser API is running!"}
 
-
-
-'''
-MAIN PARSING FUNCTION
-'''
-@app.post("/parse_resume/")
-async def parse_resume(file: UploadFile):
-    if not client:
-        return {"error": "OpenAI API key not configured. Please set OPENAI_API_KEY in your .env file"}
-    
-    # Save uploaded file temporarily
-    file_path = f"temp_{file.filename}"
-    contents = await file.read()
-    with open(file_path, "wb") as f:
-        f.write(contents)
-
-    try:
-        # Extract text based on file type
-        if file.filename.endswith(".pdf"):
-            text = extract_text(file_path)
-        elif file.filename.endswith(".docx"):  
-            doc = docx.Document(file_path)
-            text = "\n".join([p.text for p in doc.paragraphs])
-        else:
-            return {"error": "Unsupported file type. Please upload a PDF or DOCX file."}
-
-        # OpenAI call
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=[
-                {"role": "system", "content": "You are a resume parser that outputs JSON only. Return strictly valid JSON and nothing else."},
-                {"role": "user", "content": f"""
-Parse the resume below into JSON that exactly matches this schema. Use empty strings ("") for missing string fields and empty arrays ([]) for missing lists. Do NOT include any additional top-level keys. Please include a general summary of the user's resume for the resume_summary section 
-{{
-  "resume_pdf": "string",
-  "portfolio_id": "string",
-  "personal_information": {{
-    "full_name": "string",
-    "contact_info": {{
-      "email": "string",
-      "linkedin": "string",
-      "phone": "string",
-      "address": "string"
-    }},
-    "education": {{
-      "school": "string",
-      "majors": ["string"],
-      "minors": ["string"],
-      "expected_grad": "string"
-    }}
-  }},
-  "overview": {{
-    "career_name": "string",
-    "resume_summary": "string"
-  }},
-  "projects": [
-    {{
-      "title": "string",
-      "description": "string"
-    }}
-  ],
-  "skills": ["string"],
-  "experience": [
-    {{
-      "company": "string",
-      "description": "string",
-      "employed_dates": "string"
-    }}
-  ]
-}}
-
-Resume text:
-{text}
-"""}
-            ],
-            response_format={"type": "json_object"}
-        )
-
-        # Parse the model response into JSON and attach file metadata
-        parsed_json = json.loads(response.choices[0].message.content)
-        parsed_json["resume_pdf"] = file.filename
-        parsed_json["portfolio_id"] = str(uuid.uuid4())
-
-        return parsed_json
-
-    except Exception as e:
-        return {"error": f"Error processing resume: {str(e)}"}
-    finally:
-        # Clean up: remove the temporary file
-        if os.path.exists(file_path):
-            os.remove(file_path)
