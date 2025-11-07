@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, UploadFile, File
 from openai import OpenAI
 from pdfminer.high_level import extract_text
 import json, uuid, docx, os
+from datetime import datetime
 from app.core.authenticate_user import verify_token
 from app.core.supabase_client import get_supabase_client
 from app.core.config import Settings
@@ -106,7 +107,9 @@ async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)
         if not supabase:
             return {"error": "Supabase client not configured. Please set SUPABASE_URL and SUPABASE_KEY in your .env file"}
 
-        response = supabase.storage.from_("resumes").upload(f'{user.id}/{str(file.filename)}', contents)
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        path = f"{user.id}/{timestamp}_{file.filename}"
+        response = supabase.storage.from_("resumes").upload(path, contents)
 
         return {"success": True, "data": parsed_json}
     except Exception as e:
