@@ -3,7 +3,7 @@ from openai import OpenAI
 from pdfminer.high_level import extract_text
 import json, uuid, docx, os
 from datetime import datetime
-from app.core.authenticate_user import verify_token
+from app.api.deps import verify_token
 from app.core.supabase_client import get_supabase_client
 from app.core.config import Settings
 
@@ -91,6 +91,8 @@ async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)
             ],
             response_format={"type": "json_object"}
         )
+        if not response.choices or not response.choices[0].message.content:
+            return {"error": "No response from OpenAI"}
 
         parsed_json = json.loads(response.choices[0].message.content)
         parsed_json["resume_pdf"] = file.filename

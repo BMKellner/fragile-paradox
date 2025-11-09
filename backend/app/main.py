@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import supabase_routes
+from app.api.main import api_router
 
 
 app = FastAPI()
@@ -18,9 +18,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(supabase_routes.router)
+app.include_router(api_router)
 
 @app.get("/")
 async def root():
     return {"message": "Resume Parser API is running!"}
-
