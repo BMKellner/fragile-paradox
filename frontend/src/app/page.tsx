@@ -1,10 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 export default function Home() {
   const [resumeData, setResumeData] = useState<object | null>(null);
@@ -16,6 +15,17 @@ export default function Home() {
   const session = createClient();
   const router = useRouter();
   const info = useUser();
+  useEffect(() => {
+    if (!info.loading) {
+      if (info.user) {
+        // User is authenticated, redirect to resume upload
+        router.push('/upload');
+      } else {
+        // User is not authenticated, redirect to login
+        router.push('/signin');
+      }
+    }
+  }, [info.loading, info.user, router]);
 
   const handleUploadComplete = (data: object) => {
     // store the parsed resume so the next route can read it
@@ -32,24 +42,6 @@ export default function Home() {
     await session.auth.signOut();
     window.location.reload();
   }
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-16">
-
-export default function Home() {
-  const router = useRouter();
-  const info = useUser();
-
-  useEffect(() => {
-    if (!info.loading) {
-      if (info.user) {
-        // User is authenticated, redirect to resume upload
-        router.push('/upload');
-      } else {
-        // User is not authenticated, redirect to login
-        router.push('/signin');
-      }
-    }
-  }, [info.loading, info.user, router]);
 
   if (info.loading) {
     return (

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from "react";
+import { createClient } from "@/utils/supabase/client"
 
 interface FileUploadProps {
   onUploadComplete?: (data: object) => void;
@@ -46,10 +47,15 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
       formData.append("file", file);
 
       // Send to backend
-      const response = await fetch("http://localhost:8000/parse_resume/", {
-        method: "POST",
+      const supabase = createClient()
+      const session = await supabase.auth.getSession()
+      const response = await fetch('http://localhost:8000/supabase/upload_resume', {
+        method: 'POST',
+        headers: {
+          "Authorization": `Bearer ${session.data.session?.access_token}`
+        },
         body: formData,
-      });
+      })
 
       const data = await response.json();
 
@@ -92,11 +98,10 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
         <button
           type="submit"
           disabled={!file || loading}
-          className={`w-full py-3 px-6 rounded-lg font-medium text-white transition-all duration-200 ${
-            loading || !file
+          className={`w-full py-3 px-6 rounded-lg font-medium text-white transition-all duration-200 ${loading || !file
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-200'
-          }`}
+            }`}
         >
           {loading ? (
             <div className="flex items-center justify-center">

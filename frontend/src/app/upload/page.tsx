@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from "next/navigation";
-import FileUpload from "../components/FileUpload";
+import FileUpload from "@/components/FileUpload";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
 
@@ -77,4 +77,3 @@ export default function UploadPage() {
     </div>
   );
 }
-
