@@ -6,6 +6,7 @@ from datetime import datetime
 from app.api.deps import verify_token
 from app.core.supabase_client import get_supabase_client
 from app.core.config import Settings
+from app.models.resumes import ResumeSchema
 
 
 settings = Settings() # type: ignore
@@ -53,50 +54,25 @@ async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)
             return {"error": "No file uploaded."}
 
         # OpenAI call
-        response = gpt_client.chat.completions.create(
+        response = gpt_client.responses.parse(
             model="gpt-4o",
-            messages=[
+            input=[
                 {"role": "system", "content": "You are a resume parser that outputs JSON only."},
                 {"role": "user", "content": f"""
-                    Parse this resume into JSON with this schema:
-                    {{
-                      "resume_pdf": "string",
-                      "portfolio_id": "string",
-                      "personal_information": {{
-                        "full_name": "string",
-                        "contact_info": {{
-                          "email": "string",
-                          "linkedin": "string",
-                          "phone": "string",
-                          "address": "string"
-                        }},
-                        "education": {{
-                          "school": "string",
-                          "majors": ["string"],
-                          "minors": ["string"],
-                          "expected_grad": "string"
-                        }}
-                      }},
-                      "section_data": [
-                        {{
-                          "name": "string",
-                          "items": ["string"]
-                        }}
-                      ]
-                    }}
-
-                    Resume text:
-                    {text}
-               """}
+                    Parse this resume text: {text}
+                 """}
             ],
-            response_format={"type": "json_object"}
+            text_format=ResumeSchema
         )
-        if not response.choices or not response.choices[0].message.content:
+
+        if not response or not response.output_parsed:
             return {"error": "No response from OpenAI"}
 
-        parsed_json = json.loads(response.choices[0].message.content)
+        parsed_resume: ResumeSchema = response.output_parsed
+        parsed_json = json.loads(parsed_resume.model_dump_json())
         parsed_json["resume_pdf"] = file.filename
         parsed_json["portfolio_id"] = str(uuid.uuid4())
+
     except Exception as e:
         return {"error": f"Error processing resume: {str(e)}"}
     finally:
@@ -106,12 +82,14 @@ async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)
     try:
         supabase = get_supabase_client()
 
-        if not supabase:
-            return {"error": "Supabase client not configured. Please set SUPABASE_URL and SUPABASE_KEY in your .env file"}
-
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         path = f"{user.id}/{timestamp}_{file.filename}"
         response = supabase.storage.from_("resumes").upload(path, contents)
+
+        supabase.table("resumes").insert({
+            "user_id": user.id,
+            "data": parsed_json,
+        }).execute()
 
         return {"success": True, "data": parsed_json}
     except Exception as e:
