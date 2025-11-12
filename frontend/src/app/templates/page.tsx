@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
+import { PersonalInformation, ContactInfo, EducationInfo, OverviewData, ParsedResume } from "@/constants/ResumeFormat";
+import ModernMinimalistPortfolio from "@/components/PortfolioTemplates/ModernMinimalist";
 
 interface Template {
   id: string;
@@ -11,36 +13,6 @@ interface Template {
   description: string;
   preview: string;
   category: string;
-}
-
-interface ContactInfo {
-  email?: string;
-  linkedin?: string;
-  phone?: string;
-  address?: string;
-}
-
-interface Education {
-  school?: string;
-  majors?: string[];
-  minors?: string[];
-  expected_grad?: string;
-}
-
-interface PersonalInformation {
-  full_name?: string;
-  contact_info?: ContactInfo;
-  education?: Education;
-}
-
-interface SectionData {
-  name: string;
-  items?: string[];
-}
-
-interface ResumeData {
-  personal_information?: PersonalInformation;
-  section_data?: SectionData[];
 }
 
 const templates: Template[] = [
@@ -75,35 +47,73 @@ const templates: Template[] = [
 ];
 
 // Preview component for each template
-const TemplatePreview = ({ templateId, resumeData }: { templateId: string; resumeData: ResumeData | null }) => {
-  const getPreviewContent = () => {
-    const data = resumeData?.personal_information || {};
-    const name = data.full_name || 'Your Name';
-    const email = data.contact_info?.email || 'your.email@example.com';
-    const sections = resumeData?.section_data || [];
+const TemplatePreview = ({ templateId, resumeData }: { templateId: string; resumeData: ParsedResume | null }) => {
 
+  const personal_information = resumeData?.personal_information;
+  const overview_data = resumeData?.overview
+  const projects_data = resumeData?.projects
+  const experience_data = resumeData?.experience
+  const skills_data = resumeData?.skills
+
+  // derive a small uniform structure for previews from ParsedResume
+  const name = resumeData?.personal_information?.full_name
+    || resumeData?.personal_information?.full_name
+    || 'Your Name';
+
+  const email = resumeData?.personal_information?.contact_info?.email
+    || '';
+
+  type SectionData = { name: string; items?: string[] };
+
+  const sections: SectionData[] = [];
+
+  // Overview / summary
+  if (resumeData?.overview) {
+    const overviewSummary = (resumeData.overview as any).summary || (resumeData.overview as any).text;
+    if (overviewSummary) sections.push({ name: 'Overview', items: [overviewSummary] });
+    if ((resumeData.overview as any).highlights && Array.isArray((resumeData.overview as any).highlights)) {
+      sections.push({ name: 'Highlights', items: (resumeData.overview as any).highlights });
+    }
+  }
+
+  // Skills
+  if ((resumeData as any).skills && Array.isArray((resumeData as any).skills) && (resumeData as any).skills.length) {
+    sections.push({ name: 'Skills', items: (resumeData as any).skills });
+  }
+
+  // Experience
+  if ((resumeData as any).experience && Array.isArray((resumeData as any).experience)) {
+    const items = (resumeData as any).experience.slice(0, 3).map((exp: any) => {
+      const title = exp.title || exp.position || '';
+      const company = exp.company || exp.employer || '';
+      const period = (exp.start && exp.end) ? `${exp.start} - ${exp.end}` : exp.period || '';
+      return [title, company, period].filter(Boolean).join(' · ');
+    });
+    if (items.length) sections.push({ name: 'Experience', items });
+  }
+
+  // Education
+  if (resumeData?.personal_information?.education && Array.isArray(resumeData.personal_information.education)) {
+    const items = resumeData.personal_information.education.slice(0, 3).map((edu: any) => {
+      const degree = edu.degree || edu.program || '';
+      const school = edu.institution || edu.school || '';
+      const year = edu.year || edu.graduation || '';
+      return [degree, school, year].filter(Boolean).join(' · ');
+    });
+    if (items.length) sections.push({ name: 'Education', items });
+  }
+
+  const getPreviewContent = () => {
     switch (templateId) {
       case 'modern-minimal':
-        return (
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl">
-            <div className="text-center mb-8 pb-6 border-b-2 border-blue-500">
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">{name}</h1>
-              <p className="text-gray-600">{email}</p>
-            </div>
-            <div className="space-y-6">
-              {sections.slice(0, 2).map((section: SectionData, idx: number) => (
-                <div key={idx} className="mb-4">
-                  <h2 className="text-xl font-semibold text-gray-800 mb-2">{section.name}</h2>
-                  <ul className="list-disc list-inside text-gray-600 space-y-1">
-                    {section.items?.slice(0, 2).map((item: string, i: number) => (
-                      <li key={i}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
+        return <ModernMinimalistPortfolio
+         personalInformation={personal_information}
+         overviewData={overview_data}
+         experience={experience_data}
+         skills={skills_data}
+         projects={projects_data}
+         />
+
       case '2':
         return (
           <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl">
@@ -194,7 +204,7 @@ const TemplatePreview = ({ templateId, resumeData }: { templateId: string; resum
 
 export default function TemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [resumeData, setResumeData] = useState<ResumeData | null>(null);
+  const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
   const router = useRouter();
   const info = useUser();
   const session = createClient();
@@ -203,7 +213,12 @@ export default function TemplatesPage() {
     // Get resume data from localStorage
     const storedData = localStorage.getItem('resumeData');
     if (storedData) {
-      setResumeData(JSON.parse(storedData));
+      try {
+        setResumeData(JSON.parse(storedData) as ParsedResume);
+      } catch (e) {
+        console.error('Failed to parse resumeData from localStorage', e);
+        router.push('/upload');
+      }
     } else {
       // No resume data, redirect back to upload
       router.push('/upload');

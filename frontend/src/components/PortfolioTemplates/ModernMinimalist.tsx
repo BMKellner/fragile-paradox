@@ -1,12 +1,16 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { ParsedResume, Project as ProjectType, Experience as ExperienceType } from "../constants/ResumeFormat";
+import React, { useState } from "react";
+import { PersonalInformation, OverviewData, Project, Experience } from "@/constants/ResumeFormat";
 import Link from "next/link";
 
 // Theme color for the UI (hex). Update this to change accent color across the component.
 
 type Props = {
-  data?: ParsedResume;
+  personalInformation?: PersonalInformation;
+  overviewData?: OverviewData;
+  projects?: Project[];
+  experience?: Experience[];
+  skills?: string[];
   mainColor?: string;
   backgroundColor?: string; // optional so component can load from localStorage
 };
@@ -14,32 +18,16 @@ type Props = {
 const tabs = ["Overview", "About", "Projects", "Skills", "Experience"] as const;
 type TabKey = typeof tabs[number];
 
-export default function TabbedResume({ data, mainColor, backgroundColor }: Props) {
-
-  const [color, setColor] = useState(mainColor || "#5861d9ff")
-// Page background color (hex). Update this to change the portfolio background.
-  const [background_color, setBackground_color] = useState(backgroundColor || "#000000ff")
+export default function ModernMinimalistPortfolio({ personalInformation, overviewData, projects, experience, skills, mainColor, backgroundColor }: Props) {
+  // Theme & background colors (derived from props). Setters removed — colors come from parent props.
+  const color = mainColor || "#5861d9ff";
+  // Page background color (hex). Update this to change the portfolio background.
+  const background_color = backgroundColor || "#000000ff";
 
   const [active, setActive] = useState<TabKey>("Overview");
-  const [localData, setLocalData] = useState<ParsedResume | null>(() => (data ?? null));
 
-  useEffect(() => {
-    if (localData) return;
-    try {
-      const raw = localStorage.getItem("resumeData");
-      if (raw) {
-        const parsed = JSON.parse(raw) as ParsedResume;
-        setLocalData(parsed);
-      }
-    } catch (e) {
-      console.error("Failed to read/parse resumeData from localStorage", e);
-    }
-  }, [localData]);
-
-  const resume_json = localData;
-  console.log(resume_json)
-
-  if (!resume_json) {
+  // If no meaningful props were passed, show a helpful placeholder.
+  if (!personalInformation && !overviewData && (!projects || projects.length === 0) && (!experience || experience.length === 0) && (!skills || skills.length === 0)) {
     return (
       <div style={{ padding: 32, maxWidth: 960, margin: "0 auto", textAlign: "center" }}>
         <h2 style={{ color: "#111827", marginBottom: 8 }}>No resume data found</h2>
@@ -48,46 +36,45 @@ export default function TabbedResume({ data, mainColor, backgroundColor }: Props
     );
   }
 
-  // New schema usage (with safe fallbacks)
-  const personal_information = resume_json.personal_information ?? {
+  // Use incoming props directly with safe fallbacks
+  const personal_information = personalInformation ?? {
     full_name: "",
     contact_info: { email: "", linkedin: "", phone: "", address: "" },
     education: { school: "", majors: [], minors: [], expected_grad: "" },
   };
 
-  const overview = resume_json.overview ?? { career_name: "", resume_summary: "" };
-  const projectsRaw = resume_json.projects ?? [];
-  const skills = resume_json.skills ?? [];
-  const experienceRaw = resume_json.experience ?? [];
-  const resume_pdf = resume_json.resume_pdf ?? "";
+  const overview = overviewData ?? { career_name: "", resume_summary: "" };
+  const projectsRaw = projects ?? [];
+  const skillsList = skills ?? [];
+  const experienceRaw = experience ?? [];
+  // No resume PDF prop provided currently — keep empty string unless parent supplies one in future
+  const resume_pdf = "";
 
   // Coerce helpers: accept either structured objects or simple strings
-  const normalizeProject = (p: ProjectType | string): ProjectType => {
-    if (!p) return { title: "Untitled", description: "" };
-    if (typeof p === "string") return { title: p, description: "" };
-    return { title: p.title ?? String(p), description: p.description ?? "" };
+  const normalizeProject = (p: Project | string): Project => {
+    if (!p) return { title: "Untitled", description: "" } as Project;
+    if (typeof p === "string") return { title: p, description: "" } as Project;
+    return { title: (p as Project).title ?? String(p), description: (p as Project).description ?? "" } as Project;
   };
 
-  const normalizeExperience = (e: ExperienceType | string): ExperienceType => {
-    if (!e) return { company: "", description: "", employed_dates: "" };
+  const normalizeExperience = (e: Experience | string): Experience => {
+    if (!e) return { company: "", description: "", employed_dates: "" } as Experience;
     if (typeof e === "string") {
-      // try to split a simple "Role at Company (dates) - description" into fields; fallback to description
       const datesMatch = e.match(/\(([^)]+)\)/);
       const dates = datesMatch ? datesMatch[1] : "";
-      // remove dates portion
       const withoutDates = e.replace(/\([^)]+\)/, "").trim();
       const atMatch = withoutDates.split(/\s+(?:at|@)\s+/i);
       if (atMatch.length >= 2) {
-        return { company: atMatch[1].trim(), description: atMatch.slice(2).join(" ").trim() || "", employed_dates: dates };
+        return { company: atMatch[1].trim(), description: atMatch.slice(2).join(" ").trim() || "", employed_dates: dates } as Experience;
       }
-      return { company: withoutDates, description: "", employed_dates: dates };
+      return { company: withoutDates, description: "", employed_dates: dates } as Experience;
     }
-    return { company: e.company ?? "", description: e.description ?? "", employed_dates: e.employed_dates ?? "" };
+    return { company: (e as Experience).company ?? "", description: (e as Experience).description ?? "", employed_dates: (e as Experience).employed_dates ?? "" } as Experience;
   };
 
-  // Derived arrays
-  const projects = projectsRaw.map(normalizeProject);
-  const experience = experienceRaw.map(normalizeExperience);
+  // Derived arrays (renamed to avoid shadowing props)
+  const projectsList = projectsRaw.map(normalizeProject);
+  const experienceList = experienceRaw.map(normalizeExperience);
 
   // small helpers
   const initials = (name?: string) =>
@@ -257,9 +244,9 @@ export default function TabbedResume({ data, mainColor, backgroundColor }: Props
           {active === "Projects" && (
             <section style={{ marginBottom: 18 }}>
               <h3 style={{ marginBottom: 12, color }}>Projects</h3>
-              {projects.length ? (
+              {projectsList.length ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
-                  {projects.map((p, idx) => (
+                  {projectsList.map((p, idx) => (
                     <article
                       key={`project-${idx}`}
                       style={{
@@ -292,9 +279,9 @@ export default function TabbedResume({ data, mainColor, backgroundColor }: Props
             <section style={{ marginBottom: 18 }}>
               <h3 style={{ marginBottom: 12, color }}>Skills</h3>
               <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: "0 6px 18px rgba(15,23,42,0.04)" }}>
-                {skills?.length ? (
+                {skillsList?.length ? (
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                    {skills.map((s, idx) => (
+                    {skillsList.map((s, idx) => (
                       <span
                         key={`skill-${idx}`}
                         style={{
@@ -321,9 +308,9 @@ export default function TabbedResume({ data, mainColor, backgroundColor }: Props
           {active === "Experience" && (
             <section style={{ marginBottom: 18 }}>
               <h3 style={{ marginBottom: 12, color }}>Experience</h3>
-              {experience.length ? (
+              {experienceList.length ? (
                 <div style={{ display: "grid", gap: 12 }}>
-                  {experience.map((ex, idx) => (
+                  {experienceList.map((ex, idx) => (
                     <div key={`exp-${idx}`} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
                       {/* timeline marker */}
                       <div style={{ width: 28, display: "flex", justifyContent: "center" }}>
