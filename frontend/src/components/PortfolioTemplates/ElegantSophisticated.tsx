@@ -18,30 +18,12 @@ type Props = {
 const tabs = ["Overview", "About", "Projects", "Skills", "Experience"] as const;
 type TabKey = typeof tabs[number];
 
-export default function ModernMinimalistPortfolio({ personalInformation, overviewData, projects, experience, skills, mainColor, backgroundColor }: Props) {
-  const rawColor = mainColor || "#5861d9";
-  const rawBackground = backgroundColor ?? "#000000";
-
-  const hexToRgb = (hex: string) => {
-    const h = hex.replace("#", "");
-    const r = parseInt(h.slice(0, 2), 16);
-    const g = parseInt(h.slice(2, 4), 16);
-    const b = parseInt(h.slice(4, 6), 16);
-    return { r, g, b };
-  };
-  const brightness = (hex: string) => {
-    const { r, g, b } = hexToRgb(hex.length === 3 ? hex.split("").map(c => c + c).join("") : hex);
-    return (r * 299 + g * 587 + b * 114) / 1000;
-  };
-  const isLightBg = brightness(rawBackground) > 200;
-  let color = rawColor;
-  const colorBrightness = brightness(rawColor);
-  if (isLightBg && colorBrightness > 200) color = "#111827";
-  else if (!isLightBg && colorBrightness < 55) color = "#FFFFFF";
-  const background_color = rawBackground;
-
-  const shadowSoft = isLightBg ? "0 6px 18px rgba(15,23,42,0.06)" : "0 8px 24px rgba(0,0,0,0.6)";
-  const shadowLg = isLightBg ? "0 8px 24px rgba(15,23,42,0.06)" : "0 10px 30px rgba(0,0,0,0.6)";
+export default function ElegantSophisticatedPortfolio({ personalInformation, overviewData, projects, experience, skills, mainColor, backgroundColor }: Props) {
+  // Theme & background colors (derived from props). Setters removed — colors come from parent props.
+  // Elegant gold accent by default, with deep navy gradient background.
+  const color = mainColor || "#b8860b";
+  // Page background: dark navy gradient for sophistication.
+  const background_color = backgroundColor || "linear-gradient(180deg,#071024 0%, #0f172a 100%)";
 
   const [active, setActive] = useState<TabKey>("Overview");
 
@@ -107,96 +89,101 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
   return (
     <div
       style={{
-        fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
-        padding: 24,
-        maxWidth: 1100,
+        fontFamily: "Georgia, 'Times New Roman', serif",
+        padding: 36,
+        maxWidth: 1200,
         margin: "0 auto",
         boxSizing: "border-box",
         background: background_color,
         minHeight: "100vh",
+        color: "#e6e7e8",
       }}
     >
       {/* Top hero */}
-      <header style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, flex: 1 }}>
+      <header style={{ display: "flex", gap: 20, alignItems: "center", marginBottom: 28 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 18, flex: 1 }}>
           <div
             aria-hidden
             style={{
-              width: 96,
-              height: 96,
-              borderRadius: 12,
-              background: "#f3f4f6",
+              width: 112,
+              height: 112,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              fontSize: 28,
+              fontSize: 36,
               fontWeight: 700,
-              color: "#111827",
-              boxShadow: shadowSoft,
+              color: "#fff",
+              boxShadow: `0 6px 28px rgba(11,13,18,0.7), 0 0 18px ${color}22`,
               overflow: "hidden",
+              border: `2px solid ${color}`,
             }}
           >
-            <span>{initials(personal_information?.full_name)}</span>
+            <span style={{ fontFamily: "inherit" }}>{initials(personal_information?.full_name)}</span>
           </div>
 
-          <div>
-            <h1 style={{ margin: 0, fontSize: 28, color }}>{personal_information?.full_name}</h1>
-            <p style={{ margin: "6px 0 0", color: "#374151", fontSize: 14 }}>
+          <div style={{ lineHeight: 1 }}>
+            <h1 style={{ margin: 0, fontSize: 34, color, letterSpacing: 0.4 }}>{personal_information?.full_name}</h1>
+            <p style={{ margin: "8px 0 0", color: "#cfd6db", fontSize: 14, fontStyle: "italic", textTransform: "uppercase", letterSpacing: 1 }}>
               {overview?.career_name || ""}
             </p>
-            <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
+            <div style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center" }}>
               {resume_pdf && (
                 <a
                   href={resume_pdf}
                   target="_blank"
                   rel="noreferrer"
                   style={{
-                    background: color,
-                    color: "#fff",
-                    padding: "8px 12px",
+                    background: "transparent",
+                    color,
+                    padding: "8px 14px",
                     borderRadius: 8,
                     textDecoration: "none",
-                    fontWeight: 600,
-                    boxShadow: "0 6px 18px rgba(59,130,246,0.12)",
-                    fontSize: 14,
+                    fontWeight: 700,
+                    border: `1px solid ${color}33`,
+                    fontSize: 13,
                   }}
                 >
-                  Download Resume
+                  Download Résumé
                 </a>
               )}
               {personal_information?.contact_info?.linkedin && (
-                <Link href={personal_information.contact_info.linkedin} target="_blank" rel="noreferrer" style={{ color: "#6b7280", textDecoration: "none", fontSize: 14 }}>
-                  LinkedIn
+                <Link href={personal_information.contact_info.linkedin} target="_blank" rel="noreferrer" style={{ color: "#cfd6db", textDecoration: "none", fontSize: 13 }}>
+                  View LinkedIn
                 </Link>
               )}
             </div>
           </div>
         </div>
 
-        <div style={{ textAlign: "right", color: "#6b7280", fontSize: 13 }}>
+        <div style={{ textAlign: "right", color: "#c0c6ca", fontSize: 13 }}>
           <div style={{ marginBottom: 6 }}>{personal_information?.contact_info?.email}</div>
           <div>{personal_information?.contact_info?.phone}</div>
         </div>
       </header>
 
-      {/* Main layout: left nav + right content */}
-      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 24 }}>
+      {/* Main layout: slim left sidebar + content */}
+      <div style={{ display: "grid", gridTemplateColumns: "180px 1fr", gap: 28 }}>
         {/* Left column - compact nav / contact */}
-        <aside style={{ borderRadius: 12, padding: 16, background: "#fff", boxShadow: shadowSoft }}>
-          <nav aria-label="Sections" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <aside style={{ borderRadius: 12, padding: 12, background: "transparent", color: "#c8ced1" }}>
+          <nav aria-label="Sections" style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {tabs.map((t) => (
               <button
                 key={t}
                 onClick={() => setActive(t)}
                 style={{
                   textAlign: "left",
-                  padding: "10px 12px",
-                  borderRadius: 8,
+                  padding: "10px 14px",
+                  borderRadius: 6,
                   border: "none",
-                  background: active === t ? color : "transparent",
-                  color: active === t ? "#fff" : "#111827",
+                  background: "transparent",
+                  color: active === t ? color : "#cbd5d9",
                   cursor: "pointer",
-                  fontWeight: 600,
+                  fontWeight: active === t ? 800 : 600,
+                  borderLeft: active === t ? `4px solid ${color}` : "4px solid transparent",
+                  paddingLeft: 12,
+                  transition: "all 160ms ease",
                 }}
               >
                 {t}
@@ -204,13 +191,13 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
             ))}
           </nav>
 
-          <div style={{ height: 1, background: "#f3f4f6", margin: "12px 0" }} />
+          <div style={{ height: 1, background: "rgba(255,255,255,0.03)", margin: "16px 0" }} />
 
-          <div style={{ fontSize: 13, color: "#374151" }}>
-            <div style={{ fontWeight: 700, marginBottom: 6 }}>Contact</div>
-            <div style={{ color: "#6b7280", lineHeight: 1.5 }}>
+          <div style={{ fontSize: 13, color: "#c0c6ca" }}>
+            <div style={{ fontWeight: 700, marginBottom: 8 }}>Contact</div>
+            <div style={{ color: "#aeb6ba", lineHeight: 1.6, fontWeight: 500 }}>
               <div>{personal_information?.contact_info?.address}</div>
-              <div>{personal_information?.contact_info?.email}</div>
+              <div style={{ marginTop: 6 }}>{personal_information?.contact_info?.email}</div>
               <div>{personal_information?.contact_info?.phone}</div>
             </div>
           </div>
@@ -220,32 +207,32 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
         <main>
           {/* Overview */}
           {active === "Overview" && (
-            <section style={{ marginBottom: 18 }}>
-              <div style={{ background: "#fff", borderRadius: 12, padding: 18, boxShadow: "0 6px 18px rgba(15,23,42,0.04)" }}>
-                <h2 style={{ margin: 0, color }}>Overview</h2>
-                <p style={{ color: "#374151", marginTop: 12, whiteSpace: "pre-wrap" }}>{overview?.resume_summary || "No summary available."}</p>
+            <section style={{ marginBottom: 20 }}>
+              <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: 22, boxShadow: "0 8px 30px rgba(2,6,23,0.6)" }}>
+                <h2 style={{ margin: 0, color, fontFamily: "Georgia, serif" }}>Overview</h2>
+                <p style={{ color: "#cfd6db", marginTop: 14, whiteSpace: "pre-wrap", fontSize: 15 }}>{overview?.resume_summary || "No summary available."}</p>
               </div>
             </section>
           )}
 
           {/* About */}
           {active === "About" && (
-            <section style={{ marginBottom: 18 }}>
-              <div style={{ background: "#fff", borderRadius: 12, padding: 18, boxShadow: "0 6px 18px rgba(15,23,42,0.04)" }}>
-                <h2 style={{ marginTop: 0, color }}>About</h2>
-                <div style={{ color: "#374151", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <section style={{ marginBottom: 20 }}>
+              <div style={{ background: "rgba(255,255,255,0.03)", borderRadius: 12, padding: 20, boxShadow: "0 8px 30px rgba(2,6,23,0.6)" }}>
+                <h2 style={{ marginTop: 0, color, fontFamily: "Georgia, serif" }}>About</h2>
+                <div style={{ color: "#cbd5d9", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
                   <div>
-                    <div style={{ fontWeight: 700 }}>Education</div>
-                    <div style={{ color: "#6b7280", marginTop: 6 }}>
-                      <div>{personal_information?.education?.school}</div>
-                      <div>{personal_information?.education?.majors?.join(", ")}</div>
-                      <div>Expected: {personal_information?.education?.expected_grad}</div>
+                    <div style={{ fontWeight: 700, color: "#e9ecef" }}>Education</div>
+                    <div style={{ color: "#aeb6ba", marginTop: 8 }}>
+                      <div style={{ fontWeight: 700 }}>{personal_information?.education?.school}</div>
+                      <div style={{ marginTop: 6 }}>{personal_information?.education?.majors?.join(", ")}</div>
+                      <div style={{ marginTop: 6, fontStyle: "italic" }}>Expected: {personal_information?.education?.expected_grad}</div>
                     </div>
                   </div>
 
                   <div>
-                    <div style={{ fontWeight: 700 }}>Location & Links</div>
-                    <div style={{ color: "#6b7280", marginTop: 6 }}>
+                    <div style={{ fontWeight: 700, color: "#e9ecef" }}>Location & Links</div>
+                    <div style={{ color: "#aeb6ba", marginTop: 8 }}>
                       <div>{personal_information?.contact_info?.address}</div>
                       {personal_information?.contact_info?.linkedin && (
                         <a href={personal_information.contact_info.linkedin} target="_blank" rel="noreferrer" style={{ color }}>
@@ -261,55 +248,57 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
 
           {/* Projects */}
           {active === "Projects" && (
-            <section style={{ marginBottom: 18 }}>
-              <h3 style={{ marginBottom: 12, color }}>Projects</h3>
+            <section style={{ marginBottom: 20 }}>
+              <h3 style={{ marginBottom: 14, color, fontFamily: "Georgia, serif" }}>Selected Projects</h3>
               {projectsList.length ? (
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 16 }}>
                   {projectsList.map((p, idx) => (
                     <article
                       key={`project-${idx}`}
                       style={{
-                        background: "#fff",
+                        background: "linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01))",
                         borderRadius: 12,
-                        padding: 16,
-                        boxShadow: shadowLg,
+                        padding: 18,
+                        boxShadow: "0 12px 36px rgba(2,8,23,0.6)",
                         display: "flex",
                         flexDirection: "column",
                         justifyContent: "space-between",
                         minHeight: 140,
+                        borderTop: `3px solid ${color}11`,
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 800, color: "#0f172a", fontSize: 15, marginBottom: 6 }}>{p.title}</div>
-                        {p.description ? <div style={{ color: "#374151", fontSize: 13, marginBottom: 10 }}>{p.description}</div> : null}
+                        <div style={{ fontWeight: 800, color: "#f5f7f8", fontSize: 16, marginBottom: 8 }}>{p.title}</div>
+                        {p.description ? <div style={{ color: "#cbd5d9", fontSize: 14, marginBottom: 6, fontStyle: "italic" }}>{p.description}</div> : null}
                       </div>
                       {/* link or tags could go here if provided in future schema */}
                     </article>
                   ))}
                 </div>
               ) : (
-                <div style={{ color: "#6b7280" }}>No projects listed.</div>
+                <div style={{ color: "#aeb6ba" }}>No projects listed.</div>
               )}
             </section>
           )}
 
           {/* Skills */}
           {active === "Skills" && (
-            <section style={{ marginBottom: 18 }}>
-              <h3 style={{ marginBottom: 12, color }}>Skills</h3>
-              <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: shadowSoft }}>
+            <section style={{ marginBottom: 20 }}>
+              <h3 style={{ marginBottom: 12, color, fontFamily: "Georgia, serif" }}>Skills</h3>
+              <div style={{ background: "rgba(255,255,255,0.02)", borderRadius: 12, padding: 16, boxShadow: "0 8px 30px rgba(2,8,23,0.6)" }}>
                 {skillsList?.length ? (
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {skillsList.map((s, idx) => (
                       <span
                         key={`skill-${idx}`}
                         style={{
-                          padding: "6px 10px",
-                          background: "#f3f4f6",
-                          color: "#111827",
+                          padding: "8px 12px",
+                          background: "transparent",
+                          color: "#f3f4f6",
                           borderRadius: 999,
                           fontSize: 13,
-                          fontWeight: 600,
+                          fontWeight: 700,
+                          border: `1px solid ${color}66`,
                         }}
                       >
                         {s}
@@ -317,7 +306,7 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
                     ))}
                   </div>
                 ) : (
-                  <div style={{ color: "#6b7280" }}>No skills listed.</div>
+                  <div style={{ color: "#aeb6ba" }}>No skills listed.</div>
                 )}
               </div>
             </section>
@@ -325,28 +314,28 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
 
           {/* Experience */}
           {active === "Experience" && (
-            <section style={{ marginBottom: 18 }}>
-              <h3 style={{ marginBottom: 12, color }}>Experience</h3>
+            <section style={{ marginBottom: 20 }}>
+              <h3 style={{ marginBottom: 12, color, fontFamily: "Georgia, serif" }}>Experience</h3>
               {experienceList.length ? (
-                <div style={{ display: "grid", gap: 12 }}>
+                <div style={{ display: "grid", gap: 14 }}>
                   {experienceList.map((ex, idx) => (
                     <div key={`exp-${idx}`} style={{}}>
-                      <div style={{ position: "relative", background: "#fff", borderRadius: 12, padding: 14, boxShadow: "0 6px 18px rgba(15,23,42,0.04)" }}>
+                      <div style={{ position: "relative", background: "rgba(255,255,255,0.02)", borderRadius: 12, padding: 16, boxShadow: "0 10px 36px rgba(2,8,23,0.6)", borderLeft: `4px solid ${color}11` }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
                           <div>
-                            <div style={{ fontWeight: 800, color: "#0f172a" }}>{ex.company || "Company"}</div>
+                            <div style={{ fontWeight: 800, color: "#f5f7f8" }}>{ex.company || "Company"}</div>
                           </div>
-                          <div style={{ color: "#6b7280", fontSize: 13, whiteSpace: "nowrap", marginLeft: 12 }}>
+                          <div style={{ color: "#aeb6ba", fontSize: 13, whiteSpace: "nowrap", marginLeft: 12 }}>
                             {ex.employed_dates}
                           </div>
                         </div>
-                        {ex.description ? <p style={{ marginTop: 10, color: "#374151" }}>{ex.description}</p> : null}
+                        {ex.description ? <p style={{ marginTop: 10, color: "#cbd5d9" }}>{ex.description}</p> : null}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ color: "#6b7280" }}>No experience listed.</div>
+                <div style={{ color: "#aeb6ba" }}>No experience listed.</div>
               )}
             </section>
           )}
