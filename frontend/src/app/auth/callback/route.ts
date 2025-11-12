@@ -24,5 +24,5 @@ export async function GET(request: Request) {
   }
 
   // If there's no code or an error occurred, redirect to an error page
-  return NextResponse.redirect(`${origin}/auth/auth-code-error`)
+  return NextResponse.redirect(`${origin}/signin`)
 }
