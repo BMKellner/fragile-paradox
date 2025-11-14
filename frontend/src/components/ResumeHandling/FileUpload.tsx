@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from "react";
-import { createClient } from "@/utils/supabase/client"
+import { createClient } from "@/utils/supabase/client";
+import { ParsedResume } from "@/constants/ResumeFormat";
 
 interface FileUploadProps {
-  onUploadComplete?: (data: object) => void;
+  onUploadComplete: (data: ParsedResume) => void;
   onError?: (error: string) => void;
 }
 
@@ -59,8 +60,10 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
 
       const data = await response.json();
 
+      console.log(`DATA RECIEVED: ${JSON.stringify(data)}`)
+
       if (response.ok) {
-        onUploadComplete?.(data);
+        onUploadComplete(data.data);
       } else {
         const errorMsg = data.error || 'An error occurred while processing the resume.';
         setError(errorMsg);
