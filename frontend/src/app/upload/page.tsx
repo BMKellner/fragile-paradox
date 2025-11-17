@@ -13,6 +13,7 @@ import {
   LayoutDashboard
 } from "lucide-react";
 import { useState } from "react";
+import { ParsedResume } from "@/constants/ResumeFormat";
 
 export default function UploadPage() {
   const router = useRouter();
@@ -53,18 +54,24 @@ export default function UploadPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const response = await fetch("http://localhost:8001/parse_resume/", {
+      // Get auth session for the API call
+      const sessionData = await session.auth.getSession();
+      
+      const response = await fetch("http://localhost:8000/supabase/upload_resume", {
         method: "POST",
+        headers: {
+          "Authorization": `Bearer ${sessionData.data.session?.access_token}`
+        },
         body: formData,
       });
 
-      const data = await response.json();
+      const result = await response.json();
 
-      if (response.ok) {
-        localStorage.setItem('resumeData', JSON.stringify(data));
+      if (response.ok && result.data) {
+        localStorage.setItem('resumeData', JSON.stringify(result.data));
         router.push('/templates');
       } else {
-        setError(data.error || 'An error occurred while processing the resume.');
+        setError(result.error || 'An error occurred while processing the resume.');
       }
     } catch {
       setError('Failed to connect to the server. Make sure the backend is running.');

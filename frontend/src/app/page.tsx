@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
+import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -16,17 +17,38 @@ import {
   TrendingUp,
   ArrowRight
 } from "lucide-react";
-
 export default function Home() {
+  const [resumeData, setResumeData] = useState<object | null>(null);
+
+  const handleError = (error: string) => {
+    console.error('Upload error:', error);
+  };
+
+  const session = createClient();
   const router = useRouter();
   const info = useUser();
-
   useEffect(() => {
     if (!info.loading && info.user) {
       // User is authenticated, redirect to dashboard
       router.push('/dashboard');
     }
   }, [info.loading, info.user, router]);
+
+  const handleUploadComplete = (data: object) => {
+    // store the parsed resume so the next route can read it
+    try {
+      sessionStorage.setItem("resumeData", JSON.stringify(data));
+    } catch (e) {
+      console.error("Failed to save resumeData to sessionStorage", e);
+    }
+    setResumeData(data);
+    router.push('/tabbedresume')
+  };
+
+  const handleSignOut = async () => {
+    await session.auth.signOut();
+    window.location.reload();
+  }
 
   if (info.loading) {
     return (

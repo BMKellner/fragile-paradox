@@ -47,6 +47,7 @@ frontend/.env*
 backend/.env*
 
 # backend specific
+**/__pycache__/
 backend/.venv/
 backend/venv/
 backend/__pycache__/

@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from "react";
+import { createClient } from "@/utils/supabase/client";
+import { ParsedResume } from "@/constants/ResumeFormat";
 
 interface FileUploadProps {
-  onUploadComplete?: (data: object) => void;
+  onUploadComplete: (data: ParsedResume) => void;
   onError?: (error: string) => void;
 }
 
@@ -46,15 +48,22 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
       formData.append("file", file);
 
       // Send to backend
-      const response = await fetch("http://localhost:8001/parse_resume/", {
-        method: "POST",
+      const supabase = createClient()
+      const session = await supabase.auth.getSession()
+      const response = await fetch('http://localhost:8000/supabase/upload_resume', {
+        method: 'POST',
+        headers: {
+          "Authorization": `Bearer ${session.data.session?.access_token}`
+        },
         body: formData,
-      });
+      })
 
       const data = await response.json();
 
+      console.log(`DATA RECIEVED: ${JSON.stringify(data)}`)
+
       if (response.ok) {
-        onUploadComplete?.(data);
+        onUploadComplete(data.data);
       } else {
         const errorMsg = data.error || 'An error occurred while processing the resume.';
         setError(errorMsg);
@@ -92,11 +101,10 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
         <button
           type="submit"
           disabled={!file || loading}
-          className={`w-full py-3 px-6 rounded-lg font-medium text-white transition-all duration-200 ${
-            loading || !file
+          className={`w-full py-3 px-6 rounded-lg font-medium text-white transition-all duration-200 ${loading || !file
               ? 'bg-gray-400 cursor-not-allowed'
               : 'bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-200'
-          }`}
+            }`}
         >
           {loading ? (
             <div className="flex items-center justify-center">
