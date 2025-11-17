@@ -10,9 +10,9 @@ from app.models.resumes import ResumeSchema
 
 
 settings = Settings() # type: ignore
-router = APIRouter(prefix="/supabase", tags=["supabase"])
+router = APIRouter(prefix="/resumes", tags=["resumes"])
 
-@router.get("/users")
+@router.get("/")
 async def supabase_test(user=Depends(verify_token)):
     """Simple endpoint to test Supabase connection"""
 
@@ -25,7 +25,7 @@ async def supabase_test(user=Depends(verify_token)):
         return {"error": f"Supabase error: {str(e)}"}
 
 
-@router.post("/upload_resume")
+@router.post("/")
 async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)):
     """Endpoint to upload resume metadata to Supabase"""
 
@@ -84,8 +84,11 @@ async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         path = f"{user.id}/{timestamp}_{file.filename}"
-        response = supabase.storage.from_("resumes").upload(path, contents)
 
+        # Upload to supabase bucket
+        response = supabase.storage.from_("users").upload(path, contents)
+
+        # Upload to supabase pg table
         supabase.table("resumes").insert({
             "user_id": user.id,
             "data": parsed_json,
@@ -95,4 +98,3 @@ async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)
     except Exception as e:
         print(e)
         return {"error": f"Supabase error: {str(e)}"}
-
