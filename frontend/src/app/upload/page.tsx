@@ -13,7 +13,6 @@ import {
   LayoutDashboard
 } from "lucide-react";
 import { useState } from "react";
-import { ParsedResume } from "@/constants/ResumeFormat";
 
 export default function UploadPage() {
   const router = useRouter();

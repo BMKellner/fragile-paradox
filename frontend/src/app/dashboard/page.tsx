@@ -116,7 +116,7 @@ export default function DashboardPage() {
             <div>
               <h2 className="text-3xl font-bold tracking-tight">Welcome back!</h2>
               <p className="text-muted-foreground mt-1">
-                Here's what's happening with your portfolios
+                Here&apos;s what&apos;s happening with your portfolios
               </p>
             </div>
             <Button onClick={() => router.push('/upload')} size="lg" className="gap-2 shadow-sm">

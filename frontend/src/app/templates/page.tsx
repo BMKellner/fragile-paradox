@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Check, ArrowRight, Sparkles, User, LayoutDashboard } from "lucide-react";
-import { PersonalInformation, ContactInfo, EducationInfo, OverviewData, ParsedResume } from "@/constants/ResumeFormat";
+import { ParsedResume } from "@/constants/ResumeFormat";
 import ModernMinimalistPortfolio from "@/components/PortfolioTemplates/ModernMinimalist";
 import ClassicProfessionalPortfolio from "@/components/PortfolioTemplates/ClassicProfessional";
 import CreativeBoldPortfolio from "@/components/PortfolioTemplates/CreativeBold";
@@ -50,7 +50,6 @@ const templates: Template[] = [
 
 // Preview component for each template
 const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }: { templateId: string; resumeData: ParsedResume | null; selectedColor?: string; displayMode?: 'default' | 'light' | 'dark' }) => {
-  const router = useRouter();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // derive simple background color from displayMode
