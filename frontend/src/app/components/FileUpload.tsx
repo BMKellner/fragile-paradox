@@ -46,7 +46,7 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
       formData.append("file", file);
 
       // Send to backend
-      const response = await fetch("http://localhost:8000/parse_resume/", {
+      const response = await fetch("http://localhost:8001/parse_resume/", {
         method: "POST",
         body: formData,
       });

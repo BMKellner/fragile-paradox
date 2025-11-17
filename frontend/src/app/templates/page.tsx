@@ -4,12 +4,15 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Eye, Check, ArrowRight, Sparkles, User, LayoutDashboard } from "lucide-react";
 
 interface Template {
   id: string;
   name: string;
   description: string;
-  preview: string;
   category: string;
 }
 
@@ -46,57 +49,52 @@ interface ResumeData {
 const templates: Template[] = [
   {
     id: 'modern-minimal',
-    name: '1',
+    name: 'Modern Minimal',
     description: 'Modern and minimalist design',
-    preview: '',
-    category: '1'
+    category: 'Professional'
   },
   {
-    id: '2',
-    name: '2',
+    id: 'classic',
+    name: 'Classic',
     description: 'Classic professional layout',
-    preview: '',
-    category: '2'
+    category: 'Traditional'
   },
   {
-    id: '3',
-    name: '3',
+    id: 'creative',
+    name: 'Creative',
     description: 'Creative and bold design',
-    preview: '',
-    category: '3'
+    category: 'Modern'
   },
   {
-    id: '4',
-    name: '4',
+    id: 'elegant',
+    name: 'Elegant',
     description: 'Elegant and sophisticated',
-    preview: '',
-    category: '4'
+    category: 'Premium'
   }
 ];
 
-// Preview component for each template
 const TemplatePreview = ({ templateId, resumeData }: { templateId: string; resumeData: ResumeData | null }) => {
-  const getPreviewContent = () => {
-    const data = resumeData?.personal_information || {};
-    const name = data.full_name || 'Your Name';
-    const email = data.contact_info?.email || 'your.email@example.com';
-    const sections = resumeData?.section_data || [];
+  const data = resumeData?.personal_information || {};
+  const name = data.full_name || 'Your Name';
+  const email = data.contact_info?.email || 'your.email@example.com';
+  const sections = resumeData?.section_data || [];
 
+  const getPreviewContent = () => {
     switch (templateId) {
       case 'modern-minimal':
         return (
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl">
-            <div className="text-center mb-8 pb-6 border-b-2 border-blue-500">
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">{name}</h1>
-              <p className="text-gray-600">{email}</p>
+          <div className="bg-card rounded-lg border p-8">
+            <div className="text-center mb-8 pb-6 border-b-2 border-primary">
+              <h1 className="text-3xl font-bold mb-2">{name}</h1>
+              <p className="text-muted-foreground">{email}</p>
             </div>
             <div className="space-y-6">
               {sections.slice(0, 2).map((section: SectionData, idx: number) => (
-                <div key={idx} className="mb-4">
-                  <h2 className="text-xl font-semibold text-gray-800 mb-2">{section.name}</h2>
-                  <ul className="list-disc list-inside text-gray-600 space-y-1">
+                <div key={idx}>
+                  <h2 className="text-xl font-semibold mb-2">{section.name}</h2>
+                  <ul className="list-disc list-inside text-muted-foreground space-y-1">
                     {section.items?.slice(0, 2).map((item: string, i: number) => (
-                      <li key={i}>{item}</li>
+                      <li key={i} className="text-sm">{item}</li>
                     ))}
                   </ul>
                 </div>
@@ -104,20 +102,20 @@ const TemplatePreview = ({ templateId, resumeData }: { templateId: string; resum
             </div>
           </div>
         );
-      case '2':
+      case 'classic':
         return (
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl">
-            <div className="border-l-4 border-indigo-500 pl-6 mb-6">
-              <h1 className="text-3xl font-bold text-gray-900 mb-1">{name}</h1>
-              <p className="text-indigo-600">{email}</p>
+          <div className="bg-card rounded-lg border p-8">
+            <div className="border-l-4 border-primary pl-6 mb-6">
+              <h1 className="text-2xl font-bold mb-1">{name}</h1>
+              <p className="text-primary">{email}</p>
             </div>
             <div className="grid grid-cols-2 gap-6">
               {sections.slice(0, 2).map((section: SectionData, idx: number) => (
                 <div key={idx}>
-                  <h2 className="text-lg font-semibold text-gray-800 mb-2 border-b border-gray-300 pb-1">
+                  <h2 className="text-lg font-semibold mb-2 border-b pb-1">
                     {section.name}
                   </h2>
-                  <ul className="text-sm text-gray-600 space-y-1">
+                  <ul className="text-sm text-muted-foreground space-y-1">
                     {section.items?.slice(0, 2).map((item: string, i: number) => (
                       <li key={i}>• {item}</li>
                     ))}
@@ -127,20 +125,20 @@ const TemplatePreview = ({ templateId, resumeData }: { templateId: string; resum
             </div>
           </div>
         );
-      case '3':
+      case 'creative':
         return (
-          <div className="bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg shadow-lg p-8 max-w-2xl">
+          <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950 rounded-lg border p-8">
             <div className="text-center mb-6">
-              <div className="inline-block bg-purple-600 text-white px-6 py-2 rounded-full mb-3">
-                <h1 className="text-2xl font-bold">{name}</h1>
+              <div className="inline-block bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-2 rounded-full mb-3">
+                <h1 className="text-xl font-bold">{name}</h1>
               </div>
-              <p className="text-gray-700">{email}</p>
+              <p className="text-foreground">{email}</p>
             </div>
             <div className="space-y-4">
               {sections.slice(0, 2).map((section: SectionData, idx: number) => (
-                <div key={idx} className="bg-white rounded-lg p-4 shadow-sm">
-                  <h2 className="text-lg font-bold text-purple-700 mb-2">{section.name}</h2>
-                  <div className="text-sm text-gray-600">
+                <div key={idx} className="bg-card rounded-lg p-4 shadow-sm">
+                  <h2 className="text-lg font-bold text-purple-700 dark:text-purple-400 mb-2">{section.name}</h2>
+                  <div className="text-sm text-muted-foreground">
                     {section.items?.slice(0, 2).map((item: string, i: number) => (
                       <div key={i} className="mb-1">→ {item}</div>
                     ))}
@@ -150,22 +148,22 @@ const TemplatePreview = ({ templateId, resumeData }: { templateId: string; resum
             </div>
           </div>
         );
-      case '4':
+      case 'elegant':
         return (
-          <div className="bg-white rounded-lg shadow-lg overflow-hidden max-w-2xl">
+          <div className="bg-card rounded-lg border overflow-hidden">
             <div className="bg-gradient-to-r from-gray-800 to-gray-700 text-white p-6">
-              <h1 className="text-3xl font-light mb-1">{name}</h1>
+              <h1 className="text-2xl font-light mb-1">{name}</h1>
               <p className="text-gray-300 text-sm">{email}</p>
             </div>
             <div className="p-6 space-y-5">
               {sections.slice(0, 2).map((section: SectionData, idx: number) => (
                 <div key={idx} className="border-l-2 border-gray-400 pl-4">
-                  <h2 className="text-lg font-medium text-gray-800 mb-2 uppercase tracking-wide">
+                  <h2 className="text-lg font-medium mb-2 uppercase tracking-wide">
                     {section.name}
                   </h2>
-                  <ul className="text-sm text-gray-600 space-y-1">
+                  <ul className="text-sm text-muted-foreground space-y-1">
                     {section.items?.slice(0, 2).map((item: string, i: number) => (
-                      <li key={i} className="text-gray-700">{item}</li>
+                      <li key={i}>{item}</li>
                     ))}
                   </ul>
                 </div>
@@ -175,20 +173,30 @@ const TemplatePreview = ({ templateId, resumeData }: { templateId: string; resum
         );
       default:
         return (
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl text-center">
-            <p className="text-gray-600">Preview for {templateId}</p>
+          <div className="bg-card rounded-lg border p-8 text-center">
+            <p className="text-muted-foreground">Preview for {templateId}</p>
           </div>
         );
     }
   };
 
   return (
-    <div className="bg-white rounded-xl shadow-2xl p-6 border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Template Preview</h3>
-      <div className="overflow-auto max-h-96">
-        {getPreviewContent()}
-      </div>
-    </div>
+    <Card className="border-2">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Eye className="w-5 h-5" />
+          Template Preview
+        </CardTitle>
+        <CardDescription>
+          This is how your portfolio will look with this template
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-auto max-h-[600px] rounded-lg">
+          {getPreviewContent()}
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 
@@ -199,13 +207,15 @@ export default function TemplatesPage() {
   const info = useUser();
   const session = createClient();
 
+  const handleNavigation = (path: string) => {
+    router.push(path);
+  };
+
   useEffect(() => {
-    // Get resume data from localStorage
     const storedData = localStorage.getItem('resumeData');
     if (storedData) {
       setResumeData(JSON.parse(storedData));
     } else {
-      // No resume data, redirect back to upload
       router.push('/upload');
     }
   }, [router]);
@@ -228,8 +238,8 @@ export default function TemplatesPage() {
 
   if (info.loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="spinner w-8 h-8"></div>
       </div>
     );
   }
@@ -241,101 +251,156 @@ export default function TemplatesPage() {
 
   if (!resumeData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">No resume data found. Please upload your resume first.</p>
-          <button 
-            onClick={() => router.push('/upload')}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Upload Resume
-          </button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>No Resume Data Found</CardTitle>
+            <CardDescription>Please upload your resume first.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => router.push('/upload')} className="w-full">
+              Upload Resume
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-16">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="max-w-6xl mx-auto px-6 mb-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Choose Your Template</h1>
-            <p className="text-gray-600 mt-2">Select a design that best represents your professional style</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700">Welcome, {info.user.email}</span>
-            <button 
-              onClick={handleSignOut}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Sign Out
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Templates Grid */}
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Template Cards - Left Side */}
-          <div className="lg:col-span-1">
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
-              {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className={`bg-white rounded-xl shadow-lg p-6 cursor-pointer transition-all duration-200 ${
-                    selectedTemplate === template.id
-                      ? 'ring-2 ring-blue-500 shadow-xl scale-105'
-                      : 'hover:shadow-xl hover:scale-105'
-                  }`}
-                  onClick={() => handleTemplateSelect(template.id)}
+      <header className="bg-background border-b sticky top-0 z-50">
+        <div className="container-base">
+          <div className="flex items-center justify-between py-4">
+            {/* Left side - Logo */}
+            <div className="flex items-center gap-8">
+              <div>
+                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+              </div>
+              
+              {/* Navigation Tabs */}
+              <nav className="hidden md:flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  className="gap-2"
+                  onClick={() => handleNavigation('/dashboard')}
                 >
-                  <div className="text-4xl lg:text-5xl font-bold text-center mb-3 text-gray-700">
-                    {template.name}
-                  </div>
-                  <p className="text-gray-600 text-sm mb-2 text-center">{template.description}</p>
-                  <div className="text-xs text-blue-600 font-medium text-center">{template.category}</div>
-                </div>
-              ))}
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="gap-2"
+                  onClick={() => handleNavigation('/profile')}
+                >
+                  <User className="w-4 h-4" />
+                  Profile
+                </Button>
+              </nav>
             </div>
 
-            {/* Generate Button */}
-            <div className="mt-6 text-center">
-              <button
+            {/* Right side - User info and actions */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-3 h-3 text-primary" />
+                </div>
+                <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
+              </div>
+              <Button onClick={handleSignOut} variant="outline" size="sm">
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="py-12">
+        <div className="container-base max-w-7xl">
+          <div className="text-center mb-8">
+            <Badge className="mb-4" variant="secondary">
+              <Sparkles className="w-3 h-3 mr-1" />
+              Step 2 of 3
+            </Badge>
+            <h2 className="text-3xl font-bold mb-2">Choose Your Template</h2>
+            <p className="text-muted-foreground">
+              Select a design that best represents your professional style
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Template Selection - Left */}
+            <div className="lg:col-span-1 space-y-6">
+              <div className="space-y-4">
+                {templates.map((template) => (
+                  <Card
+                    key={template.id}
+                    className={`cursor-pointer transition-all hover:shadow-lg ${
+                      selectedTemplate === template.id
+                        ? 'ring-2 ring-primary shadow-lg'
+                        : ''
+                    }`}
+                    onClick={() => handleTemplateSelect(template.id)}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="flex items-center gap-2">
+                            {template.name}
+                            {selectedTemplate === template.id && (
+                              <Check className="w-5 h-5 text-primary" />
+                            )}
+                          </CardTitle>
+                          <CardDescription>{template.description}</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <Badge variant="secondary">{template.category}</Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Generate Button */}
+              <Button
                 onClick={handleGenerateWebsite}
                 disabled={!selectedTemplate}
-                className={`w-full px-8 py-4 rounded-lg font-medium text-white transition-all duration-200 ${
-                  selectedTemplate
-                    ? 'bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-200'
-                    : 'bg-gray-400 cursor-not-allowed'
-                }`}
+                className="w-full"
+                size="lg"
               >
-                {selectedTemplate ? 'Generate My Website' : 'Select a Template First'}
-              </button>
+                {selectedTemplate ? (
+                  <>
+                    Generate My Website
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                ) : (
+                  'Select a Template First'
+                )}
+              </Button>
+            </div>
+
+            {/* Preview - Right */}
+            <div className="lg:col-span-2">
+              {selectedTemplate ? (
+                <TemplatePreview templateId={selectedTemplate} resumeData={resumeData} />
+              ) : (
+                <Card className="border-2 border-dashed">
+                  <CardContent className="flex flex-col items-center justify-center py-24">
+                    <Eye className="w-16 h-16 text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Select a Template</h3>
+                    <p className="text-muted-foreground text-center">
+                      Click on a template card to see a preview
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
-
-          {/* Preview Panel - Right Side */}
-          <div className="lg:col-span-2">
-            {selectedTemplate ? (
-              <TemplatePreview templateId={selectedTemplate} resumeData={resumeData} />
-            ) : (
-              <div className="bg-white rounded-xl shadow-lg p-12 border-2 border-dashed border-gray-300 text-center">
-                <div className="text-gray-400 mb-4">
-                  <svg className="mx-auto h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">Select a Template</h3>
-                <p className="text-gray-500">Click on a template card to see a preview</p>
-              </div>
-            )}
-          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
