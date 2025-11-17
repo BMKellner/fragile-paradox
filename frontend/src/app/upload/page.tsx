@@ -1,16 +1,17 @@
 'use client';
 
 import { useRouter } from "next/navigation";
-import FileUpload from "@/components/FileUpload";
+import FileUpload from "@/components/ResumeHandling/FileUpload";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
+import { ParsedResume } from "@/constants/ResumeFormat";
 
 export default function UploadPage() {
   const router = useRouter();
   const info = useUser();
   const session = createClient();
 
-  const handleUploadComplete = (data: object) => {
+  const handleUploadComplete = (data: ParsedResume) => {
     localStorage.setItem('resumeData', JSON.stringify(data));
     router.push('/templates');
   };

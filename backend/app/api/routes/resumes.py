@@ -58,6 +58,7 @@ async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)
             model="gpt-4o",
             input=[
                 {"role": "system", "content": "You are a resume parser that outputs JSON only."},
+                {"role": "system", "content": "if nothing is parsed for the overview section, automatically generate only the overview, and leave career_name empty"},
                 {"role": "user", "content": f"""
                     Parse this resume text: {text}
                  """}
