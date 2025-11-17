@@ -4,7 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
-import { PersonalInformation, ContactInfo, EducationInfo, OverviewData, ParsedResume } from "@/constants/ResumeFormat";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Eye, Check, ArrowRight, Sparkles, User, LayoutDashboard } from "lucide-react";
+import { ParsedResume } from "@/constants/ResumeFormat";
 import ModernMinimalistPortfolio from "@/components/PortfolioTemplates/ModernMinimalist";
 import ClassicProfessionalPortfolio from "@/components/PortfolioTemplates/ClassicProfessional";
 import CreativeBoldPortfolio from "@/components/PortfolioTemplates/CreativeBold";
@@ -14,44 +18,38 @@ interface Template {
   id: string;
   name: string;
   description: string;
-  preview: string;
   category: string;
 }
 
 const templates: Template[] = [
   {
     id: '1',
-    name: '1',
+    name: 'Modern Minimal',
     description: 'Modern and minimalist design',
-    preview: '',
-    category: '1'
+    category: 'Professional'
   },
   {
     id: '2',
-    name: '2',
+    name: 'Classic Professional',
     description: 'Classic professional layout',
-    preview: '',
-    category: '2'
+    category: 'Traditional'
   },
   {
     id: '3',
-    name: '3',
+    name: 'Creative Bold',
     description: 'Creative and bold design',
-    preview: '',
-    category: '3'
+    category: 'Modern'
   },
   {
     id: '4',
-    name: '4',
+    name: 'Elegant Sophisticated',
     description: 'Elegant and sophisticated',
-    preview: '',
-    category: '4'
+    category: 'Premium'
   }
 ];
 
 // Preview component for each template
 const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }: { templateId: string; resumeData: ParsedResume | null; selectedColor?: string; displayMode?: 'default' | 'light' | 'dark' }) => {
-  const router = useRouter();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // derive simple background color from displayMode
@@ -88,54 +86,6 @@ const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }:
   const projects_data = resumeData?.projects
   const experience_data = resumeData?.experience
   const skills_data = resumeData?.skills
-
-  // derive a small uniform structure for previews from ParsedResume
-  const name = resumeData?.personal_information?.full_name
-    || resumeData?.personal_information?.full_name
-    || 'Your Name';
-
-  const email = resumeData?.personal_information?.contact_info?.email
-    || '';
-
-  type SectionData = { name: string; items?: string[] };
-
-  const sections: SectionData[] = [];
-
-  // Overview / summary
-  if (resumeData?.overview) {
-    const overviewSummary = (resumeData.overview as any).summary || (resumeData.overview as any).text;
-    if (overviewSummary) sections.push({ name: 'Overview', items: [overviewSummary] });
-    if ((resumeData.overview as any).highlights && Array.isArray((resumeData.overview as any).highlights)) {
-      sections.push({ name: 'Highlights', items: (resumeData.overview as any).highlights });
-    }
-  }
-
-  // Skills
-  if ((resumeData as any).skills && Array.isArray((resumeData as any).skills) && (resumeData as any).skills.length) {
-    sections.push({ name: 'Skills', items: (resumeData as any).skills });
-  }
-
-  // Experience
-  if ((resumeData as any).experience && Array.isArray((resumeData as any).experience)) {
-    const items = (resumeData as any).experience.slice(0, 3).map((exp: any) => {
-      const title = exp.title || exp.position || '';
-      const company = exp.company || exp.employer || '';
-      const period = (exp.start && exp.end) ? `${exp.start} - ${exp.end}` : exp.period || '';
-      return [title, company, period].filter(Boolean).join(' · ');
-    });
-    if (items.length) sections.push({ name: 'Experience', items });
-  }
-
-  // Education
-  if (resumeData?.personal_information?.education && Array.isArray(resumeData.personal_information.education)) {
-    const items = resumeData.personal_information.education.slice(0, 3).map((edu: any) => {
-      const degree = edu.degree || edu.program || '';
-      const school = edu.institution || edu.school || '';
-      const year = edu.year || edu.graduation || '';
-      return [degree, school, year].filter(Boolean).join(' · ');
-    });
-    if (items.length) sections.push({ name: 'Education', items });
-  }
 
   const getPreviewContent = () => {
     switch (templateId) {
@@ -183,42 +133,45 @@ const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }:
          />
       default:
         return (
-          <div className="bg-white rounded-lg shadow-lg p-8 max-w-2xl text-center">
-            <p className="text-gray-600">Preview for {templateId}</p>
+          <div className="bg-card rounded-lg border p-8 text-center">
+            <p className="text-muted-foreground">Preview for {templateId}</p>
           </div>
         );
     }
   };
 
   return (
-    <>
-      <div className="relative bg-white rounded-xl shadow-2xl p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Template Preview</h3>
-
-        {/* Fullscreen button — top-right */}
-        <div className="absolute top-4 right-4">
-          <button
-            aria-label="Open fullscreen preview"
-            title="Open fullscreen preview"
-            onClick={() => {
-              // keep selected template & color available if user decides to open full page
-              if (templateId) localStorage.setItem('selectedTemplate', templateId);
-              if (selectedColor) localStorage.setItem('selectedColor', selectedColor);
-              if (displayMode) localStorage.setItem('selectedMode', displayMode);
-              setIsFullscreen(true);
-            }}
-            className="inline-flex items-center justify-center p-2 rounded-md bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 110 2H5v2a1 1 0 11-2 0V4zM17 4a1 1 0 00-1-1h-3a1 1 0 100 2h2v2a1 1 0 102 0V4zM4 16a1 1 0 011 1h3a1 1 0 110 2H5a3 3 0 01-3-3v-1a1 1 0 012 0v1zM16 17a1 1 0 100-2h-2v-1a1 1 0 10-2 0v1a3 3 0 003 3h1a1 1 0 100-2h-1z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="overflow-auto max-h-96">
+    <Card className="border-2">
+      <CardHeader className="relative">
+        <CardTitle className="flex items-center gap-2">
+          <Eye className="w-5 h-5" />
+          Template Preview
+        </CardTitle>
+        <CardDescription>
+          This is how your portfolio will look with this template
+        </CardDescription>
+        {/* Fullscreen button */}
+        <button
+          aria-label="Open fullscreen preview"
+          title="Open fullscreen preview"
+          onClick={() => {
+            if (templateId) localStorage.setItem('selectedTemplate', templateId);
+            if (selectedColor) localStorage.setItem('selectedColor', selectedColor);
+            if (displayMode) localStorage.setItem('selectedMode', displayMode);
+            setIsFullscreen(true);
+          }}
+          className="absolute top-4 right-4 inline-flex items-center justify-center p-2 rounded-md bg-background border shadow-sm hover:bg-accent"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 110 2H5v2a1 1 0 11-2 0V4zM17 4a1 1 0 00-1-1h-3a1 1 0 100 2h2v2a1 1 0 102 0V4zM4 16a1 1 0 011 1h3a1 1 0 110 2H5a3 3 0 01-3-3v-1a1 1 0 012 0v1zM16 17a1 1 0 100-2h-2v-1a1 1 0 10-2 0v1a3 3 0 003 3h1a1 1 0 100-2h-1z" clipRule="evenodd" />
+          </svg>
+        </button>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-auto max-h-[600px] rounded-lg">
           {getPreviewContent()}
         </div>
-      </div>
+      </CardContent>
 
       {/* Full-window overlay preview */}
       {isFullscreen && (
@@ -229,30 +182,28 @@ const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }:
           onClick={() => setIsFullscreen(false)}
         >
           <div
-            className="relative w-full h-full max-w-6xl bg-white rounded-lg overflow-auto shadow-2xl"
+            className="relative w-full h-full max-w-6xl bg-background rounded-lg overflow-auto shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close / full-page controls */}
             <div className="absolute top-4 right-4 flex items-center space-x-2 z-60">
               <button
                 aria-label="Close fullscreen preview"
                 title="Close fullscreen preview"
                 onClick={() => setIsFullscreen(false)}
-                className="p-2 rounded-md bg-white border border-gray-200 shadow-sm hover:bg-gray-50"
+                className="p-2 rounded-md bg-background border shadow-sm hover:bg-accent"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-700" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                 </svg>
               </button>
             </div>
-
             <div className="p-8">
               {getPreviewContent()}
             </div>
           </div>
         </div>
       )}
-    </>
+    </Card>
   );
 };
 
@@ -265,8 +216,11 @@ export default function TemplatesPage() {
   const info = useUser();
   const session = createClient();
 
+  const handleNavigation = (path: string) => {
+    router.push(path);
+  };
+
   useEffect(() => {
-    // Get resume data from localStorage
     const storedData = localStorage.getItem('resumeData');
     if (storedData) {
       try {
@@ -276,7 +230,6 @@ export default function TemplatesPage() {
         router.push('/upload');
       }
     } else {
-      // No resume data, redirect back to upload
       router.push('/upload');
     }
 
@@ -308,8 +261,8 @@ export default function TemplatesPage() {
 
   if (info.loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="spinner w-8 h-8"></div>
       </div>
     );
   }
@@ -321,16 +274,18 @@ export default function TemplatesPage() {
 
   if (!resumeData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">No resume data found. Please upload your resume first.</p>
-          <button 
-            onClick={() => router.push('/upload')}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Upload Resume
-          </button>
-        </div>
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>No Resume Data Found</CardTitle>
+            <CardDescription>Please upload your resume first.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => router.push('/upload')} className="w-full">
+              Upload Resume
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -345,138 +300,197 @@ export default function TemplatesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-16">
+    <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="max-w-6xl mx-auto px-6 mb-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Choose Your Template</h1>
-            <p className="text-gray-600 mt-2">Select a design that best represents your professional style</p>
-
-            {/* Color picker - new */}
-            <div className="mt-4 flex items-center space-x-4">
-              <span className="text-gray-700 text-sm">Choose a color:</span>
-              <div className="flex items-center space-x-2">
-                {colorOptions.map((c) => (
-                  <button
-                    key={c.id}
-                    aria-label={`Choose ${c.label}`}
-                    title={c.label}
-                    onClick={() => {
-                      setSelectedColor(c.value);
-                      localStorage.setItem('selectedColor', c.value);
-                    }}
-                    className={`w-8 h-8 rounded-full border-2 ${
-                      selectedColor === c.value ? 'ring-2 ring-offset-1 ring-gray-200' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: c.value }}
-                  />
-                ))}
-                <button
-                  aria-label="Clear color"
-                  title="Clear color"
-                  onClick={() => {
-                    setSelectedColor(undefined);
-                    localStorage.removeItem('selectedColor');
-                  }}
-                  className="ml-2 text-xs px-2 py-1 bg-white border rounded-md text-gray-600 hover:bg-gray-50"
+      <header className="bg-background border-b sticky top-0 z-50">
+        <div className="container-base">
+          <div className="flex items-center justify-between py-4">
+            {/* Left side - Logo */}
+            <div className="flex items-center gap-8">
+              <div>
+                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+              </div>
+              
+              {/* Navigation Tabs */}
+              <nav className="hidden md:flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  className="gap-2"
+                  onClick={() => handleNavigation('/dashboard')}
                 >
-                  None
-                </button>
-              </div>
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="gap-2"
+                  onClick={() => handleNavigation('/profile')}
+                >
+                  <User className="w-4 h-4" />
+                  Profile
+                </Button>
+              </nav>
             </div>
-            {/* Display mode selector (default/light/dark) */}
-            <div className="mt-3 flex items-center space-x-3">
-              <span className="text-gray-700 text-sm">Display:</span>
-              <div className="inline-flex rounded-md shadow-sm" role="tablist" aria-label="Display mode">
-                {(['default','light','dark'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => {
-                      setDisplayMode(mode);
-                      if (mode === 'default') localStorage.removeItem('selectedMode'); else localStorage.setItem('selectedMode', mode);
-                    }}
-                    className={`px-3 py-1 text-sm border ${displayMode === mode ? 'bg-gray-100' : 'bg-white'} rounded-md`}
-                    aria-pressed={displayMode === mode}
-                  >
-                    {mode[0].toUpperCase() + mode.slice(1)}
-                  </button>
-                ))}
+
+            {/* Right side - User info and actions */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-3 h-3 text-primary" />
+                </div>
+                <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
               </div>
+              <Button onClick={handleSignOut} variant="outline" size="sm">
+                Sign Out
+              </Button>
             </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700">Welcome, {info.user.email}</span>
-            <button 
-              onClick={handleSignOut}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Sign Out
-            </button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Templates Grid */}
-      <div className="max-w-7xl mx-auto px-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Template Cards - Left Side */}
-          <div className="lg:col-span-1">
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-4">
-              {templates.map((template) => (
-                <div
-                  key={template.id}
-                  className={`bg-white rounded-xl shadow-lg p-6 cursor-pointer transition-all duration-200 ${
-                    selectedTemplate === template.id
-                      ? 'ring-2 ring-blue-500 shadow-xl scale-105'
-                      : 'hover:shadow-xl hover:scale-105'
-                  }`}
-                  onClick={() => handleTemplateSelect(template.id)}
-                >
-                  <div className="text-4xl lg:text-5xl font-bold text-center mb-3 text-gray-700">
-                    {template.name}
-                  </div>
-                  <p className="text-gray-600 text-sm mb-2 text-center">{template.description}</p>
-                  <div className="text-xs text-blue-600 font-medium text-center">{template.category}</div>
+      {/* Main Content */}
+      <main className="py-12">
+        <div className="container-base max-w-7xl">
+          <div className="text-center mb-8">
+            <Badge className="mb-4" variant="secondary">
+              <Sparkles className="w-3 h-3 mr-1" />
+              Step 2 of 3
+            </Badge>
+            <h2 className="text-3xl font-bold mb-2">Choose Your Template</h2>
+            <p className="text-muted-foreground mb-4">
+              Select a design that best represents your professional style
+            </p>
+            
+            {/* Customization Options */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-6">
+              {/* Color picker */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium">Color:</span>
+                <div className="flex items-center gap-2">
+                  {colorOptions.map((c) => (
+                    <button
+                      key={c.id}
+                      aria-label={`Choose ${c.label}`}
+                      title={c.label}
+                      onClick={() => {
+                        setSelectedColor(c.value);
+                        localStorage.setItem('selectedColor', c.value);
+                      }}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        selectedColor === c.value ? 'ring-2 ring-offset-2 ring-primary scale-110' : 'border-muted hover:scale-110'
+                      }`}
+                      style={{ backgroundColor: c.value }}
+                    />
+                  ))}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedColor(undefined);
+                      localStorage.removeItem('selectedColor');
+                    }}
+                    className="ml-2 h-8 text-xs"
+                  >
+                    Clear
+                  </Button>
                 </div>
-              ))}
+              </div>
+              
+              {/* Display mode selector */}
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium">Display:</span>
+                <div className="inline-flex rounded-md shadow-sm" role="tablist" aria-label="Display mode">
+                  {(['default','light','dark'] as const).map((mode) => (
+                    <Button
+                      key={mode}
+                      variant={displayMode === mode ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => {
+                        setDisplayMode(mode);
+                        if (mode === 'default') localStorage.removeItem('selectedMode'); 
+                        else localStorage.setItem('selectedMode', mode);
+                      }}
+                      className="rounded-none first:rounded-l-md last:rounded-r-md"
+                    >
+                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
             </div>
+          </div>
 
-            {/* Generate Button */}
-            <div className="mt-6 text-center">
-              <button
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* Template Selection - Left */}
+            <div className="lg:col-span-1 space-y-6">
+              <div className="space-y-4">
+                {templates.map((template) => (
+                  <Card
+                    key={template.id}
+                    className={`cursor-pointer transition-all hover:shadow-lg ${
+                      selectedTemplate === template.id
+                        ? 'ring-2 ring-primary shadow-lg'
+                        : ''
+                    }`}
+                    onClick={() => handleTemplateSelect(template.id)}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="flex items-center gap-2">
+                            {template.name}
+                            {selectedTemplate === template.id && (
+                              <Check className="w-5 h-5 text-primary" />
+                            )}
+                          </CardTitle>
+                          <CardDescription>{template.description}</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <Badge variant="secondary">{template.category}</Badge>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              {/* Generate Button */}
+              <Button
                 onClick={handleGenerateWebsite}
                 disabled={!selectedTemplate}
-                className={`w-full px-8 py-4 rounded-lg font-medium text-white transition-all duration-200 ${
-                  selectedTemplate
-                    ? 'bg-blue-600 hover:bg-blue-700 focus:ring-4 focus:ring-blue-200'
-                    : 'bg-gray-400 cursor-not-allowed'
-                }`}
+                className="w-full"
+                size="lg"
               >
-                {selectedTemplate ? 'Generate My Website' : 'Select a Template First'}
-              </button>
+                {selectedTemplate ? (
+                  <>
+                    Generate My Website
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                ) : (
+                  'Select a Template First'
+                )}
+              </Button>
+            </div>
+
+            {/* Preview - Right */}
+            <div className="lg:col-span-2">
+              {selectedTemplate ? (
+                <TemplatePreview templateId={selectedTemplate} resumeData={resumeData} selectedColor={selectedColor} displayMode={displayMode} />
+              ) : (
+                <Card className="border-2 border-dashed">
+                  <CardContent className="flex flex-col items-center justify-center py-24">
+                    <Eye className="w-16 h-16 text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Select a Template</h3>
+                    <p className="text-muted-foreground text-center">
+                      Click on a template card to see a preview
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
-
-          {/* Preview Panel - Right Side */}
-          <div className="lg:col-span-2">
-            {selectedTemplate ? (
-              <TemplatePreview templateId={selectedTemplate} resumeData={resumeData} selectedColor={selectedColor} displayMode={displayMode} />
-            ) : (
-              <div className="bg-white rounded-xl shadow-lg p-12 border-2 border-dashed border-gray-300 text-center">
-                <div className="text-gray-400 mb-4">
-                  <svg className="mx-auto h-16 w-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">Select a Template</h3>
-                <p className="text-gray-500">Click on a template card to see a preview</p>
-              </div>
-            )}
-          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
