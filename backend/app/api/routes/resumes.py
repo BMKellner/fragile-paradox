@@ -84,7 +84,7 @@ async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)
         supabase = get_supabase_client()
 
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        path = f"{user.id}/{timestamp}_{file.filename}"
+        path = f"{user.id}/resumes/{timestamp}_{file.filename}"
 
         # Upload to supabase bucket
         response = supabase.storage.from_("users").upload(path, contents)

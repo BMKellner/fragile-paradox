@@ -50,7 +50,7 @@ export default function FileUpload({ onUploadComplete, onError }: FileUploadProp
       // Send to backend
       const supabase = createClient()
       const session = await supabase.auth.getSession()
-      const response = await fetch('http://localhost:8000/supabase/upload_resume', {
+      const response = await fetch('http://localhost:8000/resumes', {
         method: 'POST',
         headers: {
           "Authorization": `Bearer ${session.data.session?.access_token}`

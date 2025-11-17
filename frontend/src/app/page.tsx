@@ -27,6 +27,7 @@ export default function Home() {
     }
   }, [info.loading, info.user, router]);
 
+
   const handleUploadComplete = (data: object) => {
     // store the parsed resume so the next route can read it
     try {

@@ -20,7 +20,7 @@ async def upload_pfp(file: UploadFile = File(...), user=Depends(verify_token)):
         supabase = get_supabase_client()
 
 
-        path = f"{user.id}/profile_picture"
+        path = f"{user.id}/profile/profile_picture"
         response = (
             supabase.storage
             .from_("users")
