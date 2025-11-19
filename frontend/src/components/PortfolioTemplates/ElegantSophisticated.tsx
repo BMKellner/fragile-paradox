@@ -11,8 +11,8 @@ type Props = {
   projects?: Project[];
   experience?: Experience[];
   skills?: string[];
-  mainColor?: string;
-  backgroundColor?: string; // optional so component can load from localStorage
+  mainColor: string;
+  backgroundColor: string; // optional so component can load from localStorage
 };
 
 const tabs = ["Overview", "About", "Projects", "Skills", "Experience"] as const;
@@ -21,9 +21,9 @@ type TabKey = typeof tabs[number];
 export default function ElegantSophisticatedPortfolio({ personalInformation, overviewData, projects, experience, skills, mainColor, backgroundColor }: Props) {
   // Theme & background colors (derived from props). Setters removed — colors come from parent props.
   // Elegant gold accent by default, with deep navy gradient background.
-  const color = mainColor || "#b8860b";
+  const color = mainColor;
   // Page background: dark navy gradient for sophistication.
-  const background_color = backgroundColor || "linear-gradient(180deg,#071024 0%, #0f172a 100%)";
+  const background_color = backgroundColor;
 
   const [active, setActive] = useState<TabKey>("Overview");
 

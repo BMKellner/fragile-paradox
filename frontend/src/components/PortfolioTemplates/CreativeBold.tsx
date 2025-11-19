@@ -11,8 +11,8 @@ type Props = {
   projects?: Project[];
   experience?: Experience[];
   skills?: string[];
-  mainColor?: string;
-  backgroundColor?: string; // optional so component can load from localStorage
+  mainColor: string;
+  backgroundColor: string; // optional so component can load from localStorage
 };
 
 const tabs = ["Overview", "About", "Projects", "Skills", "Experience"] as const;
@@ -20,8 +20,8 @@ type TabKey = typeof tabs[number];
 
 export default function CreativeBoldPortfolio({ personalInformation, overviewData, projects, experience, skills, mainColor, backgroundColor }: Props) {
   // Theme & background colors (derived from props)
-  const color = mainColor || "#FF4D6D"; // bolder default accent
-  const background_color = backgroundColor || "#0b1020"; // darker creative background
+  const color = mainColor; // bolder default accent
+  const background_color = backgroundColor; // darker creative background
 
   const [active, setActive] = useState<TabKey>("Overview");
 
