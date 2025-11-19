@@ -4,10 +4,15 @@ from app.core.supabase_client import get_supabase_client
 from app.core.config import Settings
 
 
-router = APIRouter(prefix="/pfp", tags=["pfp"])
+router = APIRouter(prefix="/user", tags=["users"])
 settings = Settings()  # type: ignore
 
-@router.post("/")
+@router.get("/")
+async def read_user(user=Depends(verify_token)):
+    """Endpoint to read user info"""
+    return {"user_id": user.id, "email": user.email}
+
+@router.post("/pfp")
 async def upload_pfp(file: UploadFile = File(...), user=Depends(verify_token)):
     """Endpoint to upload profile picture to Supabase Storage"""
 
@@ -38,7 +43,7 @@ async def upload_pfp(file: UploadFile = File(...), user=Depends(verify_token)):
     except Exception as e:
         return {"error": f"Supabase error: {str(e)}"}
 
-@router.get("/")
+@router.get("/pfp")
 async def get_pfp(user=Depends(verify_token)):
     """Endpoint to get profile picture from Supabase Storage"""
 

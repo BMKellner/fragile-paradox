@@ -395,7 +395,7 @@ function adjustAlpha(hex: string, alpha: number) {
       const b = parseInt(h.slice(4, 6), 16);
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     }
-  } catch (e) {
+  } catch {
     // fallback
   }
   return hex;
