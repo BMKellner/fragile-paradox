@@ -430,7 +430,5 @@ export default function TemplatesPage() {
             </div>
           </div>
         </div>
-      </main>
-    </div>
   );
 }
