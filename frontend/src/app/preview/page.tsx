@@ -20,7 +20,7 @@ import ElegantSophisticatedPortfolio from "@/components/PortfolioTemplates/Elega
 //          backgroundColor={backgroundColor}
 
 // Full template render component
-const FullTemplateRender = ({ templateId, resumeData, mainColor, backgroundColor }: { templateId: string; resumeData: ParsedResume; mainColor?: string; backgroundColor?: string }) => {
+const FullTemplateRender = ({ templateId, resumeData, mainColor, backgroundColor }: { templateId: string; resumeData: ParsedResume; mainColor: string; backgroundColor: string }) => {
 
   const personal_information = resumeData.personal_information;
   const overview_data = resumeData.overview;
@@ -67,7 +67,8 @@ const FullTemplateRender = ({ templateId, resumeData, mainColor, backgroundColor
       );
     case '4':
       return (
-        <ElegantSophisticatedPortfolio
+        <div className={`bg-${backgroundColor}`}>
+          <ElegantSophisticatedPortfolio
           personalInformation={personal_information}
           overviewData={overview_data}
           experience={experience_data}
@@ -76,6 +77,7 @@ const FullTemplateRender = ({ templateId, resumeData, mainColor, backgroundColor
           mainColor={mainColor}
           backgroundColor={backgroundColor}
         />
+        </div>
       );
     default:
       return (
@@ -89,8 +91,8 @@ const FullTemplateRender = ({ templateId, resumeData, mainColor, backgroundColor
 export default function PreviewPage() {
   const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
-  const [mainColor, setMainColor] = useState<string | undefined>();
-  const [backgroundColor, setBackgroundColor] = useState<string | undefined>();
+  const [mainColor, setMainColor] = useState<string>('#2563EB');
+  const [backgroundColor, setBackgroundColor] = useState<string>('#F8FAFC');
   const [isGenerating, setIsGenerating] = useState(true);
   const router = useRouter();
   const info = useUser();
@@ -110,19 +112,17 @@ export default function PreviewPage() {
       setSelectedTemplate(storedTemplate);
     }
 
-    if (storedColor) {
-      setMainColor(storedColor);
-    }
+    setMainColor(storedColor || '#2563EB');
+    setBackgroundColor(storedMode === 'light' ? '#F8FAFC' : '#0B1220');
 
-    if (storedMode) {
-      setBackgroundColor(storedMode);
-    }
 
     // Simulate website generation
     setTimeout(() => {
       setIsGenerating(false);
     }, 2000);
   }, []);
+
+
 
   const handleSignOut = async () => {
     await session.auth.signOut();

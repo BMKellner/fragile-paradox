@@ -50,16 +50,14 @@ const templates: Template[] = [
 ];
 
 // Preview component for each template
-const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }: { templateId: string; resumeData: ParsedResume | null; selectedColor?: string; displayMode?: 'default' | 'light' | 'dark' }) => {
+const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }: { templateId: string; resumeData: ParsedResume | null; selectedColor: string; displayMode?: 'light' | 'dark' }) => {
   const router = useRouter();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // derive simple background color from displayMode
   const backgroundColor = displayMode === 'light'
     ? '#F8FAFC'        // nice light background (tailwind gray-50-ish)
-    : displayMode === 'dark'
-    ? '#0B1220'        // nice dark background
-    : undefined;       // default -> let component use its default
+    : '#0B1220'     // nice dark background  
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -259,8 +257,8 @@ const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }:
 export default function TemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
-  const [displayMode, setDisplayMode] = useState<'default' | 'light' | 'dark'>('default');
+  const [selectedColor, setSelectedColor] = useState<string>('#2563EB');
+  const [displayMode, setDisplayMode] = useState<'light' | 'dark'>('light');
   const router = useRouter();
   const info = useUser();
   const session = createClient();
@@ -284,7 +282,7 @@ export default function TemplatesPage() {
     const storedColor = localStorage.getItem('selectedColor');
     if (storedColor) setSelectedColor(storedColor);
     // load previously chosen display mode
-    const storedMode = localStorage.getItem('selectedMode') as ('default'|'light'|'dark') | null;
+    const storedMode = localStorage.getItem('selectedMode') as ('light'|'dark') | null;
     if (storedMode) setDisplayMode(storedMode);
   }, [router]);
 
@@ -372,29 +370,18 @@ export default function TemplatesPage() {
                     style={{ backgroundColor: c.value }}
                   />
                 ))}
-                <button
-                  aria-label="Clear color"
-                  title="Clear color"
-                  onClick={() => {
-                    setSelectedColor(undefined);
-                    localStorage.removeItem('selectedColor');
-                  }}
-                  className="ml-2 text-xs px-2 py-1 bg-white border rounded-md text-gray-600 hover:bg-gray-50"
-                >
-                  None
-                </button>
               </div>
             </div>
             {/* Display mode selector (default/light/dark) */}
             <div className="mt-3 flex items-center space-x-3">
               <span className="text-gray-700 text-sm">Display:</span>
               <div className="inline-flex rounded-md shadow-sm" role="tablist" aria-label="Display mode">
-                {(['default','light','dark'] as const).map((mode) => (
+                {(['light','dark'] as const).map((mode) => (
                   <button
                     key={mode}
                     onClick={() => {
                       setDisplayMode(mode);
-                      if (mode === 'default') localStorage.removeItem('selectedMode'); else localStorage.setItem('selectedMode', mode);
+                      localStorage.setItem('selectedMode', mode);
                     }}
                     className={`px-3 py-1 text-sm border ${displayMode === mode ? 'bg-gray-100' : 'bg-white'} rounded-md`}
                     aria-pressed={displayMode === mode}

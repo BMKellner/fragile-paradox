@@ -11,16 +11,16 @@ type Props = {
   projects?: Project[];
   experience?: Experience[];
   skills?: string[];
-  mainColor?: string;
-  backgroundColor?: string; // optional so component can load from localStorage
+  mainColor: string;
+  backgroundColor: string; // optional so component can load from localStorage
 };
 
 const tabs = ["Overview", "About", "Projects", "Skills", "Experience"] as const;
 type TabKey = typeof tabs[number];
 
 export default function ModernMinimalistPortfolio({ personalInformation, overviewData, projects, experience, skills, mainColor, backgroundColor }: Props) {
-  const rawColor = mainColor || "#5861d9";
-  const rawBackground = backgroundColor ?? "#000000";
+  const rawColor = mainColor;
+  const rawBackground = backgroundColor;
 
   const hexToRgb = (hex: string) => {
     const h = hex.replace("#", "");
