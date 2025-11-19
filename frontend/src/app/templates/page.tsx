@@ -49,15 +49,14 @@ const templates: Template[] = [
 ];
 
 // Preview component for each template
-const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }: { templateId: string; resumeData: ParsedResume | null; selectedColor?: string; displayMode?: 'default' | 'light' | 'dark' }) => {
+const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }: { templateId: string; resumeData: ParsedResume | null; selectedColor: string; displayMode?: 'light' | 'dark' }) => {
+  const router = useRouter();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // derive simple background color from displayMode
   const backgroundColor = displayMode === 'light'
     ? '#F8FAFC'        // nice light background (tailwind gray-50-ish)
-    : displayMode === 'dark'
-    ? '#0B1220'        // nice dark background
-    : undefined;       // default -> let component use its default
+    : '#0B1220'     // nice dark background  
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -210,8 +209,8 @@ const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }:
 export default function TemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string | undefined>(undefined);
-  const [displayMode, setDisplayMode] = useState<'default' | 'light' | 'dark'>('default');
+  const [selectedColor, setSelectedColor] = useState<string>('#2563EB');
+  const [displayMode, setDisplayMode] = useState<'light' | 'dark'>('light');
   const router = useRouter();
   const info = useUser();
   const session = createClient();
@@ -237,7 +236,7 @@ export default function TemplatesPage() {
     const storedColor = localStorage.getItem('selectedColor');
     if (storedColor) setSelectedColor(storedColor);
     // load previously chosen display mode
-    const storedMode = localStorage.getItem('selectedMode') as ('default'|'light'|'dark') | null;
+    const storedMode = localStorage.getItem('selectedMode') as ('light'|'dark') | null;
     if (storedMode) setDisplayMode(storedMode);
   }, [router]);
 
@@ -302,123 +301,64 @@ export default function TemplatesPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-50">
-        <div className="container-base">
-          <div className="flex items-center justify-between py-4">
-            {/* Left side - Logo */}
-            <div className="flex items-center gap-8">
-              <div>
-                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
-              </div>
-              
-              {/* Navigation Tabs */}
-              <nav className="hidden md:flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  className="gap-2"
-                  onClick={() => handleNavigation('/dashboard')}
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="gap-2"
-                  onClick={() => handleNavigation('/profile')}
-                >
-                  <User className="w-4 h-4" />
-                  Profile
-                </Button>
-              </nav>
-            </div>
+      <div className="max-w-6xl mx-auto px-6 mb-8">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Choose Your Template</h1>
+            <p className="text-gray-600 mt-2">Select a design that best represents your professional style</p>
 
-            {/* Right side - User info and actions */}
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-3 h-3 text-primary" />
-                </div>
-                <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
+            {/* Color picker - new */}
+            <div className="mt-4 flex items-center space-x-4">
+              <span className="text-gray-700 text-sm">Choose a color:</span>
+              <div className="flex items-center space-x-2">
+                {colorOptions.map((c) => (
+                  <button
+                    key={c.id}
+                    aria-label={`Choose ${c.label}`}
+                    title={c.label}
+                    onClick={() => {
+                      setSelectedColor(c.value);
+                      localStorage.setItem('selectedColor', c.value);
+                    }}
+                    className={`w-8 h-8 rounded-full border-2 ${
+                      selectedColor === c.value ? 'ring-2 ring-offset-1 ring-gray-200' : 'border-transparent'
+                    }`}
+                    style={{ backgroundColor: c.value }}
+                  />
+                ))}
               </div>
-              <Button onClick={handleSignOut} variant="outline" size="sm">
-                Sign Out
-              </Button>
             </div>
+            {/* Display mode selector (default/light/dark) */}
+            <div className="mt-3 flex items-center space-x-3">
+              <span className="text-gray-700 text-sm">Display:</span>
+              <div className="inline-flex rounded-md shadow-sm" role="tablist" aria-label="Display mode">
+                {(['light','dark'] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => {
+                      setDisplayMode(mode);
+                      localStorage.setItem('selectedMode', mode);
+                    }}
+                    className={`px-3 py-1 text-sm border ${displayMode === mode ? 'bg-gray-100' : 'bg-white'} rounded-md`}
+                    aria-pressed={displayMode === mode}
+                  >
+                    {mode[0].toUpperCase() + mode.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center space-x-4">
+            <span className="text-gray-700">Welcome, {info.user.email}</span>
+            <button 
+              onClick={handleSignOut}
+              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Sign Out
+            </button>
           </div>
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="py-12">
-        <div className="container-base max-w-7xl">
-          <div className="text-center mb-8">
-            <Badge className="mb-4" variant="secondary">
-              <Sparkles className="w-3 h-3 mr-1" />
-              Step 2 of 3
-            </Badge>
-            <h2 className="text-3xl font-bold mb-2">Choose Your Template</h2>
-            <p className="text-muted-foreground mb-4">
-              Select a design that best represents your professional style
-            </p>
-            
-            {/* Customization Options */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-6 mt-6">
-              {/* Color picker */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium">Color:</span>
-                <div className="flex items-center gap-2">
-                  {colorOptions.map((c) => (
-                    <button
-                      key={c.id}
-                      aria-label={`Choose ${c.label}`}
-                      title={c.label}
-                      onClick={() => {
-                        setSelectedColor(c.value);
-                        localStorage.setItem('selectedColor', c.value);
-                      }}
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        selectedColor === c.value ? 'ring-2 ring-offset-2 ring-primary scale-110' : 'border-muted hover:scale-110'
-                      }`}
-                      style={{ backgroundColor: c.value }}
-                    />
-                  ))}
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedColor(undefined);
-                      localStorage.removeItem('selectedColor');
-                    }}
-                    className="ml-2 h-8 text-xs"
-                  >
-                    Clear
-                  </Button>
-                </div>
-              </div>
-              
-              {/* Display mode selector */}
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium">Display:</span>
-                <div className="inline-flex rounded-md shadow-sm" role="tablist" aria-label="Display mode">
-                  {(['default','light','dark'] as const).map((mode) => (
-                    <Button
-                      key={mode}
-                      variant={displayMode === mode ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => {
-                        setDisplayMode(mode);
-                        if (mode === 'default') localStorage.removeItem('selectedMode'); 
-                        else localStorage.setItem('selectedMode', mode);
-                      }}
-                      className="rounded-none first:rounded-l-md last:rounded-r-md"
-                    >
-                      {mode.charAt(0).toUpperCase() + mode.slice(1)}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
+      </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Template Selection - Left */}

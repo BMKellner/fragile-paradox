@@ -21,8 +21,8 @@ type TabKey = typeof tabs[number];
 // Renamed component to reflect classic professional template
 export default function ClassicProfessionalPortfolio({ personalInformation, overviewData, projects, experience, skills, mainColor, backgroundColor }: Props) {
   // Classic navy accent and soft neutral background
-  const color = mainColor || "#0b3d91";
-  const background_color = backgroundColor || "#f7f8fa";
+  const color = mainColor;
+  const background_color = backgroundColor;
 
   const [active, setActive] = useState<TabKey>("Overview");
 
