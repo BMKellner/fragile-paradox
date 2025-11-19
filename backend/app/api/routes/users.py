@@ -1,16 +1,47 @@
-from fastapi import APIRouter, UploadFile, File, Depends, Response
+from fastapi import APIRouter, UploadFile, File, Depends, Response, HTTPException
 from app.api.deps import verify_token
 from app.core.supabase_client import get_supabase_client
 from app.core.config import Settings
+from app.models.users import UserUpdate
 
 
-router = APIRouter(prefix="/user", tags=["users"])
+router = APIRouter(prefix="/users", tags=["users"])
 settings = Settings()  # type: ignore
 
 @router.get("/")
 async def read_user(user=Depends(verify_token)):
-    """Endpoint to read user info"""
-    return {"user_id": user.id, "email": user.email}
+    supabase = get_supabase_client()
+    response = supabase.table("users").select("*").eq("id", user.id).execute()
+    return {"success": True, "data": response.data[0] if response.data else None}
+
+@router.patch("/")
+async def supabase_patch(
+    payload: UserUpdate,
+    user=Depends(verify_token)
+):
+    try:
+        supabase = get_supabase_client()
+
+        # Only include fields that user actually sent
+        update_data = payload.model_dump(exclude_unset=True)
+
+        if not update_data:
+            raise HTTPException(400, "No fields provided to update")
+
+        response = (
+            supabase
+            .from_("users")
+            .update(update_data)
+            .eq("id", user.id)
+            .execute()
+        )
+
+        return {"success": True, "updated": update_data, "response": response.data}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(500, f"Supabase error: {str(e)}")
 
 @router.post("/pfp")
 async def upload_pfp(file: UploadFile = File(...), user=Depends(verify_token)):
@@ -41,26 +72,41 @@ async def upload_pfp(file: UploadFile = File(...), user=Depends(verify_token)):
 
         return {"success": True, "data": response}
     except Exception as e:
-        return {"error": f"Supabase error: {str(e)}"}
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to upload profile picture: {str(e)}"
+        )
 
 @router.get("/pfp")
-async def get_pfp(user=Depends(verify_token)):
-    """Endpoint to get profile picture from Supabase Storage"""
+def get_profile_picture(user=Depends(verify_token)):
+    supabase = get_supabase_client()
 
     try:
-        supabase = get_supabase_client()
+        path = f"{user.id}/profile/"
+        files = supabase.storage.from_("users").list(
+            path,
+            options={"limit": 1, "search": "profile_picture"}
+        )
+        if not files:
+            raise HTTPException(status_code=404, detail="Profile picture not found")
 
-        # Get filetype
-        pfp_response = supabase.storage.from_("users").list(user.id,options={
-            "limit": 1,
-            "search": "profile_picture"
-            })
-        content_type = pfp_response[0]['metadata']['mimetype']
+        mimetype = files[0]["metadata"]["mimetype"]
 
-        response = supabase.storage.from_("users").download(f"{user.id}/profile_picture")
 
-        return Response(content=response, media_type=content_type)
+        resp = supabase.storage.from_("users").download(path + "profile_picture")
+
+        if resp is None:
+            raise HTTPException(status_code=404, detail="Profile picture missing")
+
+        return Response(content=resp, media_type=mimetype)
+
+    except HTTPException:
+        raise
 
     except Exception as e:
-        return {"error": f"Supabase error: {str(e)}"}
+        print(f"Error retrieving profile picture: {str(e)}")
 
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to retrieve profile picture"
+        )

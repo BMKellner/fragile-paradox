@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from openai import OpenAI
 from pdfminer.high_level import extract_text
 import json, uuid, docx, os
@@ -18,12 +18,11 @@ async def supabase_test(user=Depends(verify_token)):
 
     try:
         supabase = get_supabase_client()
-        response = supabase.from_("users").select("*").execute()
+        response = supabase.from_("resumes").select("*").eq("user_id", user.id).execute()
 
         return {"success": True, "data": response.data, "response": response}
     except Exception as e:
         return {"error": f"Supabase error: {str(e)}"}
-
 
 @router.post("/")
 async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)):
