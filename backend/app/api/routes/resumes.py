@@ -1,100 +1,170 @@
+import uuid
+from typing import cast
+
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
-from openai import OpenAI
-from pdfminer.high_level import extract_text
-import json, uuid, docx, os
-from datetime import datetime
+from fastapi.responses import JSONResponse, Response
+from starlette.status import HTTP_201_CREATED
+
 from app.api.deps import verify_token
 from app.core.supabase_client import get_supabase_client
-from app.core.config import Settings
-from app.models.resumes import ResumeSchema
+from app.core.text_extract import extract_text_from_upload
+from app.core.resume_parser import parse_resume_with_openai
+from app.models.resumes import ResumeRow, ResumeSchema, Resume
 
 
-settings = Settings() # type: ignore
 router = APIRouter(prefix="/resumes", tags=["resumes"])
 
 @router.get("/")
-async def supabase_test(user=Depends(verify_token)):
-    """Simple endpoint to test Supabase connection"""
+async def list_resumes(user=Depends(verify_token)):
+    """List all resumes for the authenticated user."""
 
     try:
         supabase = get_supabase_client()
         response = supabase.from_("resumes").select("*").eq("user_id", user.id).execute()
 
-        return {"success": True, "data": response.data, "response": response}
+        return response.data
     except Exception as e:
-        return {"error": f"Supabase error: {str(e)}"}
+        raise HTTPException(status_code=500, detail=f"Supabase error: {str(e)}")
 
-@router.post("/")
-async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)):
-    """Endpoint to upload resume metadata to Supabase"""
-
-
-    gpt_client = OpenAI(api_key=settings.openai_api_key)
-    if not gpt_client:
-        return {"error": "OpenAI API key not configured. Please set OPENAI_API_KEY in your .env file"}
-    
-    # Save uploaded file temporarily
-    file_path = f"temp_{file.filename}"
-    contents = await file.read()
-    with open(file_path, "wb") as f:
-        f.write(contents)
-
-    try:
-        # Extract text based on file type
-        if file.filename:
-            if file.filename.endswith(".pdf"):
-                text = extract_text(file_path)
-            elif file.filename.endswith(".docx"):  
-                doc = docx.Document(file_path)
-                text = "\n".join([p.text for p in doc.paragraphs])
-            else:
-                return {"error": "Unsupported file type. Please upload a PDF or DOCX file."}
-        else:
-            return {"error": "No file uploaded."}
-
-        # OpenAI call
-        response = gpt_client.responses.parse(
-            model="gpt-4o",
-            input=[
-                {"role": "system", "content": "You are a resume parser that outputs JSON only."},
-                {"role": "system", "content": "if nothing is parsed for the overview section, automatically generate only the overview, and leave career_name empty"},
-                {"role": "user", "content": f"""
-                    Parse this resume text: {text}
-                 """}
-            ],
-            text_format=ResumeSchema
-        )
-
-        if not response or not response.output_parsed:
-            return {"error": "No response from OpenAI"}
-
-        parsed_resume: ResumeSchema = response.output_parsed
-        parsed_json = json.loads(parsed_resume.model_dump_json())
-        parsed_json["resume_pdf"] = file.filename
-        parsed_json["portfolio_id"] = str(uuid.uuid4())
-
-    except Exception as e:
-        return {"error": f"Error processing resume: {str(e)}"}
-    finally:
-        if os.path.exists(file_path):
-            os.remove(file_path)
+@router.get("/{resume_id}")
+async def get_resume(resume_id: str, user=Depends(verify_token)):
+    """Get a specific resume by ID for the authenticated user."""
 
     try:
         supabase = get_supabase_client()
+        response = supabase.from_("resumes").select("*").eq("id", resume_id).eq("user_id", user.id).execute()
 
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        path = f"{user.id}/resumes/{timestamp}_{file.filename}"
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="Resume not found")
 
-        # Upload to supabase bucket
-        response = supabase.storage.from_("users").upload(path, contents)
-
-        # Upload to supabase pg table
-        supabase.table("resumes").insert({
-            "user_id": user.id,
-            "data": parsed_json,
-        }).execute()
-
-        return {"success": True, "data": parsed_json}
+        return response.data[0]
     except Exception as e:
-        print(e)
-        return {"error": f"Supabase error: {str(e)}"}
+        raise HTTPException(status_code=500, detail=f"Supabase error: {str(e)}")
+
+@router.get("/{resume_id}/download")
+async def download_resume(resume_id: str, user=Depends(verify_token)):
+    """Download the resume file by ID for the authenticated user."""
+
+    try:
+        supabase = get_supabase_client()
+        response = supabase.from_("resumes").select("*").eq("id", resume_id).eq("user_id", user.id).execute()
+
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="Resume not found")
+
+        resume = cast(ResumeRow, response.data[0])
+        file_path = resume["file_path"]
+
+        download_response = supabase.storage.from_("users").download(file_path)
+
+        if not download_response:
+            raise HTTPException(status_code=404, detail="File not found in storage")
+
+        return Response(
+            content=download_response,
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": f"attachment; filename={resume['title']}"}
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Supabase error: {str(e)}")
+
+@router.delete("/{resume_id}", status_code=204)
+async def delete_resume(resume_id: str, user=Depends(verify_token)):
+    """Delete a specific resume by ID for the authenticated user."""
+
+    try:
+        supabase = get_supabase_client()
+        response = supabase.from_("resumes").select("*").eq("id", resume_id).eq("user_id", user.id).execute()
+
+        if not response.data or len(response.data) == 0:
+            raise HTTPException(status_code=404, detail="Resume not found")
+
+        resume = cast(ResumeRow, response.data[0])
+        file_path = resume["file_path"]
+
+        # Delete from storage
+        supabase.storage.from_("users").remove([file_path])
+
+        # Delete from database
+        supabase.from_("resumes").delete().eq("id", resume_id).eq("user_id", user.id).execute()
+
+        return Response(status_code=204)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Supabase error: {str(e)}")
+
+
+
+@router.post("/", status_code=HTTP_201_CREATED)
+async def upload_resume(
+    file: UploadFile = File(...),
+    user=Depends(verify_token),
+):
+    supabase = get_supabase_client()
+
+    allowed_types = {
+        "application/pdf": ".pdf",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+    }
+
+    if not file.filename:
+        raise HTTPException(400, "No file uploaded.")
+    if file.content_type not in allowed_types:
+        raise HTTPException(400, "Only PDF and DOCX files are allowed.")
+
+    ext = allowed_types[file.content_type]
+    resume_id = str(uuid.uuid4())
+    file_path = f"{user.id}/resumes/{resume_id}{ext}"
+
+    file_bytes = await file.read()
+
+    text = extract_text_from_upload(file, file_bytes)
+
+    uploaded = False  # Track if storage file exists
+
+    try:
+
+        # Parse resume with OpenAI
+        parsed_resume: ResumeSchema = parse_resume_with_openai(text)
+
+        # Upload file to Supabase Storage
+        supabase.storage.from_("users").upload(
+            file_path,
+            file_bytes,
+            {
+                "content-type": file.content_type
+            }
+        )
+
+        uploaded = True
+
+        # Insert row into database
+        resume_entry = Resume(
+            id=resume_id,
+            user_id=user.id,
+            title=file.filename,
+            file_path=file_path,
+            data=parsed_resume,
+                )
+
+        payload = resume_entry.model_dump()
+
+        result = supabase.table("resumes").insert(payload).execute()
+        if not result.data or len(result.data) == 0:
+            raise Exception("No data returned from insert.")
+
+        return JSONResponse(status_code=HTTP_201_CREATED, content=result.data[0])
+
+    except Exception as e:
+        # Roll back storage file if created
+        if uploaded:
+            try:
+                supabase.storage.from_("users").remove([file_path])
+            except:
+                pass
+
+        raise HTTPException(
+            status_code=500,
+            detail=f"Upload failed: {str(e)}"
+        )

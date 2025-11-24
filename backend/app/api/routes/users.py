@@ -1,12 +1,11 @@
 from fastapi import APIRouter, UploadFile, File, Depends, Response, HTTPException
+
 from app.api.deps import verify_token
 from app.core.supabase_client import get_supabase_client
-from app.core.config import Settings
 from app.models.users import UserUpdate
 
 
 router = APIRouter(prefix="/users", tags=["users"])
-settings = Settings()  # type: ignore
 
 @router.get("/")
 async def read_user(user=Depends(verify_token)):
@@ -15,7 +14,7 @@ async def read_user(user=Depends(verify_token)):
     return {"success": True, "data": response.data[0] if response.data else None}
 
 @router.patch("/")
-async def supabase_patch(
+async def patch_user(
     payload: UserUpdate,
     user=Depends(verify_token)
 ):
@@ -35,8 +34,7 @@ async def supabase_patch(
             .eq("id", user.id)
             .execute()
         )
-
-        return {"success": True, "updated": update_data, "response": response.data}
+        return Response(status_code=200, content=f"User updated successfully : {response.data}")
 
     except HTTPException:
         raise
