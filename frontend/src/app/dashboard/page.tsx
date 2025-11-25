@@ -47,7 +47,6 @@ export default function DashboardPage() {
     router.push('/signin');
     return null;
   }
-  console.log(info.session?.access_token);
 
   // Mock data for demonstration
   const recentResumes = [

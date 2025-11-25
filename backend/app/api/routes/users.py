@@ -55,20 +55,17 @@ async def upload_pfp(file: UploadFile = File(...), user=Depends(verify_token)):
 
 
         path = f"{user.id}/profile/profile_picture"
-        response = (
-            supabase.storage
-            .from_("users")
-            .update(
-                path,
-                file=contents,
-                file_options={
-                    "upsert": "true",
-                    "content-type": file.content_type,
-                    }
-            )
+
+        supabase.storage.from_("users").update(
+            path,
+            file=contents,
+            file_options={
+                "upsert": "true",
+                "content-type": file.content_type,
+                }
         )
 
-        return {"success": True, "data": response}
+        return Response(status_code=201)
     except Exception as e:
         raise HTTPException(
             status_code=500,
