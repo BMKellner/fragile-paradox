@@ -9,6 +9,9 @@ import ModernMinimalistPortfolio from "@/components/PortfolioTemplates/ModernMin
 import ClassicProfessionalPortfolio from "@/components/PortfolioTemplates/ClassicProfessional";
 import CreativeBoldPortfolio from "@/components/PortfolioTemplates/CreativeBold";
 import ElegantSophisticatedPortfolio from "@/components/PortfolioTemplates/ElegantSophisticated";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { User, LayoutDashboard, Download, Globe, ArrowLeft, Loader2, Save, Check } from "lucide-react";
 
 
 // personalInformation={personal_information}
@@ -94,6 +97,8 @@ export default function PreviewPage() {
   const [mainColor, setMainColor] = useState<string>('#2563EB');
   const [backgroundColor, setBackgroundColor] = useState<string>('#F8FAFC');
   const [isGenerating, setIsGenerating] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const router = useRouter();
   const info = useUser();
   const session = createClient();
@@ -132,13 +137,28 @@ export default function PreviewPage() {
   const handleStartOver = () => {
     localStorage.removeItem('resumeData');
     localStorage.removeItem('selectedTemplate');
+    localStorage.removeItem('currentPortfolioId');
     router.push('/upload');
+  };
+
+  const handleNavigation = (path: string) => {
+    router.push(path);
+  };
+
+  const templateNames: Record<string, string> = {
+    '1': 'Modern Minimal',
+    '2': 'Classic Professional', 
+    '3': 'Creative Bold',
+    '4': 'Elegant Sophisticated'
   };
 
   if (info.loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -150,15 +170,28 @@ export default function PreviewPage() {
 
   if (!resumeData || !selectedTemplate) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600">Missing data. Please start over.</p>
-          <button 
-            onClick={handleStartOver}
-            className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Start Over
-          </button>
+      <div className="min-h-screen bg-muted/30">
+        {/* Header */}
+        <header className="bg-background border-b sticky top-0 z-50">
+          <div className="container-base">
+            <div className="flex items-center justify-between py-4">
+              <div>
+                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+              </div>
+              <Button onClick={handleSignOut} variant="outline" size="sm">
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
+          <div className="text-center">
+            <p className="text-muted-foreground mb-4">Missing data. Please start over.</p>
+            <Button onClick={handleStartOver}>
+              Start Over
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -166,64 +199,312 @@ export default function PreviewPage() {
 
   if (isGenerating) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Generating Your Website</h2>
-          <p className="text-gray-600">Creating your {selectedTemplate} portfolio...</p>
+      <div className="min-h-screen bg-muted/30">
+        {/* Header */}
+        <header className="bg-background border-b sticky top-0 z-50">
+          <div className="container-base">
+            <div className="flex items-center justify-between py-4">
+              <div>
+                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+              </div>
+              <Button onClick={handleSignOut} variant="outline" size="sm">
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
+          <div className="text-center">
+            <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
+            <h2 className="text-2xl font-bold mb-2">Generating Your Website</h2>
+            <p className="text-muted-foreground">Creating your {templateNames[selectedTemplate] || 'portfolio'}...</p>
+          </div>
         </div>
       </div>
     );
   }
 
+  const handleSave = async () => {
+    if (!selectedTemplate || !resumeData) return;
+    
+    setIsSaving(true);
+    setSaveMessage(null);
+    
+    try {
+      const supabaseSession = await session.auth.getSession();
+      const token = supabaseSession.data.session?.access_token;
+      
+      if (!token) {
+        setSaveMessage({ type: 'error', message: 'Please sign in to save your portfolio' });
+        setIsSaving(false);
+        return;
+      }
+
+      // Find template name
+      const templateNames: Record<string, string> = {
+        '1': 'Modern Minimal',
+        '2': 'Classic Professional',
+        '3': 'Creative Bold',
+        '4': 'Elegant Sophisticated'
+      };
+      const templateName = templateNames[selectedTemplate] || 'Portfolio';
+
+      // Check if editing existing portfolio
+      const existingPortfolioId = localStorage.getItem('currentPortfolioId');
+
+      // Prepare portfolio data
+      const portfolioData = {
+        name: `${resumeData.personal_information?.full_name || 'My'} Portfolio - ${templateName}`,
+        template_id: selectedTemplate,
+        data: resumeData,
+        color: mainColor,
+        display_mode: backgroundColor === '#F8FAFC' ? 'light' : 'dark',
+        is_published: false
+      };
+
+      let response: Response;
+
+      if (existingPortfolioId) {
+        // Try to update existing portfolio
+        const updateResponse = await fetch(`http://localhost:8000/portfolios/${existingPortfolioId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(portfolioData)
+        });
+
+        // If portfolio not found (404), create a new one instead
+        if (updateResponse.status === 404) {
+          localStorage.removeItem('currentPortfolioId');
+          response = await fetch('http://localhost:8000/portfolios/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(portfolioData)
+          });
+        } else {
+          response = updateResponse;
+        }
+      } else {
+        // Create new portfolio
+        response = await fetch('http://localhost:8000/portfolios/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(portfolioData)
+        });
+      }
+
+      if (response.ok) {
+        const savedPortfolio = await response.json();
+        localStorage.setItem('currentPortfolioId', savedPortfolio.id);
+        setSaveMessage({ type: 'success', message: 'Portfolio saved successfully!' });
+        setTimeout(() => setSaveMessage(null), 3000);
+      } else {
+        const error = await response.json();
+        setSaveMessage({ type: 'error', message: error.detail || 'Failed to save portfolio' });
+      }
+    } catch (error) {
+      console.error('Error saving portfolio:', error);
+      setSaveMessage({ type: 'error', message: 'Error saving portfolio. Please try again.' });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDownload = () => {
+    // Generate HTML file for download
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${resumeData.personal_information?.full_name || 'Portfolio'}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: ${backgroundColor};
+      color: ${backgroundColor === '#0B1220' ? '#fff' : '#1a202c'};
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    h1 { color: ${mainColor}; margin-bottom: 10px; }
+    h2 { color: ${mainColor}; margin: 20px 0 10px; border-bottom: 2px solid ${mainColor}; padding-bottom: 5px; }
+    .section { margin: 20px 0; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Portfolio content would be rendered here -->
+    <h1>${resumeData.personal_information?.full_name || 'Portfolio'}</h1>
+    <p>${resumeData.overview?.resume_summary || ''}</p>
+  </div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `portfolio-${selectedTemplate}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-16">
+    <div className="min-h-screen bg-muted/30">
       {/* Header */}
-      <div className="max-w-6xl mx-auto px-6 mb-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Your Portfolio Website</h1>
-            <p className="text-gray-600 mt-2">Template: {selectedTemplate}</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <button 
-              onClick={handleStartOver}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Start Over
-            </button>
-            <button 
-              onClick={handleSignOut}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Sign Out
-            </button>
+      <header className="bg-background border-b sticky top-0 z-50">
+        <div className="container-base">
+          <div className="flex items-center justify-between py-4">
+            {/* Left side - Logo */}
+            <div className="flex items-center gap-8">
+              <div>
+                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+              </div>
+              
+              {/* Navigation Tabs */}
+              <nav className="hidden md:flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  className="gap-2"
+                  onClick={() => handleNavigation('/dashboard')}
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="gap-2"
+                  onClick={() => handleNavigation('/profile')}
+                >
+                  <User className="w-4 h-4" />
+                  Profile
+                </Button>
+              </nav>
+            </div>
+
+            {/* Right side - User info and actions */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-3 h-3 text-primary" />
+                </div>
+                <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
+              </div>
+              <Button onClick={handleSignOut} variant="outline" size="sm">
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Full Website Render */}
-      <div className="max-w-6xl mx-auto px-6">
-        {resumeData && selectedTemplate && (
-          <FullTemplateRender templateId={selectedTemplate} resumeData={resumeData} mainColor={mainColor} backgroundColor={backgroundColor}/>
-        )}
+      {/* Main Content */}
+      <main className="py-8">
+        <div className="container-base max-w-7xl">
+          {/* Page Header */}
+          <div className="mb-8">
+            <div className="flex items-center gap-2 mb-2">
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => router.push('/templates')}
+                className="gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Templates
+              </Button>
+            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-bold tracking-tight">Your Portfolio Website</h2>
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="secondary">{templateNames[selectedTemplate] || `Template ${selectedTemplate}`}</Badge>
+                  <span className="text-muted-foreground text-sm">Preview Mode</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button 
+                  onClick={handleSave} 
+                  disabled={isSaving}
+                  className="gap-2"
+                  variant={saveMessage?.type === 'success' ? 'default' : 'default'}
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : saveMessage?.type === 'success' ? (
+                    <>
+                      <Check className="w-4 h-4" />
+                      Saved!
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save
+                    </>
+                  )}
+                </Button>
+                <Button onClick={handleDownload} variant="outline" className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Download
+                </Button>
+                <Button variant="outline" className="gap-2">
+                  <Globe className="w-4 h-4" />
+                  Deploy
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => router.push('/templates')}
+                >
+                  Change Template
+                </Button>
+              </div>
+            </div>
+          </div>
 
-        {/* Action Buttons */}
-        <div className="mt-8 flex flex-wrap justify-center gap-4">
-          <button className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors">
-            Download Website
-          </button>
-          <button className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-medium transition-colors">
-            Deploy Online
-          </button>
-          <button 
-            onClick={() => router.push('/templates')}
-            className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-          >
-            Change Template
-          </button>
+          {/* Save Message */}
+          {saveMessage && (
+            <div className={`mb-4 p-4 rounded-lg ${
+              saveMessage.type === 'success' 
+                ? 'bg-green-50 text-green-800 border border-green-200' 
+                : 'bg-red-50 text-red-800 border border-red-200'
+            }`}>
+              {saveMessage.message}
+            </div>
+          )}
+
+          {/* Portfolio Preview */}
+          <div className="rounded-lg overflow-hidden shadow-lg bg-background">
+            {resumeData && selectedTemplate && (
+              <FullTemplateRender templateId={selectedTemplate} resumeData={resumeData} mainColor={mainColor} backgroundColor={backgroundColor}/>
+            )}
+          </div>
+
+          {/* Bottom Actions */}
+          <div className="mt-6 flex justify-center gap-4">
+            <Button 
+              variant="outline" 
+              onClick={() => router.push('/dashboard')}
+            >
+              Back to Dashboard
+            </Button>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
