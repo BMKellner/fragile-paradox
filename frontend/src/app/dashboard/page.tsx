@@ -124,14 +124,6 @@ export default function DashboardPage() {
   const handleDownloadWebsite = async (website: Website) => {
     // Generate and download HTML file
     try {
-      // Import the template component dynamically based on template_id
-      const templateComponents: Record<string, string> = {
-        '1': 'ModernMinimalist',
-        '2': 'ClassicProfessional',
-        '3': 'CreativeBold',
-        '4': 'ElegantSophisticated'
-      };
-      
       // Create a simple HTML structure
       const html = `<!DOCTYPE html>
 <html lang="en">

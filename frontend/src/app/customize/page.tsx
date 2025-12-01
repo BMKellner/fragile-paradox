@@ -27,8 +27,7 @@ import {
   Code,
   ChevronLeft,
   ChevronRight,
-  PanelLeftClose,
-  PanelLeft
+  PanelLeftClose
 } from "lucide-react";
 import { ParsedResume } from "@/constants/ResumeFormat";
 
@@ -127,7 +126,6 @@ export default function CustomizePage() {
       visible: true
     };
     setSections([...sections, newSection]);
-    setShowComponentLibrary(false);
   };
 
   const handleRemoveSection = (id: string) => {
