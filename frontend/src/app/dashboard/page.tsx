@@ -20,12 +20,13 @@ import {
   Loader2
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { ParsedResume } from "@/constants/ResumeFormat";
 
 interface Website {
   id: string;
   name: string;
   template_id: string;
-  data: Record<string, unknown>;
+  data: ParsedResume;
   color: string;
   display_mode: string;
   is_published: boolean;
@@ -180,7 +181,7 @@ export default function DashboardPage() {
     ${website.data?.experience?.length > 0 ? `
     <section class="section">
       <h2>Experience</h2>
-      ${(website.data.experience as Array<{company: string; employed_dates: string; description: string}>).map((exp) => `
+      ${website.data.experience?.map((exp) => `
         <div class="item">
           <h3>${exp.company}</h3>
           <p><em>${exp.employed_dates}</em></p>
@@ -193,7 +194,7 @@ export default function DashboardPage() {
     ${website.data?.projects?.length > 0 ? `
     <section class="section">
       <h2>Projects</h2>
-      ${(website.data.projects as Array<{title: string; description: string}>).map((proj) => `
+      ${website.data.projects?.map((proj) => `
         <div class="item">
           <h3>${proj.title}</h3>
           <p>${proj.description}</p>
