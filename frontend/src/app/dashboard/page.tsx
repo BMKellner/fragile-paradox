@@ -10,8 +10,6 @@ import {
   FileText, 
   Layout,
   Upload,
-  ArrowRight,
-  Bookmark,
   Clock,
   User,
   LayoutDashboard,
@@ -27,7 +25,7 @@ interface Website {
   id: string;
   name: string;
   template_id: string;
-  data: any;
+  data: Record<string, unknown>;
   color: string;
   display_mode: string;
   is_published: boolean;
@@ -83,6 +81,7 @@ export default function DashboardPage() {
     if (info.user) {
       fetchData();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [info.user]);
 
   const handleDeleteWebsite = async (websiteId: string) => {
@@ -126,14 +125,12 @@ export default function DashboardPage() {
     // Generate and download HTML file
     try {
       // Import the template component dynamically based on template_id
-      const templateComponents: any = {
+      const templateComponents: Record<string, string> = {
         '1': 'ModernMinimalist',
         '2': 'ClassicProfessional',
         '3': 'CreativeBold',
         '4': 'ElegantSophisticated'
       };
-
-      const templateName = templateComponents[website.template_id] || 'Modern';
       
       // Create a simple HTML structure
       const html = `<!DOCTYPE html>
@@ -191,7 +188,7 @@ export default function DashboardPage() {
     ${website.data?.experience?.length > 0 ? `
     <section class="section">
       <h2>Experience</h2>
-      ${website.data.experience.map((exp: any) => `
+      ${(website.data.experience as Array<{company: string; employed_dates: string; description: string}>).map((exp) => `
         <div class="item">
           <h3>${exp.company}</h3>
           <p><em>${exp.employed_dates}</em></p>
@@ -204,7 +201,7 @@ export default function DashboardPage() {
     ${website.data?.projects?.length > 0 ? `
     <section class="section">
       <h2>Projects</h2>
-      ${website.data.projects.map((proj: any) => `
+      ${(website.data.projects as Array<{title: string; description: string}>).map((proj) => `
         <div class="item">
           <h3>${proj.title}</h3>
           <p>${proj.description}</p>
@@ -253,15 +250,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleEditWebsite = (website: Website) => {
-    // Store website data and navigate back to templates to edit
-    localStorage.setItem('currentPortfolioId', website.id);
-    localStorage.setItem('resumeData', JSON.stringify(website.data));
-    localStorage.setItem('selectedTemplate', website.template_id);
-    localStorage.setItem('selectedColor', website.color);
-    localStorage.setItem('selectedMode', website.display_mode);
-    router.push('/templates');
-  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -531,7 +519,7 @@ export default function DashboardPage() {
                       <p className="text-sm font-medium mb-3">Recent Templates</p>
                       <div className="space-y-2">
                         {[...new Set(websites.slice(0, 3).map(w => w.template_id))].map((templateId) => {
-                          const templateNames: any = {
+                          const templateNames: Record<string, string> = {
                             '1': 'Modern Minimal',
                             '2': 'Classic Professional',
                             '3': 'Creative Bold',

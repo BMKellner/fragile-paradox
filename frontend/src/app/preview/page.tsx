@@ -145,7 +145,7 @@ export default function PreviewPage() {
     router.push(path);
   };
 
-  const templateNames: any = {
+  const templateNames: Record<string, string> = {
     '1': 'Modern Minimal',
     '2': 'Classic Professional', 
     '3': 'Creative Bold',
@@ -242,7 +242,7 @@ export default function PreviewPage() {
       }
 
       // Find template name
-      const templateNames: any = {
+      const templateNames: Record<string, string> = {
         '1': 'Modern Minimal',
         '2': 'Classic Professional',
         '3': 'Creative Bold',

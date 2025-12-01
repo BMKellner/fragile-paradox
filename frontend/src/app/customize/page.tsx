@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -17,7 +16,6 @@ import {
   Plus, 
   Trash2, 
   GripVertical,
-  Eye,
   Save,
   ArrowLeft,
   Settings,
@@ -30,9 +28,7 @@ import {
   ChevronLeft,
   ChevronRight,
   PanelLeftClose,
-  PanelLeft,
-  Type,
-  Palette
+  PanelLeft
 } from "lucide-react";
 import { ParsedResume } from "@/constants/ResumeFormat";
 
@@ -41,7 +37,7 @@ interface Section {
   type: 'header' | 'about' | 'experience' | 'projects' | 'skills' | 'education' | 'contact';
   layout: 'default' | 'centered' | 'split' | 'cards';
   visible: boolean;
-  data?: any;
+  data?: Record<string, unknown>;
   style?: {
     fontSize?: 'small' | 'medium' | 'large';
     fontWeight?: 'normal' | 'medium' | 'bold';
@@ -66,14 +62,12 @@ export default function CustomizePage() {
   const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
   const [sections, setSections] = useState<Section[]>([]);
   const [selectedSection, setSelectedSection] = useState<Section | null>(null);
-  const [showComponentLibrary, setShowComponentLibrary] = useState(true);
   const [selectedColor, setSelectedColor] = useState<string>('#2563EB');
   const [displayMode, setDisplayMode] = useState<'light' | 'dark'>('light');
   const [isLoading, setIsLoading] = useState(true);
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
-  const [editingText, setEditingText] = useState<{sectionId: string, field: string} | null>(null);
 
   useEffect(() => {
     const storedData = localStorage.getItem('resumeData');
@@ -113,7 +107,8 @@ export default function CustomizePage() {
         setSelectedSection(updatedSection);
       }
     }
-  }, [sections, selectedSection?.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sections]);
 
   const handleSignOut = async () => {
     await session.auth.signOut();
@@ -142,17 +137,6 @@ export default function CustomizePage() {
     }
   };
 
-  const handleMoveSection = (id: string, direction: 'up' | 'down') => {
-    const index = sections.findIndex(s => s.id === id);
-    if (index === -1) return;
-    if (direction === 'up' && index === 0) return;
-    if (direction === 'down' && index === sections.length - 1) return;
-
-    const newSections = [...sections];
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    [newSections[index], newSections[newIndex]] = [newSections[newIndex], newSections[index]];
-    setSections(newSections);
-  };
 
   const handleDragStart = (e: React.DragEvent, sectionId: string) => {
     setDraggedSection(sectionId);
@@ -342,7 +326,7 @@ export default function CustomizePage() {
                       </div>
                     ) : (
                       <>
-                        {sections.map((section, index) => {
+                        {sections.map((section) => {
                           const config = sectionComponents[section.type];
                           const Icon = config.icon;
                           const isDragging = draggedSection === section.id;

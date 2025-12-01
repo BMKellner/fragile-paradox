@@ -50,7 +50,6 @@ const templates: Template[] = [
 
 // Preview component for each template
 const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }: { templateId: string; resumeData: ParsedResume | null; selectedColor: string; displayMode?: 'light' | 'dark' }) => {
-  const router = useRouter();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // derive simple background color from displayMode

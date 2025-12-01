@@ -115,6 +115,7 @@ export default function ProfilePage() {
     if (info.user) {
       fetchProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [info.user]);
 
   const handleSignOut = async () => {
