@@ -17,15 +17,18 @@ import {
   MapPin,
   Linkedin,
   Github,
-  Globe
+  Globe,
+  Loader2
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function ProfilePage() {
   const router = useRouter();
   const info = useUser();
   const session = createClient();
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', message: string} | null>(null);
 
   // Profile form state
   const [profile, setProfile] = useState({
@@ -41,6 +44,79 @@ export default function ProfilePage() {
     company: ""
   });
 
+  // Fetch profile data and auto-fill with auth data on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!info.user) return;
+      
+      // Start with auth data
+      const authData = {
+        fullName: info.user.user_metadata?.full_name || info.user.user_metadata?.name || "",
+        email: info.user.email || "",
+        phone: info.user.user_metadata?.phone || "",
+        location: "",
+        bio: "",
+        linkedin: "",
+        github: "",
+        website: "",
+        title: "",
+        company: ""
+      };
+      
+      try {
+        const supabaseSession = await session.auth.getSession();
+        const token = supabaseSession.data.session?.access_token;
+        
+        if (!token) {
+          setProfile(authData);
+          setIsLoading(false);
+          return;
+        }
+
+        const response = await fetch('http://localhost:8000/profiles/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data) {
+            // Merge saved profile data with auth data
+            setProfile({
+              fullName: data.full_name || authData.fullName,
+              email: data.email || authData.email,
+              phone: data.phone || authData.phone,
+              location: data.location || authData.location,
+              bio: data.bio || authData.bio,
+              linkedin: data.linkedin || authData.linkedin,
+              github: data.github || authData.github,
+              website: data.website || authData.website,
+              title: data.title || authData.title,
+              company: data.company || authData.company
+            });
+          } else {
+            // No profile found, use auth data
+            setProfile(authData);
+          }
+        } else {
+          // Error fetching profile, use auth data
+          setProfile(authData);
+        }
+      } catch (error) {
+        console.error('Error fetching profile:', error);
+        // On error, use auth data
+        setProfile(authData);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (info.user) {
+      fetchProfile();
+    }
+  }, [info.user]);
+
   const handleSignOut = async () => {
     await session.auth.signOut();
     router.push('/signin');
@@ -52,20 +128,68 @@ export default function ProfilePage() {
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Simulate save
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setIsSaving(false);
-    // TODO: Save to database
+    setSaveMessage(null);
+    
+    try {
+      const supabaseSession = await session.auth.getSession();
+      const token = supabaseSession.data.session?.access_token;
+      
+      if (!token) {
+        throw new Error('Not authenticated');
+      }
+
+      // Prepare profile data (convert camelCase to snake_case for backend)
+      const profileData = {
+        full_name: profile.fullName,
+        phone: profile.phone,
+        location: profile.location,
+        bio: profile.bio,
+        linkedin: profile.linkedin,
+        github: profile.github,
+        website: profile.website,
+        title: profile.title,
+        company: profile.company
+      };
+
+      // Use PUT which now handles both create and update
+      const response = await fetch('http://localhost:8000/profiles/me', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(profileData)
+      });
+
+      if (response.ok) {
+        setSaveMessage({ type: 'success', message: 'Profile saved successfully!' });
+        setTimeout(() => setSaveMessage(null), 3000);
+      } else {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to save profile');
+      }
+    } catch (error) {
+      console.error('Error saving profile:', error);
+      setSaveMessage({ 
+        type: 'error', 
+        message: error instanceof Error ? error.message : 'Failed to save profile' 
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleInputChange = (field: string, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
 
-  if (info.loading) {
+  if (info.loading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="spinner w-8 h-8"></div>
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -301,6 +425,17 @@ export default function ProfilePage() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Save Message */}
+            {saveMessage && (
+              <div className={`p-4 rounded-lg ${
+                saveMessage.type === 'success' 
+                  ? 'bg-green-50 text-green-800 border border-green-200' 
+                  : 'bg-red-50 text-red-800 border border-red-200'
+              }`}>
+                {saveMessage.message}
+              </div>
+            )}
 
             {/* Save Button */}
             <div className="flex justify-end gap-4">

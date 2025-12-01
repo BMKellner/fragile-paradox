@@ -25,6 +25,66 @@ async def supabase_test(user=Depends(verify_token)):
         return {"error": f"Supabase error: {str(e)}"}
 
 
+@router.get("/resumes")
+async def get_resumes(user=Depends(verify_token), limit: int = 50, offset: int = 0):
+    """Get all resumes for the current user"""
+    try:
+        supabase = get_supabase_client()
+        response = supabase.table("resumes")\
+            .select("*")\
+            .eq("user_id", user.id)\
+            .order("created_at", desc=True)\
+            .limit(limit)\
+            .offset(offset)\
+            .execute()
+        
+        return {"success": True, "data": response.data}
+    except Exception as e:
+        return {"error": f"Error fetching resumes: {str(e)}"}
+
+@router.get("/resumes/{resume_id}")
+async def get_resume(resume_id: str, user=Depends(verify_token)):
+    """Get a specific resume by ID"""
+    try:
+        supabase = get_supabase_client()
+        response = supabase.table("resumes")\
+            .select("*")\
+            .eq("id", resume_id)\
+            .eq("user_id", user.id)\
+            .maybe_single()\
+            .execute()
+        
+        if not response.data:
+            return {"error": "Resume not found"}
+            
+        return {"success": True, "data": response.data}
+    except Exception as e:
+        return {"error": f"Error fetching resume: {str(e)}"}
+
+@router.delete("/resumes/{resume_id}")
+async def delete_resume(resume_id: str, user=Depends(verify_token)):
+    """Delete a resume"""
+    try:
+        supabase = get_supabase_client()
+        
+        # Get resume data to find the storage path
+        resume_response = supabase.table("resumes")\
+            .select("*")\
+            .eq("id", resume_id)\
+            .eq("user_id", user.id)\
+            .maybe_single()\
+            .execute()
+        
+        if not resume_response.data:
+            return {"error": "Resume not found"}
+        
+        # Delete from database
+        supabase.table("resumes").delete().eq("id", resume_id).eq("user_id", user.id).execute()
+        
+        return {"success": True, "message": "Resume deleted successfully"}
+    except Exception as e:
+        return {"error": f"Error deleting resume: {str(e)}"}
+
 @router.post("/upload_resume")
 async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)):
     """Endpoint to upload resume metadata to Supabase"""
@@ -87,12 +147,12 @@ async def upload_resume(file: UploadFile = File(...), user=Depends(verify_token)
         path = f"{user.id}/{timestamp}_{file.filename}"
         response = supabase.storage.from_("resumes").upload(path, contents)
 
-        supabase.table("resumes").insert({
+        insert_response = supabase.table("resumes").insert({
             "user_id": user.id,
             "data": parsed_json,
         }).execute()
 
-        return {"success": True, "data": parsed_json}
+        return {"success": True, "data": parsed_json, "id": insert_response.data[0]["id"]}
     except Exception as e:
         print(e)
         return {"error": f"Supabase error: {str(e)}"}
