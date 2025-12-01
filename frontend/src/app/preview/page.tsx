@@ -263,12 +263,11 @@ export default function PreviewPage() {
         is_published: false
       };
 
-      let response;
-      let shouldCreateNew = false;
+      let response: Response;
 
       if (existingPortfolioId) {
         // Try to update existing portfolio
-        response = await fetch(`http://localhost:8000/portfolios/${existingPortfolioId}`, {
+        const updateResponse = await fetch(`http://localhost:8000/portfolios/${existingPortfolioId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -278,16 +277,21 @@ export default function PreviewPage() {
         });
 
         // If portfolio not found (404), create a new one instead
-        if (response.status === 404) {
-          shouldCreateNew = true;
+        if (updateResponse.status === 404) {
           localStorage.removeItem('currentPortfolioId');
+          response = await fetch('http://localhost:8000/portfolios/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(portfolioData)
+          });
+        } else {
+          response = updateResponse;
         }
       } else {
-        shouldCreateNew = true;
-      }
-
-      // Create new portfolio if needed
-      if (shouldCreateNew) {
+        // Create new portfolio
         response = await fetch('http://localhost:8000/portfolios/', {
           method: 'POST',
           headers: {
