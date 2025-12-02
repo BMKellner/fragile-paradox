@@ -96,7 +96,7 @@ export default function DashboardPage() {
       
       if (!token) return;
 
-      const response = await fetch(`http://localhost:8000/portfolios/${websiteId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/${websiteId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

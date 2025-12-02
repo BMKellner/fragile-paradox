@@ -15,12 +15,18 @@ from app.models.resumes import ResumeRow, ResumeSchema, Resume
 router = APIRouter(prefix="/resumes", tags=["resumes"])
 
 @router.get("/")
-async def list_resumes(user=Depends(verify_token)):
+async def list_resumes(user=Depends(verify_token), limit: int = 50, offset: int = 0):
     """List all resumes for the authenticated user."""
 
     try:
         supabase = get_supabase_client()
-        response = supabase.from_("resumes").select("*").eq("user_id", user.id).execute()
+        response = supabase.table("resumes")\
+            .select("*")\
+            .eq("user_id", user.id)\
+            .order("created_at", desc=True)\
+            .limit(limit)\
+            .offset(offset)\
+            .execute()
 
         return response.data
     except Exception as e:
