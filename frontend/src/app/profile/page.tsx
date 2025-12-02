@@ -29,6 +29,7 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   // Profile form state
   const [profile, setProfile] = useState({
@@ -118,6 +119,37 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [info.user]);
 
+  const validateProfile = () => {
+    const newErrors: { [key: string]: string } = {};
+    const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/;
+    // A simple phone regex that allows for common formats
+    const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,4}[-\s.]?[0-9]{4,9}$/;
+
+    // Phone validation
+    if (profile.phone && !phoneRegex.test(profile.phone)) {
+      newErrors.phone = 'Please enter a valid phone number.';
+    }
+
+    // LinkedIn validation
+    if (profile.linkedin && !profile.linkedin.includes('linkedin.com')) {
+      newErrors.linkedin = 'Please enter a valid LinkedIn URL.';
+    }
+
+    // GitHub validation
+    if (profile.github && !profile.github.includes('github.com')) {
+      newErrors.github = 'Please enter a valid GitHub URL.';
+    }
+
+    // Website validation
+    if (profile.website && !urlRegex.test(profile.website)) {
+      newErrors.website = 'Please enter a valid website URL.';
+    }
+
+    setErrors(newErrors);
+    // Return true if there are no errors
+    return Object.keys(newErrors).length === 0;
+  };
+
   const handleSignOut = async () => {
     await session.auth.signOut();
     router.push('/signin');
@@ -128,6 +160,12 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    // First, validate the form
+    if (!validateProfile()) {
+      setSaveMessage({ type: 'error', message: 'Please fix the errors before saving.' });
+      return; // Stop the function if validation fails
+    }
+
     setIsSaving(true);
     setSaveMessage(null);
     
@@ -310,6 +348,7 @@ export default function ProfilePage() {
                         className="pl-10"
                       />
                     </div>
+                    {errors.phone && <p className="text-sm text-red-500 mt-1">{errors.phone}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="location">Location</Label>
@@ -395,6 +434,7 @@ export default function ProfilePage() {
                       className="pl-10"
                     />
                   </div>
+                  {errors.linkedin && <p className="text-sm text-red-500 mt-1">{errors.linkedin}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -409,6 +449,7 @@ export default function ProfilePage() {
                       className="pl-10"
                     />
                   </div>
+                  {errors.github && <p className="text-sm text-red-500 mt-1">{errors.github}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -423,6 +464,7 @@ export default function ProfilePage() {
                       className="pl-10"
                     />
                   </div>
+                  {errors.website && <p className="text-sm text-red-500 mt-1">{errors.website}</p>}
                 </div>
               </CardContent>
             </Card>
