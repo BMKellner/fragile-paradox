@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Check, ArrowRight, Sparkles, User, LayoutDashboard } from "lucide-react";
+import { Eye, Check, ArrowRight, Sparkles, User, LayoutDashboard, Loader2 } from "lucide-react";
 import { ParsedResume } from "@/constants/ResumeFormat";
 import ModernMinimalistPortfolio from "@/components/PortfolioTemplates/ModernMinimalist";
 import ClassicProfessionalPortfolio from "@/components/PortfolioTemplates/ClassicProfessional";
@@ -50,7 +50,6 @@ const templates: Template[] = [
 
 // Preview component for each template
 const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }: { templateId: string; resumeData: ParsedResume | null; selectedColor: string; displayMode?: 'light' | 'dark' }) => {
-  const router = useRouter();
   const [isFullscreen, setIsFullscreen] = useState(false);
 
   // derive simple background color from displayMode
@@ -250,18 +249,22 @@ export default function TemplatesPage() {
   };
 
   const handleGenerateWebsite = () => {
-    if (selectedTemplate) {
-      localStorage.setItem('selectedTemplate', selectedTemplate);
-      if (selectedColor) localStorage.setItem('selectedColor', selectedColor);
-      if (displayMode) localStorage.setItem('selectedMode', displayMode);
-      router.push('/preview');
-    }
+    if (!selectedTemplate || !resumeData) return;
+    
+    // Just navigate to preview - don't save yet
+    localStorage.setItem('selectedTemplate', selectedTemplate);
+    localStorage.setItem('selectedColor', selectedColor);
+    localStorage.setItem('selectedMode', displayMode);
+    router.push('/preview');
   };
 
   if (info.loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="spinner w-8 h-8"></div>
+      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+        <div className="text-center">
+          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
       </div>
     );
   }
@@ -299,67 +302,110 @@ export default function TemplatesPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-muted/30">
       {/* Header */}
-      <div className="max-w-6xl mx-auto px-6 mb-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Choose Your Template</h1>
-            <p className="text-gray-600 mt-2">Select a design that best represents your professional style</p>
+      <header className="bg-background border-b sticky top-0 z-50">
+        <div className="container-base">
+          <div className="flex items-center justify-between py-4">
+            {/* Left side - Logo */}
+            <div className="flex items-center gap-8">
+              <div>
+                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+              </div>
+              
+              {/* Navigation Tabs */}
+              <nav className="hidden md:flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  className="gap-2"
+                  onClick={() => handleNavigation('/dashboard')}
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  Dashboard
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="gap-2"
+                  onClick={() => handleNavigation('/profile')}
+                >
+                  <User className="w-4 h-4" />
+                  Profile
+                </Button>
+              </nav>
+            </div>
 
-            {/* Color picker - new */}
-            <div className="mt-4 flex items-center space-x-4">
-              <span className="text-gray-700 text-sm">Choose a color:</span>
-              <div className="flex items-center space-x-2">
-                {colorOptions.map((c) => (
-                  <button
-                    key={c.id}
-                    aria-label={`Choose ${c.label}`}
-                    title={c.label}
-                    onClick={() => {
-                      setSelectedColor(c.value);
-                      localStorage.setItem('selectedColor', c.value);
-                    }}
-                    className={`w-8 h-8 rounded-full border-2 ${
-                      selectedColor === c.value ? 'ring-2 ring-offset-1 ring-gray-200' : 'border-transparent'
-                    }`}
-                    style={{ backgroundColor: c.value }}
-                  />
-                ))}
+            {/* Right side - User info and actions */}
+            <div className="flex items-center gap-3">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
+                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-3 h-3 text-primary" />
+                </div>
+                <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
               </div>
+              <Button onClick={handleSignOut} variant="outline" size="sm">
+                Sign Out
+              </Button>
             </div>
-            {/* Display mode selector (default/light/dark) */}
-            <div className="mt-3 flex items-center space-x-3">
-              <span className="text-gray-700 text-sm">Display:</span>
-              <div className="inline-flex rounded-md shadow-sm" role="tablist" aria-label="Display mode">
-                {(['light','dark'] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    onClick={() => {
-                      setDisplayMode(mode);
-                      localStorage.setItem('selectedMode', mode);
-                    }}
-                    className={`px-3 py-1 text-sm border ${displayMode === mode ? 'bg-gray-100' : 'bg-white'} rounded-md`}
-                    aria-pressed={displayMode === mode}
-                  >
-                    {mode[0].toUpperCase() + mode.slice(1)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span className="text-gray-700">Welcome, {info.user.email}</span>
-            <button 
-              onClick={handleSignOut}
-              className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              Sign Out
-            </button>
           </div>
         </div>
-      </div>
+      </header>
 
+      {/* Main Content */}
+      <main className="py-8">
+        <div className="container-base max-w-7xl">
+          {/* Page Header */}
+          <div className="mb-8">
+            <h2 className="text-3xl font-bold tracking-tight mb-2">Choose Your Template</h2>
+            <p className="text-muted-foreground">
+              Select a design that best represents your professional style
+            </p>
+
+            {/* Color picker and display mode */}
+            <div className="flex flex-wrap items-center gap-6 mt-6">
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium">Color:</span>
+                <div className="flex items-center gap-2">
+                  {colorOptions.map((c) => (
+                    <button
+                      key={c.id}
+                      aria-label={`Choose ${c.label}`}
+                      title={c.label}
+                      onClick={() => {
+                        setSelectedColor(c.value);
+                        localStorage.setItem('selectedColor', c.value);
+                      }}
+                      className={`w-8 h-8 rounded-full border-2 transition-all ${
+                        selectedColor === c.value ? 'ring-2 ring-offset-2 ring-primary scale-110' : 'border-muted hover:scale-105'
+                      }`}
+                      style={{ backgroundColor: c.value }}
+                    />
+                  ))}
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <span className="text-sm font-medium">Display:</span>
+                <div className="inline-flex rounded-lg border bg-background p-1">
+                  {(['light','dark'] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      onClick={() => {
+                        setDisplayMode(mode);
+                        localStorage.setItem('selectedMode', mode);
+                      }}
+                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                        displayMode === mode ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                      }`}
+                    >
+                      {mode[0].toUpperCase() + mode.slice(1)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Templates Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Template Selection - Left */}
             <div className="lg:col-span-1 space-y-6">
@@ -394,22 +440,45 @@ export default function TemplatesPage() {
                 ))}
               </div>
 
-              {/* Generate Button */}
-              <Button
-                onClick={handleGenerateWebsite}
-                disabled={!selectedTemplate}
-                className="w-full"
-                size="lg"
-              >
-                {selectedTemplate ? (
-                  <>
-                    Generate My Website
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </>
-                ) : (
-                  'Select a Template First'
-                )}
-              </Button>
+              {/* Action Buttons */}
+              <div className="space-y-3">
+                <Button
+                  onClick={handleGenerateWebsite}
+                  disabled={!selectedTemplate}
+                  className="w-full"
+                  size="lg"
+                >
+                  {selectedTemplate ? (
+                    <>
+                      Generate My Website
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </>
+                  ) : (
+                    'Select a Template First'
+                  )}
+                </Button>
+                
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      or
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={() => router.push('/customize')}
+                  variant="outline"
+                  className="w-full gap-2"
+                  size="lg"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Customize from Scratch
+                </Button>
+              </div>
             </div>
 
             {/* Preview - Right */}
@@ -430,5 +499,7 @@ export default function TemplatesPage() {
             </div>
           </div>
         </div>
+      </main>
+    </div>
   );
 }
