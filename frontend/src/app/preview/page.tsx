@@ -573,7 +573,7 @@ export default function PreviewPage() {
               <div>
                 <h2 className="text-3xl font-bold tracking-tight">Your Portfolio Website</h2>
                 <div className="flex items-center gap-2 mt-2">
-                  <Badge variant="secondary">{selectedTemplate === 'custom' ? 'Custom Template' : (templateNames[selectedTemplate] || `Template ${selectedTemplate}`)}</Badge>
+                  <Badge variant="secondary">{selectedTemplate === 'custom' ? 'Custom Template' : (selectedTemplate ? (templateNames[selectedTemplate] || `Template ${selectedTemplate}`) : 'Portfolio')}</Badge>
                   <span className="text-muted-foreground text-sm">Preview Mode</span>
                 </div>
               </div>

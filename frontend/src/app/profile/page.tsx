@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
