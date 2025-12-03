@@ -140,7 +140,7 @@ const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }:
   };
 
   return (
-    <Card className="border-2">
+    <Card className="border-2 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' }}>
       <CardHeader className="relative">
         <CardTitle className="flex items-center gap-2">
           <Eye className="w-5 h-5" />
@@ -364,11 +364,16 @@ export default function TemplatesPage() {
                 {templates.map((template) => (
                   <Card
                     key={template.id}
-                    className={`cursor-pointer transition-all border hover:shadow-lg ${
+                    className={`cursor-pointer transition-all border ${
                       selectedTemplate === template.id
-                        ? 'ring-2 ring-emerald-500 border-emerald-200 shadow-lg bg-emerald-50/50'
-                        : 'border-emerald-100 bg-white/70 backdrop-blur-sm'
+                        ? 'ring-2 ring-emerald-500 border-emerald-200 shadow-xl bg-emerald-50/50'
+                        : 'border-emerald-100 bg-white/70 backdrop-blur-sm shadow-md hover:shadow-xl'
                     }`}
+                    style={selectedTemplate === template.id ? {
+                      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+                    } : {
+                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                    }}
                     onClick={() => handleTemplateSelect(template.id)}
                   >
                     <CardHeader>

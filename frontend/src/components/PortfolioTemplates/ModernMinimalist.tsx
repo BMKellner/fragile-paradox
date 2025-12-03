@@ -36,9 +36,17 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
   const isLightBg = brightness(rawBackground) > 200;
   let color = rawColor;
   const colorBrightness = brightness(rawColor);
-  if (isLightBg && colorBrightness > 200) color = "#111827";
+  if (isLightBg && colorBrightness > 200) color = "#0f172a";
   else if (!isLightBg && colorBrightness < 55) color = "#FFFFFF";
   const background_color = rawBackground;
+
+  // Dynamic colors based on background - improved contrast for light mode
+  const textPrimary = isLightBg ? "#0f172a" : "#F9FAFB";
+  const textSecondary = isLightBg ? "#111827" : "#D1D5DB";
+  const textMuted = isLightBg ? "#1f2937" : "#9CA3AF";
+  const cardBg = isLightBg ? "#ffffff" : "#1F2937";
+  const borderColor = isLightBg ? "#E5E7EB" : "#374151";
+  const dividerColor = isLightBg ? "#f3f4f6" : "#374151";
 
   const shadowSoft = isLightBg ? "0 6px 18px rgba(15,23,42,0.06)" : "0 8px 24px rgba(0,0,0,0.6)";
   const shadowLg = isLightBg ? "0 8px 24px rgba(15,23,42,0.06)" : "0 10px 30px rgba(0,0,0,0.6)";
@@ -49,8 +57,8 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
   if (!personalInformation && !overviewData && (!projects || projects.length === 0) && (!experience || experience.length === 0) && (!skills || skills.length === 0)) {
     return (
       <div style={{ padding: 32, maxWidth: 960, margin: "0 auto", textAlign: "center" }}>
-        <h2 style={{ color: "#111827", marginBottom: 8 }}>No resume data found</h2>
-        <p style={{ color: "#6b7280" }}>Please upload a resume from the main page to view the portfolio.</p>
+        <h2 style={{ color: textPrimary, marginBottom: 8 }}>No resume data found</h2>
+        <p style={{ color: textMuted }}>Please upload a resume from the main page to view the portfolio.</p>
       </div>
     );
   }
@@ -113,6 +121,7 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
         margin: "0 auto",
         boxSizing: "border-box",
         background: background_color,
+        color: textPrimary,
         minHeight: "100vh",
       }}
     >
@@ -125,13 +134,13 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
               width: 96,
               height: 96,
               borderRadius: 12,
-              background: "#f3f4f6",
+              background: isLightBg ? "#f3f4f6" : "#374151",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               fontSize: 28,
               fontWeight: 700,
-              color: "#111827",
+              color: isLightBg ? "#111827" : "#F9FAFB",
               boxShadow: shadowSoft,
               overflow: "hidden",
             }}
@@ -141,7 +150,7 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
 
           <div>
             <h1 style={{ margin: 0, fontSize: 28, color }}>{personal_information?.full_name}</h1>
-            <p style={{ margin: "6px 0 0", color: "#374151", fontSize: 14 }}>
+            <p style={{ margin: "6px 0 0", color: textSecondary, fontSize: 14 }}>
               {overview?.career_name || ""}
             </p>
             <div style={{ marginTop: 8, display: "flex", gap: 8, alignItems: "center" }}>
@@ -165,7 +174,7 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
                 </a>
               )}
               {personal_information?.contact_info?.linkedin && (
-                <Link href={personal_information.contact_info.linkedin} target="_blank" rel="noreferrer" style={{ color: "#6b7280", textDecoration: "none", fontSize: 14 }}>
+                <Link href={personal_information.contact_info.linkedin} target="_blank" rel="noreferrer" style={{ color: textSecondary, textDecoration: "none", fontSize: 14 }}>
                   LinkedIn
                 </Link>
               )}
@@ -173,7 +182,7 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
           </div>
         </div>
 
-        <div style={{ textAlign: "right", color: "#6b7280", fontSize: 13 }}>
+        <div style={{ textAlign: "right", color: textSecondary, fontSize: 13 }}>
           <div style={{ marginBottom: 6 }}>{personal_information?.contact_info?.email}</div>
           <div>{personal_information?.contact_info?.phone}</div>
         </div>
@@ -182,7 +191,7 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
       {/* Main layout: left nav + right content */}
       <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: 24 }}>
         {/* Left column - compact nav / contact */}
-        <aside style={{ borderRadius: 12, padding: 16, background: "#fff", boxShadow: shadowSoft }}>
+        <aside style={{ borderRadius: 12, padding: 16, background: cardBg, boxShadow: shadowSoft }}>
           <nav aria-label="Sections" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {tabs.map((t) => (
               <button
@@ -194,7 +203,7 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
                   borderRadius: 8,
                   border: "none",
                   background: active === t ? color : "transparent",
-                  color: active === t ? "#fff" : "#111827",
+                  color: active === t ? "#fff" : textPrimary,
                   cursor: "pointer",
                   fontWeight: 600,
                 }}
@@ -204,11 +213,11 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
             ))}
           </nav>
 
-          <div style={{ height: 1, background: "#f3f4f6", margin: "12px 0" }} />
+          <div style={{ height: 1, background: dividerColor, margin: "12px 0" }} />
 
-          <div style={{ fontSize: 13, color: "#374151" }}>
+          <div style={{ fontSize: 13, color: textSecondary }}>
             <div style={{ fontWeight: 700, marginBottom: 6 }}>Contact</div>
-            <div style={{ color: "#6b7280", lineHeight: 1.5 }}>
+            <div style={{ color: textSecondary, lineHeight: 1.5 }}>
               <div>{personal_information?.contact_info?.address}</div>
               <div>{personal_information?.contact_info?.email}</div>
               <div>{personal_information?.contact_info?.phone}</div>
@@ -221,9 +230,9 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
           {/* Overview */}
           {active === "Overview" && (
             <section style={{ marginBottom: 18 }}>
-              <div style={{ background: "#fff", borderRadius: 12, padding: 18, boxShadow: "0 6px 18px rgba(15,23,42,0.04)" }}>
+              <div style={{ background: cardBg, borderRadius: 12, padding: 18, boxShadow: shadowSoft }}>
                 <h2 style={{ margin: 0, color }}>Overview</h2>
-                <p style={{ color: "#374151", marginTop: 12, whiteSpace: "pre-wrap" }}>{overview?.resume_summary || "No summary available."}</p>
+                <p style={{ color: textSecondary, marginTop: 12, whiteSpace: "pre-wrap" }}>{overview?.resume_summary || "No summary available."}</p>
               </div>
             </section>
           )}
@@ -231,12 +240,12 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
           {/* About */}
           {active === "About" && (
             <section style={{ marginBottom: 18 }}>
-              <div style={{ background: "#fff", borderRadius: 12, padding: 18, boxShadow: "0 6px 18px rgba(15,23,42,0.04)" }}>
+              <div style={{ background: cardBg, borderRadius: 12, padding: 18, boxShadow: shadowSoft }}>
                 <h2 style={{ marginTop: 0, color }}>About</h2>
-                <div style={{ color: "#374151", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div style={{ color: textSecondary, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                   <div>
                     <div style={{ fontWeight: 700 }}>Education</div>
-                    <div style={{ color: "#6b7280", marginTop: 6 }}>
+                    <div style={{ color: textSecondary, marginTop: 6 }}>
                       <div>{personal_information?.education?.school}</div>
                       <div>{personal_information?.education?.majors?.join(", ")}</div>
                       <div>Expected: {personal_information?.education?.expected_grad}</div>
@@ -245,7 +254,7 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
 
                   <div>
                     <div style={{ fontWeight: 700 }}>Location & Links</div>
-                    <div style={{ color: "#6b7280", marginTop: 6 }}>
+                    <div style={{ color: textSecondary, marginTop: 6 }}>
                       <div>{personal_information?.contact_info?.address}</div>
                       {personal_information?.contact_info?.linkedin && (
                         <a href={personal_information.contact_info.linkedin} target="_blank" rel="noreferrer" style={{ color }}>
@@ -269,7 +278,7 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
                     <article
                       key={`project-${idx}`}
                       style={{
-                        background: "#fff",
+                        background: cardBg,
                         borderRadius: 12,
                         padding: 16,
                         boxShadow: shadowLg,
@@ -280,15 +289,15 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
                       }}
                     >
                       <div>
-                        <div style={{ fontWeight: 800, color: "#0f172a", fontSize: 15, marginBottom: 6 }}>{p.title}</div>
-                        {p.description ? <div style={{ color: "#374151", fontSize: 13, marginBottom: 10 }}>{p.description}</div> : null}
+                        <div style={{ fontWeight: 800, color: textPrimary, fontSize: 15, marginBottom: 6 }}>{p.title}</div>
+                        {p.description ? <div style={{ color: textSecondary, fontSize: 13, marginBottom: 10 }}>{p.description}</div> : null}
                       </div>
                       {/* link or tags could go here if provided in future schema */}
                     </article>
                   ))}
                 </div>
               ) : (
-                <div style={{ color: "#6b7280" }}>No projects listed.</div>
+                <div style={{ color: textMuted }}>No projects listed.</div>
               )}
             </section>
           )}
@@ -297,7 +306,7 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
           {active === "Skills" && (
             <section style={{ marginBottom: 18 }}>
               <h3 style={{ marginBottom: 12, color }}>Skills</h3>
-              <div style={{ background: "#fff", borderRadius: 12, padding: 16, boxShadow: shadowSoft }}>
+              <div style={{ background: cardBg, borderRadius: 12, padding: 16, boxShadow: shadowSoft }}>
                 {skillsList?.length ? (
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                     {skillsList.map((s, idx) => (
@@ -305,8 +314,8 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
                         key={`skill-${idx}`}
                         style={{
                           padding: "6px 10px",
-                          background: "#f3f4f6",
-                          color: "#111827",
+                          background: isLightBg ? "#f3f4f6" : "#374151",
+                          color: textPrimary,
                           borderRadius: 999,
                           fontSize: 13,
                           fontWeight: 600,
@@ -317,7 +326,7 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
                     ))}
                   </div>
                 ) : (
-                  <div style={{ color: "#6b7280" }}>No skills listed.</div>
+                  <div style={{ color: textMuted }}>No skills listed.</div>
                 )}
               </div>
             </section>
@@ -331,22 +340,22 @@ export default function ModernMinimalistPortfolio({ personalInformation, overvie
                 <div style={{ display: "grid", gap: 12 }}>
                   {experienceList.map((ex, idx) => (
                     <div key={`exp-${idx}`} style={{}}>
-                      <div style={{ position: "relative", background: "#fff", borderRadius: 12, padding: 14, boxShadow: "0 6px 18px rgba(15,23,42,0.04)" }}>
+                      <div style={{ position: "relative", background: cardBg, borderRadius: 12, padding: 14, boxShadow: shadowSoft }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
                           <div>
-                            <div style={{ fontWeight: 800, color: "#0f172a" }}>{ex.company || "Company"}</div>
+                            <div style={{ fontWeight: 800, color: textPrimary }}>{ex.company || "Company"}</div>
                           </div>
-                          <div style={{ color: "#6b7280", fontSize: 13, whiteSpace: "nowrap", marginLeft: 12 }}>
+                          <div style={{ color: textMuted, fontSize: 13, whiteSpace: "nowrap", marginLeft: 12 }}>
                             {ex.employed_dates}
                           </div>
                         </div>
-                        {ex.description ? <p style={{ marginTop: 10, color: "#374151" }}>{ex.description}</p> : null}
+                        {ex.description ? <p style={{ marginTop: 10, color: textSecondary }}>{ex.description}</p> : null}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div style={{ color: "#6b7280" }}>No experience listed.</div>
+                <div style={{ color: textMuted }}>No experience listed.</div>
               )}
             </section>
           )}
