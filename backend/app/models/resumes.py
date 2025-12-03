@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import List
+from typing import List, TypedDict, Any
+
 
 class ContactInfo(BaseModel):
     email: str
@@ -39,4 +40,14 @@ class ResumeSchema(BaseModel):
     projects: List[Project]
     skills: List[str]
     experience: List[Experience]
+
+
+class Resume(BaseModel):
+    id: str
+    user_id: str
+    title: str
+    file_path: str
+    data: ResumeSchema | None
+
+
 

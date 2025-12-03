@@ -75,7 +75,7 @@ export default function ProfilePage() {
           return;
         }
 
-        const response = await fetch('http://localhost:8000/profiles/me', {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profiles/me`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -155,7 +155,7 @@ export default function ProfilePage() {
       };
 
       // Use PUT which now handles both create and update
-      const response = await fetch('http://localhost:8000/profiles/me', {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profiles/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
