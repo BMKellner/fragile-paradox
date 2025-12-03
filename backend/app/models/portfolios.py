@@ -30,3 +30,4 @@ class Portfolio(PortfolioBase):
     class Config:
         from_attributes = True
 
+

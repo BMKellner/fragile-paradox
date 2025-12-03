@@ -18,7 +18,9 @@ import {
   Linkedin,
   Github,
   Globe,
-  Loader2
+  Loader2,
+  Leaf,
+  Sprout
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
@@ -186,10 +188,10 @@ export default function ProfilePage() {
 
   if (info.loading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
+          <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your profile...</p>
         </div>
       </div>
     );
@@ -201,15 +203,16 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-50">
+      <header className="header-base sticky top-0 z-50">
         <div className="container-base">
           <div className="flex items-center justify-between py-4">
             {/* Left side - Logo */}
             <div className="flex items-center gap-8">
               <div>
-                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+                <Leaf className="w-5 h-5 text-emerald-600" />
+                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
               </div>
               
               {/* Navigation Tabs */}
@@ -235,13 +238,13 @@ export default function ProfilePage() {
 
             {/* Right side - User info and actions */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-3 h-3 text-primary" />
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-50">
+                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <User className="w-3 h-3 text-emerald-700" />
                 </div>
-                <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
+                <span className="text-sm font-medium text-emerald-900">{info.user.email?.split('@')[0]}</span>
               </div>
-              <Button onClick={handleSignOut} variant="outline" size="sm">
+              <Button onClick={handleSignOut} variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
                 Sign Out
               </Button>
             </div>
@@ -443,7 +446,7 @@ export default function ProfilePage() {
               <Button variant="outline" onClick={() => router.push('/dashboard')}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} disabled={isSaving} className="gap-2">
+              <Button onClick={handleSave} disabled={isSaving} className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg">
                 {isSaving ? (
                   <>
                     <div className="spinner w-4 h-4"></div>

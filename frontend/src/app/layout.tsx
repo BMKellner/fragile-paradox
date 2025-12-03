@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Resume Parser",
-  description: "Upload and parse your resume with AI",
+  title: "Foliage - Transform Your Career Story",
+  description: "Create beautiful portfolio websites from your resume with AI-powered parsing and nature-inspired design",
 };
 
 export default function RootLayout({

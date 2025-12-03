@@ -11,7 +11,9 @@ import {
   ChevronRight,
   User,
   LayoutDashboard,
-  Loader2
+  Loader2,
+  Leaf,
+  Sprout
 } from "lucide-react";
 import { useState } from "react";
 
@@ -87,10 +89,10 @@ export default function UploadPage() {
 
   if (info.loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
+          <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
+          <p className="text-muted-foreground">Preparing your garden...</p>
         </div>
       </div>
     );
@@ -102,15 +104,16 @@ export default function UploadPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-50">
+      <header className="header-base sticky top-0 z-50">
         <div className="container-base">
           <div className="flex items-center justify-between py-4">
             {/* Left side - Logo */}
             <div className="flex items-center gap-8">
-              <div>
-                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+              <div className="flex items-center gap-2">
+                <Leaf className="w-5 h-5 text-emerald-600" />
+                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
               </div>
               
               {/* Navigation Tabs */}
@@ -136,13 +139,13 @@ export default function UploadPage() {
 
             {/* Right side - User info and actions */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-3 h-3 text-primary" />
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-50">
+                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <User className="w-3 h-3 text-emerald-700" />
                 </div>
-                <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
+                <span className="text-sm font-medium text-emerald-900">{info.user.email?.split('@')[0]}</span>
               </div>
-              <Button onClick={handleSignOut} variant="outline" size="sm">
+              <Button onClick={handleSignOut} variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
                 Sign Out
               </Button>
             </div>
@@ -154,21 +157,24 @@ export default function UploadPage() {
       <main className="py-16">
         <div className="container-base max-w-2xl">
           <div className="text-center mb-8">
-            <h2 className="text-3xl font-bold mb-2">Create Your Portfolio</h2>
+            <div className="inline-flex items-center justify-center gap-2 mb-4">
+              <Sprout className="w-10 h-10 text-emerald-600" />
+            </div>
+            <h2 className="text-3xl font-bold mb-2">Plant Your Story</h2>
             <p className="text-muted-foreground">
-              Upload your resume to get started
+              Upload your resume and watch your portfolio grow
             </p>
           </div>
 
           {/* Upload Card */}
-          <Card className="shadow-lg">
+          <Card className="shadow-lg border border-emerald-100 bg-white/80 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-2xl">
-                <Upload className="w-6 h-6" />
+                <Sprout className="w-6 h-6 text-emerald-600" />
                 Upload Your Resume
               </CardTitle>
               <CardDescription>
-                Upload a PDF or DOCX file. We&apos;ll extract all the information and help you create a professional portfolio.
+                Upload a PDF or DOCX file. Our AI will cultivate your information into a beautiful portfolio.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -178,15 +184,15 @@ export default function UploadPage() {
                     type="file"
                     accept=".pdf,.docx"
                     onChange={handleFileChange}
-                    className="w-full p-8 border-2 border-dashed rounded-lg cursor-pointer transition-all hover:border-primary focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                    className="w-full p-8 border-2 border-dashed border-emerald-200 rounded-lg cursor-pointer transition-all hover:border-emerald-400 hover:bg-emerald-50/50 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700"
                   />
                 </div>
                 
                 {file && (
-                  <div className="flex items-center gap-2 p-3 bg-secondary rounded-lg">
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-sm flex-1">
-                      {file.name} <span className="text-muted-foreground">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                  <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
+                    <FileText className="w-4 h-4 text-emerald-600" />
+                    <span className="text-sm flex-1 text-emerald-900">
+                      {file.name} <span className="text-emerald-600">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
                     </span>
                   </div>
                 )}
@@ -194,17 +200,18 @@ export default function UploadPage() {
                 <Button 
                   type="submit" 
                   disabled={!file || loading}
-                  className="w-full"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
                   size="lg"
                 >
                   {loading ? (
                     <>
-                      <div className="spinner w-4 h-4 mr-2"></div>
-                      Processing...
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Cultivating...
                     </>
                   ) : (
                     <>
-                      Parse Resume
+                      <Sprout className="w-4 h-4 mr-2" />
+                      Parse & Grow
                       <ChevronRight className="w-4 h-4 ml-2" />
                     </>
                   )}
@@ -222,20 +229,23 @@ export default function UploadPage() {
           </Card>
 
           {/* Info Section */}
-          <div className="mt-8 p-6 bg-muted/50 rounded-lg">
-            <h3 className="font-semibold mb-2">What happens next?</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2">
-                <span className="text-primary">1.</span>
-                <span>We&apos;ll parse your resume using AI to extract all relevant information</span>
+          <div className="mt-8 p-6 bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-100 rounded-lg">
+            <h3 className="font-semibold mb-3 flex items-center gap-2 text-emerald-900">
+              <Leaf className="w-5 h-5 text-emerald-600" />
+              Your Growth Journey
+            </h3>
+            <ul className="space-y-3 text-sm text-muted-foreground">
+              <li className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-semibold">1</span>
+                <span>AI parses your resume, extracting every detail like nutrients from rich soil</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary">2.</span>
-                <span>Choose from our collection of professional portfolio templates</span>
+              <li className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-semibold">2</span>
+                <span>Choose from nature-inspired templates that let your story bloom</span>
               </li>
-              <li className="flex items-start gap-2">
-                <span className="text-primary">3.</span>
-                <span>Customize your portfolio and publish it with a unique link</span>
+              <li className="flex items-start gap-3">
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-semibold">3</span>
+                <span>Customize and publish your portfolio, ready to branch out and grow</span>
               </li>
             </ul>
           </div>

@@ -215,7 +215,7 @@ export default function CustomizePage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -235,7 +235,7 @@ export default function CustomizePage() {
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center gap-8">
               <div>
-                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
               </div>
               
               <nav className="hidden md:flex items-center gap-1">
@@ -260,8 +260,8 @@ export default function CustomizePage() {
 
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-3 h-3 text-primary" />
+                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <User className="w-3 h-3 text-emerald-700" />
                 </div>
                 <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
               </div>
@@ -339,7 +339,7 @@ export default function CustomizePage() {
                               className={`p-2 rounded border transition-all cursor-move ${
                                 isDragging ? 'opacity-50 scale-95' : ''
                               } ${
-                                selectedSection?.id === section.id ? 'bg-primary/10 border-primary' : 'bg-background hover:bg-muted'
+                                selectedSection?.id === section.id ? 'bg-emerald-50 border-emerald-500' : 'bg-background hover:bg-muted'
                               }`}
                               onClick={() => setSelectedSection(section)}
                             >
@@ -429,7 +429,7 @@ export default function CustomizePage() {
                         key={mode}
                         onClick={() => setDisplayMode(mode)}
                         className={`px-2 py-1 text-xs rounded transition-colors ${
-                          displayMode === mode ? 'bg-black text-white' : 'hover:bg-muted'
+                          displayMode === mode ? 'bg-primary text-primary-foreground' : 'hover:bg-emerald-50'
                         }`}
                       >
                         {mode[0].toUpperCase() + mode.slice(1)}
@@ -901,9 +901,9 @@ export default function CustomizePage() {
                                 }}
                                 className="capitalize text-xs h-8 transition-all"
                                 style={{
-                                  backgroundColor: isSelected ? '#000' : 'transparent',
+                                  backgroundColor: isSelected ? 'var(--color-primary)' : 'transparent',
                                   color: isSelected ? '#fff' : 'inherit',
-                                  borderColor: isSelected ? '#000' : 'hsl(var(--border))'
+                                  borderColor: isSelected ? 'var(--color-primary)' : 'var(--color-border)'
                                 }}
                               >
                                 {layout}
@@ -931,9 +931,9 @@ export default function CustomizePage() {
                                 }}
                                 className="capitalize text-xs h-8 transition-all"
                                 style={{
-                                  backgroundColor: isSelected ? '#000' : 'transparent',
+                                  backgroundColor: isSelected ? 'var(--color-primary)' : 'transparent',
                                   color: isSelected ? '#fff' : 'inherit',
-                                  borderColor: isSelected ? '#000' : 'hsl(var(--border))'
+                                  borderColor: isSelected ? 'var(--color-primary)' : 'var(--color-border)'
                                 }}
                               >
                                 {size}
@@ -961,9 +961,9 @@ export default function CustomizePage() {
                                 }}
                                 className="capitalize text-xs h-8 transition-all"
                                 style={{
-                                  backgroundColor: isSelected ? '#000' : 'transparent',
+                                  backgroundColor: isSelected ? 'var(--color-primary)' : 'transparent',
                                   color: isSelected ? '#fff' : 'inherit',
-                                  borderColor: isSelected ? '#000' : 'hsl(var(--border))'
+                                  borderColor: isSelected ? 'var(--color-primary)' : 'var(--color-border)'
                                 }}
                               >
                                 {spacing}
