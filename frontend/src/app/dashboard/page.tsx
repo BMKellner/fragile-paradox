@@ -17,7 +17,10 @@ import {
   Eye,
   Trash2,
   Download,
-  Loader2
+  Loader2,
+  Leaf,
+  Sprout,
+  TreePine
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { ParsedResume } from "@/constants/ResumeFormat";
@@ -261,10 +264,10 @@ export default function DashboardPage() {
 
   if (info.loading || isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
+          <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your portfolio garden...</p>
         </div>
       </div>
     );
@@ -276,15 +279,16 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-50">
+      <header className="header-base sticky top-0 z-50">
         <div className="container-base">
           <div className="flex items-center justify-between py-4">
             {/* Left side - Logo */}
             <div className="flex items-center gap-8">
-              <div>
-                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+              <div className="flex items-center gap-2">
+                <Leaf className="w-5 h-5 text-emerald-600" />
+                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
               </div>
               
               {/* Navigation Tabs */}
@@ -308,15 +312,15 @@ export default function DashboardPage() {
               </nav>
             </div>
 
-            {/* Right side - User info and actions */}
+              {/* Right side - User info and actions */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-3 h-3 text-primary" />
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-50">
+                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <User className="w-3 h-3 text-emerald-700" />
                 </div>
-                <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
+                <span className="text-sm font-medium text-emerald-900">{info.user.email?.split('@')[0]}</span>
               </div>
-              <Button onClick={handleSignOut} variant="outline" size="sm">
+              <Button onClick={handleSignOut} variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
                 Sign Out
               </Button>
             </div>
@@ -330,59 +334,62 @@ export default function DashboardPage() {
           {/* Page Header with CTA */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight">Welcome back!</h2>
+              <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
+                <Sprout className="w-8 h-8 text-emerald-600" />
+                Welcome back!
+              </h2>
               <p className="text-muted-foreground mt-1">
-                Here&apos;s what&apos;s happening with your portfolios
+                Watch your portfolio garden grow
               </p>
             </div>
-            <Button onClick={() => router.push('/upload')} size="lg" className="gap-2 shadow-sm">
+            <Button onClick={() => router.push('/upload')} size="lg" className="gap-2 shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white">
               <Plus className="w-4 h-4" />
-              Upload New Resume
+              Plant New Portfolio
             </Button>
           </div>
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <Card className="border-none shadow-sm">
+            <Card className="border border-emerald-100 shadow-md bg-white/70 backdrop-blur-sm hover:shadow-lg transition-all">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Total Websites</p>
-                    <p className="text-3xl font-bold">{websites.length}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Created portfolios</p>
+                    <p className="text-sm font-medium text-muted-foreground mb-1">Total Portfolios</p>
+                    <p className="text-3xl font-bold text-emerald-900">{websites.length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Growing strong</p>
                   </div>
-                  <div className="p-3 rounded-full bg-blue-100">
-                    <FileText className="w-6 h-6 text-blue-600" />
+                  <div className="p-3 rounded-full bg-emerald-100">
+                    <Sprout className="w-6 h-6 text-emerald-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-sm">
+            <Card className="border border-green-100 shadow-md bg-white/70 backdrop-blur-sm hover:shadow-lg transition-all">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">Templates Used</p>
-                    <p className="text-3xl font-bold">{new Set(websites.map(w => w.template_id)).size}</p>
+                    <p className="text-3xl font-bold text-green-900">{new Set(websites.map(w => w.template_id)).size}</p>
                     <p className="text-xs text-muted-foreground mt-1">Unique designs</p>
                   </div>
-                  <div className="p-3 rounded-full bg-purple-100">
-                    <Layout className="w-6 h-6 text-purple-600" />
+                  <div className="p-3 rounded-full bg-green-100">
+                    <TreePine className="w-6 h-6 text-green-600" />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            <Card className="border-none shadow-sm">
+            <Card className="border border-teal-100 shadow-md bg-white/70 backdrop-blur-sm hover:shadow-lg transition-all">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-1">Published</p>
-                    <p className="text-3xl font-bold">{websites.filter(w => w.is_published).length}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Live websites</p>
+                    <p className="text-3xl font-bold text-teal-900">{websites.filter(w => w.is_published).length}</p>
+                    <p className="text-xs text-muted-foreground mt-1">Live & flourishing</p>
                   </div>
-                  <div className="p-3 rounded-full bg-green-100">
-                    <Upload className="w-6 h-6 text-green-600" />
+                  <div className="p-3 rounded-full bg-teal-100">
+                    <Leaf className="w-6 h-6 text-teal-600" />
                   </div>
                 </div>
               </CardContent>
@@ -393,16 +400,19 @@ export default function DashboardPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Recent Websites - Takes up 2 columns */}
             <div className="lg:col-span-2">
-              <Card className="border-none shadow-sm">
+              <Card className="border border-emerald-100 shadow-md bg-white/70 backdrop-blur-sm">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <CardTitle className="text-xl">Recent Websites</CardTitle>
+                      <CardTitle className="text-xl flex items-center gap-2">
+                        <TreePine className="w-5 h-5 text-emerald-600" />
+                        Portfolio Garden
+                      </CardTitle>
                       <CardDescription className="mt-1">
-                        Your recently created portfolio websites
+                        Your growing collection of portfolio websites
                       </CardDescription>
                     </div>
-                    <Button variant="ghost" size="sm" onClick={() => router.push('/upload')}>
+                    <Button variant="ghost" size="sm" onClick={() => router.push('/upload')} className="hover:bg-emerald-50">
                       <Plus className="w-4 h-4 mr-1" />
                       Create New
                     </Button>
@@ -466,16 +476,16 @@ export default function DashboardPage() {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <div className="p-4 rounded-full bg-muted inline-block mb-4">
-                        <Layout className="w-8 h-8 text-muted-foreground" />
+                      <div className="p-4 rounded-full bg-emerald-50 inline-block mb-4">
+                        <Sprout className="w-8 h-8 text-emerald-600" />
                       </div>
-                      <h3 className="font-semibold mb-1">No websites yet</h3>
+                      <h3 className="font-semibold mb-1">Your garden awaits</h3>
                       <p className="text-sm text-muted-foreground mb-4">
-                        Create your first portfolio website to get started
+                        Plant your first portfolio to start growing
                       </p>
-                      <Button onClick={() => router.push('/upload')}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Create Website
+                      <Button onClick={() => router.push('/upload')} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                        <Sprout className="w-4 h-4 mr-2" />
+                        Plant First Portfolio
                       </Button>
                     </div>
                   )}
@@ -485,29 +495,32 @@ export default function DashboardPage() {
 
             {/* Quick Actions - Takes up 1 column */}
             <div className="lg:col-span-1">
-              <Card className="border-none shadow-sm">
+              <Card className="border border-emerald-100 shadow-md bg-white/70 backdrop-blur-sm">
                 <CardHeader className="pb-3">
-                  <CardTitle className="text-xl">Quick Actions</CardTitle>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Leaf className="w-5 h-5 text-emerald-600" />
+                    Quick Actions
+                  </CardTitle>
                   <CardDescription className="mt-1">
-                    Manage your portfolio
+                    Cultivate your presence
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <Button 
-                    className="w-full justify-start gap-2" 
+                    className="w-full justify-start gap-2 border-emerald-200 hover:bg-emerald-50" 
                     variant="outline"
                     onClick={() => router.push('/upload')}
                   >
-                    <Upload className="w-4 h-4" />
-                    Upload New Resume
+                    <Sprout className="w-4 h-4 text-emerald-600" />
+                    Plant New Portfolio
                   </Button>
                   <Button 
-                    className="w-full justify-start gap-2" 
+                    className="w-full justify-start gap-2 border-emerald-200 hover:bg-emerald-50" 
                     variant="outline"
                     onClick={() => router.push('/profile')}
                   >
-                    <User className="w-4 h-4" />
-                    Edit Profile
+                    <User className="w-4 h-4 text-emerald-600" />
+                    Tend Profile
                   </Button>
                   {websites.length > 0 && (
                     <div className="pt-4 border-t">

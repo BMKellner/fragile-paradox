@@ -7,7 +7,7 @@ import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Check, ArrowRight, Sparkles, User, LayoutDashboard, Loader2 } from "lucide-react";
+import { Eye, Check, ArrowRight, Sparkles, User, LayoutDashboard, Loader2, Leaf, TreePine, Sprout } from "lucide-react";
 import { ParsedResume } from "@/constants/ResumeFormat";
 import ModernMinimalistPortfolio from "@/components/PortfolioTemplates/ModernMinimalist";
 import ClassicProfessionalPortfolio from "@/components/PortfolioTemplates/ClassicProfessional";
@@ -260,10 +260,10 @@ export default function TemplatesPage() {
 
   if (info.loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-muted/30">
+      <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading...</p>
+          <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading templates...</p>
         </div>
       </div>
     );
@@ -292,25 +292,27 @@ export default function TemplatesPage() {
     );
   }
 
-  // color options for picker
+  // color options for picker - nature-inspired palette
   const colorOptions = [
-    { id: 'blue', value: '#2563EB', label: 'Blue' },
-    { id: 'teal', value: '#0F766E', label: 'Teal' },
-    { id: 'purple', value: '#7C3AED', label: 'Purple' },
-    { id: 'red', value: '#EF4444', label: 'Red' },
-    { id: 'amber', value: '#F59E0B', label: 'Amber' },
+    { id: 'forest', value: '#10B981', label: 'Forest Green' },
+    { id: 'moss', value: '#4D7C0F', label: 'Moss' },
+    { id: 'sage', value: '#84CC16', label: 'Sage' },
+    { id: 'teal', value: '#0F766E', label: 'Ocean Teal' },
+    { id: 'bark', value: '#92400E', label: 'Bark Brown' },
+    { id: 'sky', value: '#0EA5E9', label: 'Sky Blue' },
   ];
 
   return (
-    <div className="min-h-screen bg-muted/30">
+    <div className="min-h-screen">
       {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-50">
+      <header className="header-base sticky top-0 z-50">
         <div className="container-base">
           <div className="flex items-center justify-between py-4">
             {/* Left side - Logo */}
             <div className="flex items-center gap-8">
-              <div>
-                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+              <div className="flex items-center gap-2">
+                <Leaf className="w-5 h-5 text-emerald-600" />
+                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
               </div>
               
               {/* Navigation Tabs */}
@@ -336,13 +338,13 @@ export default function TemplatesPage() {
 
             {/* Right side - User info and actions */}
             <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-3 h-3 text-primary" />
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-50">
+                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <User className="w-3 h-3 text-emerald-700" />
                 </div>
-                <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
+                <span className="text-sm font-medium text-emerald-900">{info.user.email?.split('@')[0]}</span>
               </div>
-              <Button onClick={handleSignOut} variant="outline" size="sm">
+              <Button onClick={handleSignOut} variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
                 Sign Out
               </Button>
             </div>
@@ -355,9 +357,12 @@ export default function TemplatesPage() {
         <div className="container-base max-w-7xl">
           {/* Page Header */}
           <div className="mb-8">
-            <h2 className="text-3xl font-bold tracking-tight mb-2">Choose Your Template</h2>
+            <h2 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-3">
+              <TreePine className="w-8 h-8 text-emerald-600" />
+              Choose Your Template
+            </h2>
             <p className="text-muted-foreground">
-              Select a design that best represents your professional style
+              Select a design that lets your career story flourish
             </p>
 
             {/* Color picker and display mode */}
@@ -375,7 +380,7 @@ export default function TemplatesPage() {
                         localStorage.setItem('selectedColor', c.value);
                       }}
                       className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        selectedColor === c.value ? 'ring-2 ring-offset-2 ring-primary scale-110' : 'border-muted hover:scale-105'
+                        selectedColor === c.value ? 'ring-2 ring-offset-2 ring-emerald-500 scale-110' : 'border-muted hover:scale-105'
                       }`}
                       style={{ backgroundColor: c.value }}
                     />
@@ -394,7 +399,7 @@ export default function TemplatesPage() {
                         localStorage.setItem('selectedMode', mode);
                       }}
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                        displayMode === mode ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
+                        displayMode === mode ? 'bg-emerald-600 text-white' : 'hover:bg-emerald-50'
                       }`}
                     >
                       {mode[0].toUpperCase() + mode.slice(1)}
@@ -413,10 +418,10 @@ export default function TemplatesPage() {
                 {templates.map((template) => (
                   <Card
                     key={template.id}
-                    className={`cursor-pointer transition-all hover:shadow-lg ${
+                    className={`cursor-pointer transition-all border hover:shadow-lg ${
                       selectedTemplate === template.id
-                        ? 'ring-2 ring-primary shadow-lg'
-                        : ''
+                        ? 'ring-2 ring-emerald-500 border-emerald-200 shadow-lg bg-emerald-50/50'
+                        : 'border-emerald-100 bg-white/70 backdrop-blur-sm'
                     }`}
                     onClick={() => handleTemplateSelect(template.id)}
                   >
@@ -426,7 +431,7 @@ export default function TemplatesPage() {
                           <CardTitle className="flex items-center gap-2">
                             {template.name}
                             {selectedTemplate === template.id && (
-                              <Check className="w-5 h-5 text-primary" />
+                              <Check className="w-5 h-5 text-emerald-600" />
                             )}
                           </CardTitle>
                           <CardDescription>{template.description}</CardDescription>
@@ -445,12 +450,13 @@ export default function TemplatesPage() {
                 <Button
                   onClick={handleGenerateWebsite}
                   disabled={!selectedTemplate}
-                  className="w-full"
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
                   size="lg"
                 >
                   {selectedTemplate ? (
                     <>
-                      Generate My Website
+                      <Sprout className="w-4 h-4 mr-2" />
+                      Grow My Portfolio
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </>
                   ) : (
@@ -472,11 +478,11 @@ export default function TemplatesPage() {
                 <Button
                   onClick={() => router.push('/customize')}
                   variant="outline"
-                  className="w-full gap-2"
+                  className="w-full gap-2 border-emerald-200 hover:bg-emerald-50"
                   size="lg"
                 >
-                  <Sparkles className="w-4 h-4" />
-                  Customize from Scratch
+                  <Sparkles className="w-4 h-4 text-emerald-600" />
+                  Cultivate from Scratch
                 </Button>
               </div>
             </div>

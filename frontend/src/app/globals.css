@@ -4,47 +4,79 @@
   --font-family-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-family-mono: var(--font-geist-mono), ui-monospace, monospace;
   
-  /* shadcn/ui New York - Neutral Colors (Light Mode Only) */
-  --color-background: oklch(1 0 0);
-  --color-foreground: oklch(0.145 0 0);
-  --color-card: oklch(1 0 0);
-  --color-card-foreground: oklch(0.145 0 0);
-  --color-popover: oklch(1 0 0);
-  --color-popover-foreground: oklch(0.145 0 0);
-  --color-primary: oklch(0.205 0 0);
-  --color-primary-foreground: oklch(0.985 0 0);
-  --color-secondary: oklch(0.97 0 0);
-  --color-secondary-foreground: oklch(0.205 0 0);
-  --color-muted: oklch(0.97 0 0);
-  --color-muted-foreground: oklch(0.556 0 0);
-  --color-accent: oklch(0.97 0 0);
-  --color-accent-foreground: oklch(0.205 0 0);
+  /* Foliage - Nature/Canopy Inspired Color Palette */
+  /* Soft sage backgrounds instead of pure white */
+  --color-background: oklch(0.985 0.008 155);
+  --color-foreground: oklch(0.25 0.02 150);
+  
+  /* Cards with soft neutral bark tones */
+  --color-card: oklch(0.99 0.005 145);
+  --color-card-foreground: oklch(0.25 0.02 150);
+  
+  /* Popovers */
+  --color-popover: oklch(0.99 0.005 145);
+  --color-popover-foreground: oklch(0.25 0.02 150);
+  
+  /* Primary - Deep forest green */
+  --color-primary: oklch(0.42 0.12 155);
+  --color-primary-foreground: oklch(0.99 0.005 145);
+  
+  /* Secondary - Soft moss/lichen tone */
+  --color-secondary: oklch(0.95 0.015 150);
+  --color-secondary-foreground: oklch(0.35 0.05 155);
+  
+  /* Muted - Light sage */
+  --color-muted: oklch(0.96 0.012 150);
+  --color-muted-foreground: oklch(0.52 0.03 150);
+  
+  /* Accent - Bright spring green */
+  --color-accent: oklch(0.94 0.025 155);
+  --color-accent-foreground: oklch(0.35 0.08 155);
+  
+  /* Destructive stays similar but slightly warmer */
   --color-destructive: oklch(0.577 0.245 27.325);
   --color-destructive-foreground: oklch(0.985 0 0);
-  --color-border: oklch(0.922 0 0);
-  --color-input: oklch(0.922 0 0);
-  --color-ring: oklch(0.145 0 0);
   
-  /* Gradient colors (using hsl for compatibility) */
-  --color-gradient-from: #3b82f6;
-  --color-gradient-to: #8b5cf6;
+  /* Borders - Soft bark/branch tone */
+  --color-border: oklch(0.89 0.015 145);
+  --color-input: oklch(0.92 0.012 150);
   
-  /* Radius */
+  /* Ring - Forest green focus */
+  --color-ring: oklch(0.45 0.12 155);
+  
+  /* Canopy gradient colors - soft green to sky blue */
+  --color-gradient-from: #4d8b6f;
+  --color-gradient-to: #7ba899;
+  --color-gradient-accent: #a8d5ba;
+  
+  /* Nature-inspired gradients */
+  --gradient-canopy: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 50%, #a5d6a7 100%);
+  --gradient-forest: linear-gradient(180deg, #f1f8f4 0%, #e8f5e9 100%);
+  --gradient-dappled: radial-gradient(circle at 30% 50%, rgba(200, 230, 201, 0.3) 0%, transparent 50%),
+                       radial-gradient(circle at 70% 80%, rgba(165, 214, 167, 0.2) 0%, transparent 50%);
+  
+  /* Radius - slightly more organic */
   --radius-xs: 0.25rem;
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
-  --radius-lg: 0.625rem;
-  --radius-xl: 0.75rem;
-  --radius-2xl: 1rem;
-  --radius-3xl: 1.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
   
-  /* Shadow utilities */
-  --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-sm: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-  --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  /* Shadow utilities with soft green tint */
+  --shadow-xs: 0 1px 2px 0 rgb(77 139 111 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(77 139 111 / 0.08), 0 1px 2px -1px rgb(77 139 111 / 0.08);
+  --shadow-md: 0 4px 6px -1px rgb(77 139 111 / 0.08), 0 2px 4px -2px rgb(77 139 111 / 0.08);
+  --shadow-lg: 0 10px 15px -3px rgb(77 139 111 / 0.1), 0 4px 6px -4px rgb(77 139 111 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(77 139 111 / 0.1), 0 8px 10px -6px rgb(77 139 111 / 0.1);
+  --shadow-2xl: 0 25px 50px -12px rgb(77 139 111 / 0.15);
+  
+  /* Nature accent colors */
+  --color-leaf: oklch(0.65 0.15 155);
+  --color-bark: oklch(0.55 0.03 70);
+  --color-sky: oklch(0.85 0.05 220);
+  --color-moss: oklch(0.58 0.10 140);
 }
 
 * {
@@ -56,10 +88,30 @@ html {
 }
 
 body {
-  background-color: var(--color-background);
+  background: var(--gradient-forest);
   color: var(--color-foreground);
   font-family: var(--font-family-sans);
   font-feature-settings: "rlig" 1, "calt" 1;
+  position: relative;
+}
+
+/* Subtle dappled light effect overlay */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: var(--gradient-dappled);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* Gradient utilities */
@@ -67,11 +119,30 @@ body {
   background: linear-gradient(to right, var(--color-gradient-from), var(--color-gradient-to));
 }
 
+.gradient-canopy {
+  background: var(--gradient-canopy);
+}
+
 .gradient-text {
-  background: linear-gradient(to right, var(--color-gradient-from), var(--color-gradient-to));
+  background: linear-gradient(135deg, var(--color-gradient-from), var(--color-gradient-to), var(--color-gradient-accent));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+/* Leaf accent utility */
+.leaf-accent {
+  position: relative;
+}
+
+.leaf-accent::before {
+  content: '🌿';
+  position: absolute;
+  left: -1.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.3;
+  font-size: 1.2rem;
 }
 
 /* Loading spinner */
@@ -131,8 +202,10 @@ body {
 
 /* Header */
 .header-base {
-  background-color: var(--color-background);
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--color-border);
+  box-shadow: 0 1px 3px 0 rgb(77 139 111 / 0.05);
 }
 
 /* Focus visible */

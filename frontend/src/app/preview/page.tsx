@@ -11,7 +11,7 @@ import CreativeBoldPortfolio from "@/components/PortfolioTemplates/CreativeBold"
 import ElegantSophisticatedPortfolio from "@/components/PortfolioTemplates/ElegantSophisticated";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { User, LayoutDashboard, Download, Globe, ArrowLeft, Loader2, Save, Check } from "lucide-react";
+import { User, LayoutDashboard, Download, Globe, ArrowLeft, Loader2, Save, Check , Leaf, Sprout } from "lucide-react";
 
 
 // personalInformation={personal_information}
@@ -156,7 +156,7 @@ export default function PreviewPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-muted/30">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
           <p className="text-muted-foreground">Loading...</p>
         </div>
       </div>
@@ -176,7 +176,8 @@ export default function PreviewPage() {
           <div className="container-base">
             <div className="flex items-center justify-between py-4">
               <div>
-                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+                <Leaf className="w-5 h-5 text-emerald-600" />
+                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
               </div>
               <Button onClick={handleSignOut} variant="outline" size="sm">
                 Sign Out
@@ -205,7 +206,8 @@ export default function PreviewPage() {
           <div className="container-base">
             <div className="flex items-center justify-between py-4">
               <div>
-                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+                <Leaf className="w-5 h-5 text-emerald-600" />
+                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
               </div>
               <Button onClick={handleSignOut} variant="outline" size="sm">
                 Sign Out
@@ -216,7 +218,7 @@ export default function PreviewPage() {
 
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
-            <Loader2 className="w-16 h-16 animate-spin text-primary mx-auto mb-4" />
+            <Loader2 className="w-16 h-16 animate-spin text-emerald-600 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">Generating Your Website</h2>
             <p className="text-muted-foreground">Creating your {templateNames[selectedTemplate] || 'portfolio'}...</p>
           </div>
@@ -370,7 +372,8 @@ export default function PreviewPage() {
             {/* Left side - Logo */}
             <div className="flex items-center gap-8">
               <div>
-                <h1 className="text-xl font-bold gradient-text">Resume Parser</h1>
+                <Leaf className="w-5 h-5 text-emerald-600" />
+                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
               </div>
               
               {/* Navigation Tabs */}
@@ -397,8 +400,8 @@ export default function PreviewPage() {
             {/* Right side - User info and actions */}
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-                <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-3 h-3 text-primary" />
+                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <User className="w-3 h-3 text-emerald-700" />
                 </div>
                 <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
               </div>
@@ -458,7 +461,7 @@ export default function PreviewPage() {
                     </>
                   )}
                 </Button>
-                <Button onClick={handleDownload} variant="outline" className="gap-2">
+                <Button onClick={handleDownload} variant="outline" className="gap-2 border-emerald-200 hover:bg-emerald-50">
                   <Download className="w-4 h-4" />
                   Download
                 </Button>

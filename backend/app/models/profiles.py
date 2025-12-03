@@ -29,3 +29,4 @@ class Profile(ProfileBase):
     class Config:
         from_attributes = True
 
+
