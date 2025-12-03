@@ -14,7 +14,6 @@ import { Badge } from "@/components/ui/badge";
 import { Download, Globe, ArrowLeft, Loader2, Save, Check, Sprout } from "lucide-react";
 import Header from "@/components/Header";
 
-
 // personalInformation={personal_information}
 //          overviewData={overview_data}
 //          experience={experience_data}
