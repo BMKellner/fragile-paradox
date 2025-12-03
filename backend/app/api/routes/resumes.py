@@ -1,5 +1,4 @@
 import uuid
-from typing import cast
 
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse, Response
@@ -9,7 +8,7 @@ from app.api.deps import verify_token
 from app.core.supabase_client import get_supabase_client
 from app.core.text_extract import extract_text_from_upload
 from app.core.resume_parser import parse_resume_with_openai
-from app.models.resumes import ResumeRow, ResumeSchema, Resume
+from app.models.resumes import ResumeSchema, Resume
 
 
 router = APIRouter(prefix="/resumes", tags=["resumes"])
@@ -58,8 +57,8 @@ async def download_resume(resume_id: str, user=Depends(verify_token)):
         if not response.data or len(response.data) == 0:
             raise HTTPException(status_code=404, detail="Resume not found")
 
-        resume = cast(ResumeRow, response.data[0])
-        file_path = resume["file_path"]
+        resume = Resume.model_validate(response.data[0])
+        file_path = resume.file_path
 
         download_response = supabase.storage.from_("users").download(file_path)
 
@@ -69,7 +68,7 @@ async def download_resume(resume_id: str, user=Depends(verify_token)):
         return Response(
             content=download_response,
             media_type="application/octet-stream",
-            headers={"Content-Disposition": f"attachment; filename={resume['title']}"}
+            headers={"Content-Disposition": f"attachment; filename={resume.title}"}
         )
 
     except Exception as e:
@@ -86,8 +85,8 @@ async def delete_resume(resume_id: str, user=Depends(verify_token)):
         if not response.data or len(response.data) == 0:
             raise HTTPException(status_code=404, detail="Resume not found")
 
-        resume = cast(ResumeRow, response.data[0])
-        file_path = resume["file_path"]
+        resume = Resume.model_validate(response.data[0])
+        file_path = resume.file_path
 
         # Delete from storage
         supabase.storage.from_("users").remove([file_path])

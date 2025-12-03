@@ -47,13 +47,7 @@ class Resume(BaseModel):
     user_id: str
     title: str
     file_path: str
-    data: ResumeSchema
+    data: ResumeSchema | None
 
-class ResumeRow(TypedDict):
-    id: str
-    user_id: str
-    title: str
-    file_path: str
-    parsed_data: dict[str, Any] | None
 
 
