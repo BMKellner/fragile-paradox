@@ -7,21 +7,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  FileText, 
   Layout,
-  Upload,
   Clock,
-  User,
-  LayoutDashboard,
   Plus,
   Eye,
   Trash2,
   Download,
   Loader2,
-  Leaf,
   Sprout,
-  TreePine
+  TreePine,
+  Leaf,
+  User
 } from "lucide-react";
+import Header from "@/components/Header";
 import { useState, useEffect } from "react";
 import { ParsedResume } from "@/constants/ResumeFormat";
 
@@ -44,14 +42,6 @@ export default function DashboardPage() {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  const handleSignOut = async () => {
-    await session.auth.signOut();
-    router.push('/signin');
-  };
-
-  const handleNavigation = (path: string) => {
-    router.push(path);
-  };
 
   // Fetch websites (portfolios)
   useEffect(() => {
@@ -280,53 +270,7 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen">
-      {/* Header */}
-      <header className="header-base sticky top-0 z-50">
-        <div className="container-base">
-          <div className="flex items-center justify-between py-4">
-            {/* Left side - Logo */}
-            <div className="flex items-center gap-8">
-              <div className="flex items-center gap-2">
-                <Leaf className="w-5 h-5 text-emerald-600" />
-                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
-              </div>
-              
-              {/* Navigation Tabs */}
-              <nav className="hidden md:flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  className="gap-2 data-[active=true]:bg-muted"
-                  data-active="true"
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="gap-2"
-                  onClick={() => handleNavigation('/profile')}
-                >
-                  <User className="w-4 h-4" />
-                  Profile
-                </Button>
-              </nav>
-            </div>
-
-              {/* Right side - User info and actions */}
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-50">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <User className="w-3 h-3 text-emerald-700" />
-                </div>
-                <span className="text-sm font-medium text-emerald-900">{info.user.email?.split('@')[0]}</span>
-              </div>
-              <Button onClick={handleSignOut} variant="outline" size="sm" className="border-emerald-200 hover:bg-emerald-50">
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Header currentPage="dashboard" />
 
       {/* Main Content */}
       <main className="py-8">

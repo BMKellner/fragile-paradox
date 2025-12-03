@@ -197,7 +197,10 @@ export default function CustomizePage() {
   };
 
   const handlePreview = () => {
+    // Save all necessary data for preview
     localStorage.setItem('customSections', JSON.stringify(sections));
+    localStorage.setItem('resumeData', JSON.stringify(resumeData));
+    localStorage.setItem('selectedTemplate', 'custom'); // Mark as custom template
     localStorage.setItem('selectedColor', selectedColor);
     localStorage.setItem('selectedMode', displayMode);
     router.push('/preview');
