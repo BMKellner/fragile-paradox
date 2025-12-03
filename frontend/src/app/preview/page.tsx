@@ -11,7 +11,7 @@ import CreativeBoldPortfolio from "@/components/PortfolioTemplates/CreativeBold"
 import ElegantSophisticatedPortfolio from "@/components/PortfolioTemplates/ElegantSophisticated";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, Globe, ArrowLeft, Loader2, Save, Check, Sprout } from "lucide-react";
+import { Download, Globe, ArrowLeft, Loader2, Save, Check } from "lucide-react";
 import Header from "@/components/Header";
 
 // personalInformation={personal_information}
@@ -23,8 +23,19 @@ import Header from "@/components/Header";
 //          backgroundColor={backgroundColor}
 
 // Custom template renderer for custom sections
+interface CustomSection {
+  id: string;
+  type: 'header' | 'about' | 'experience' | 'projects' | 'skills' | 'education' | 'contact';
+  layout: 'default' | 'centered' | 'split' | 'cards';
+  visible: boolean;
+  style?: {
+    fontSize?: 'small' | 'medium' | 'large';
+    spacing?: 'compact' | 'normal' | 'spacious';
+  };
+}
+
 const CustomTemplateRender = ({ resumeData, mainColor, backgroundColor }: { resumeData: ParsedResume; mainColor: string; backgroundColor: string }) => {
-  const [sections, setSections] = useState<any[]>([]);
+  const [sections, setSections] = useState<CustomSection[]>([]);
   
   useEffect(() => {
     const storedSections = localStorage.getItem('customSections');

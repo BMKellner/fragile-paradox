@@ -117,15 +117,6 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [info.user]);
 
-  const handleSignOut = async () => {
-    await session.auth.signOut();
-    router.push('/signin');
-  };
-
-  const handleNavigation = (path: string) => {
-    router.push(path);
-  };
-
   const handleSave = async () => {
     setIsSaving(true);
     setSaveMessage(null);

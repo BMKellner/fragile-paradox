@@ -7,7 +7,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { 
   FileText, 
-  Upload,
   ChevronRight,
   Loader2,
   Sprout,

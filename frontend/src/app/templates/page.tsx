@@ -213,11 +213,6 @@ export default function TemplatesPage() {
   const [displayMode, setDisplayMode] = useState<'light' | 'dark'>('light');
   const router = useRouter();
   const info = useUser();
-  const session = createClient();
-
-  const handleNavigation = (path: string) => {
-    router.push(path);
-  };
 
   useEffect(() => {
     const storedData = localStorage.getItem('resumeData');
