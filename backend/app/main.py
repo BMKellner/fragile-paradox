@@ -21,6 +21,6 @@ app.add_middleware(
 
 app.include_router(api_router)
 
-@app.get("/")
+@app.get("/liveliness")
 async def root():
-    return {"message": "Resume Parser API is running!"}
+    return {"ping": "pong"}

@@ -62,7 +62,9 @@ export default function DashboardPage() {
         if (!token) return;
 
         // Fetch portfolios (websites)
-        const response = await fetch('http://localhost:8000/portfolios/', {
+        const url = process.env.NEXT_PUBLIC_BACKEND_URL
+        const response = await fetch(`${url}/portfolios/`, {
+
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -94,7 +96,7 @@ export default function DashboardPage() {
       
       if (!token) return;
 
-      const response = await fetch(`http://localhost:8000/portfolios/${websiteId}`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/${websiteId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`

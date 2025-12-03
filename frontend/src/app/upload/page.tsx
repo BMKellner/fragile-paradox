@@ -57,7 +57,7 @@ export default function UploadPage() {
       // Get auth session for the API call
       const sessionData = await session.auth.getSession();
       
-      const response = await fetch("http://localhost:8000/supabase/upload_resume", {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/resumes`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${sessionData.data.session?.access_token}`

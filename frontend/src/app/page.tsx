@@ -27,6 +27,7 @@ export default function Home() {
     }
   }, [info.loading, info.user, router]);
 
+
   if (info.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
