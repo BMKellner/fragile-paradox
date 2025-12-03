@@ -405,7 +405,7 @@ export default function PreviewPage() {
           <div className="text-center">
             <Loader2 className="w-16 h-16 animate-spin text-emerald-600 mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">Generating Your Website</h2>
-            <p className="text-muted-foreground">Creating your {templateNames[selectedTemplate] || 'portfolio'}...</p>
+            <p className="text-muted-foreground">Creating your {selectedTemplate ? (templateNames[selectedTemplate] || 'portfolio') : 'portfolio'}...</p>
           </div>
         </div>
       </div>
