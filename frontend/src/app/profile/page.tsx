@@ -210,7 +210,7 @@ export default function ProfilePage() {
           <div className="flex items-center justify-between py-4">
             {/* Left side - Logo */}
             <div className="flex items-center gap-8">
-              <div>
+              <div className="flex items-center gap-2">
                 <Leaf className="w-5 h-5 text-emerald-600" />
                 <h1 className="text-xl font-bold gradient-text">Foliage</h1>
               </div>
@@ -236,7 +236,7 @@ export default function ProfilePage() {
               </nav>
             </div>
 
-            {/* Right side - User info and actions */}
+              {/* Right side - User info and actions */}
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-50">
                 <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -251,6 +251,7 @@ export default function ProfilePage() {
           </div>
         </div>
       </header>
+
 
       {/* Main Content */}
       <main className="py-12">
