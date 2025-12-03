@@ -20,8 +20,30 @@ type TabKey = typeof tabs[number];
 
 export default function CreativeBoldPortfolio({ personalInformation, overviewData, projects, experience, skills, mainColor, backgroundColor }: Props) {
   // Theme & background colors (derived from props)
-  const color = mainColor; // bolder default accent
-  const background_color = backgroundColor; // darker creative background
+  const rawColor = mainColor || "#3B82F6";
+  const rawBackground = backgroundColor || "#0B1220";
+
+  const hexToRgb = (hex: string) => {
+    const h = hex.replace("#", "");
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return { r, g, b };
+  };
+  const brightness = (hex: string) => {
+    const { r, g, b } = hexToRgb(hex.length === 3 ? hex.split("").map(c => c + c).join("") : hex);
+    return (r * 299 + g * 587 + b * 114) / 1000;
+  };
+  const isLightBg = brightness(rawBackground) > 200;
+  const color = rawColor;
+  const background_color = rawBackground;
+
+  // Dynamic colors based on background
+  const textPrimary = isLightBg ? "#111827" : "#E6EEF8";
+  const textSecondary = isLightBg ? "#374151" : "#CFE7FF";
+  const textMuted = isLightBg ? "#6b7280" : "#B9D7FF";
+  const cardBg = isLightBg ? "#ffffff" : "rgba(255,255,255,0.02)";
+  const shadowSoft = isLightBg ? "0 6px 18px rgba(15,23,42,0.06)" : "0 20px 50px rgba(2,6,23,0.6)";
 
   const [active, setActive] = useState<TabKey>("Overview");
 
@@ -29,8 +51,8 @@ export default function CreativeBoldPortfolio({ personalInformation, overviewDat
   if (!personalInformation && !overviewData && (!projects || projects.length === 0) && (!experience || experience.length === 0) && (!skills || skills.length === 0)) {
     return (
       <div style={{ padding: 32, maxWidth: 960, margin: "0 auto", textAlign: "center" }}>
-        <h2 style={{ color: "#fff", marginBottom: 8 }}>No resume data found</h2>
-        <p style={{ color: "#9CA3AF" }}>Please upload a resume from the main page to view the portfolio.</p>
+        <h2 style={{ color: textPrimary, marginBottom: 8 }}>No resume data found</h2>
+        <p style={{ color: textMuted }}>Please upload a resume from the main page to view the portfolio.</p>
       </div>
     );
   }
@@ -94,7 +116,7 @@ export default function CreativeBoldPortfolio({ personalInformation, overviewDat
         margin: "0 auto",
         boxSizing: "border-box",
         background: `radial-gradient(1200px 400px at 10% 10%, ${adjustAlpha(color, 0.12)}, transparent), ${background_color}`,
-        color: "#E6EEF8",
+        color: textPrimary,
         minHeight: "100vh",
       }}
     >
@@ -125,8 +147,8 @@ export default function CreativeBoldPortfolio({ personalInformation, overviewDat
               <h1 style={{ margin: 0, fontSize: 40, lineHeight: 1.02, background: `-webkit-linear-gradient(${color}, ${adjustAlpha(color, 0.9)})`, WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", fontWeight: 900 }}>
                 {personal_information?.full_name}
               </h1>
-              <p style={{ margin: "6px 0 0", color: "#CFE7FF", fontSize: 16, fontWeight: 700 }}>{overview?.career_name || ""}</p>
-              <p style={{ marginTop: 12, color: "#B9D7FF", maxWidth: 680, whiteSpace: "pre-wrap" }}>{overview?.resume_summary || "No summary available."}</p>
+              <p style={{ margin: "6px 0 0", color: textSecondary, fontSize: 16, fontWeight: 700 }}>{overview?.career_name || ""}</p>
+              <p style={{ marginTop: 12, color: textMuted, maxWidth: 680, whiteSpace: "pre-wrap" }}>{overview?.resume_summary || "No summary available."}</p>
 
               <div style={{ marginTop: 14, display: "flex", gap: 12, alignItems: "center" }}>
                 {resume_pdf && (

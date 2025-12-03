@@ -21,9 +21,34 @@ type TabKey = typeof tabs[number];
 export default function ElegantSophisticatedPortfolio({ personalInformation, overviewData, projects, experience, skills, mainColor, backgroundColor }: Props) {
   // Theme & background colors (derived from props). Setters removed — colors come from parent props.
   // Elegant gold accent by default, with deep navy gradient background.
-  const color = mainColor;
-  // Page background: dark navy gradient for sophistication.
-  const background_color = backgroundColor;
+  const rawColor = mainColor || "#D4AF37";
+  const rawBackground = backgroundColor || "#0F172A";
+
+  const hexToRgb = (hex: string) => {
+    const h = hex.replace("#", "");
+    const r = parseInt(h.slice(0, 2), 16);
+    const g = parseInt(h.slice(2, 4), 16);
+    const b = parseInt(h.slice(4, 6), 16);
+    return { r, g, b };
+  };
+  const brightness = (hex: string) => {
+    const { r, g, b } = hexToRgb(hex.length === 3 ? hex.split("").map(c => c + c).join("") : hex);
+    return (r * 299 + g * 587 + b * 114) / 1000;
+  };
+  const isLightBg = brightness(rawBackground) > 200;
+  let color = rawColor;
+  const colorBrightness = brightness(rawColor);
+  if (isLightBg && colorBrightness > 200) color = "#D4AF37";
+  else if (!isLightBg && colorBrightness < 55) color = "#FFFFFF";
+  const background_color = rawBackground;
+
+  // Dynamic colors based on background
+  const textPrimary = isLightBg ? "#1f2937" : "#e6e7e8";
+  const textSecondary = isLightBg ? "#374151" : "#cfd6db";
+  const textMuted = isLightBg ? "#6b7280" : "#9CA3AF";
+  const cardBg = isLightBg ? "#ffffff" : "rgba(255,255,255,0.03)";
+  const borderColor = isLightBg ? "#E5E7EB" : "#374151";
+  const shadowSoft = isLightBg ? "0 6px 18px rgba(15,23,42,0.06)" : "0 6px 28px rgba(11,13,18,0.7)";
 
   const [active, setActive] = useState<TabKey>("Overview");
 
@@ -31,8 +56,8 @@ export default function ElegantSophisticatedPortfolio({ personalInformation, ove
   if (!personalInformation && !overviewData && (!projects || projects.length === 0) && (!experience || experience.length === 0) && (!skills || skills.length === 0)) {
     return (
       <div style={{ padding: 32, maxWidth: 960, margin: "0 auto", textAlign: "center" }}>
-        <h2 style={{ color: "#111827", marginBottom: 8 }}>No resume data found</h2>
-        <p style={{ color: "#6b7280" }}>Please upload a resume from the main page to view the portfolio.</p>
+        <h2 style={{ color: textPrimary, marginBottom: 8 }}>No resume data found</h2>
+        <p style={{ color: textMuted }}>Please upload a resume from the main page to view the portfolio.</p>
       </div>
     );
   }
@@ -96,7 +121,7 @@ export default function ElegantSophisticatedPortfolio({ personalInformation, ove
         boxSizing: "border-box",
         background: background_color,
         minHeight: "100vh",
-        color: "#e6e7e8",
+        color: textPrimary,
       }}
     >
       {/* Top hero */}
@@ -125,7 +150,7 @@ export default function ElegantSophisticatedPortfolio({ personalInformation, ove
 
           <div style={{ lineHeight: 1 }}>
             <h1 style={{ margin: 0, fontSize: 34, color, letterSpacing: 0.4 }}>{personal_information?.full_name}</h1>
-            <p style={{ margin: "8px 0 0", color: "#cfd6db", fontSize: 14, fontStyle: "italic", textTransform: "uppercase", letterSpacing: 1 }}>
+            <p style={{ margin: "8px 0 0", color: textSecondary, fontSize: 14, fontStyle: "italic", textTransform: "uppercase", letterSpacing: 1 }}>
               {overview?.career_name || ""}
             </p>
             <div style={{ marginTop: 10, display: "flex", gap: 10, alignItems: "center" }}>
@@ -149,7 +174,7 @@ export default function ElegantSophisticatedPortfolio({ personalInformation, ove
                 </a>
               )}
               {personal_information?.contact_info?.linkedin && (
-                <Link href={personal_information.contact_info.linkedin} target="_blank" rel="noreferrer" style={{ color: "#cfd6db", textDecoration: "none", fontSize: 13 }}>
+                <Link href={personal_information.contact_info.linkedin} target="_blank" rel="noreferrer" style={{ color: textSecondary, textDecoration: "none", fontSize: 13 }}>
                   View LinkedIn
                 </Link>
               )}
