@@ -11,7 +11,8 @@ import CreativeBoldPortfolio from "@/components/PortfolioTemplates/CreativeBold"
 import ElegantSophisticatedPortfolio from "@/components/PortfolioTemplates/ElegantSophisticated";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { User, LayoutDashboard, Download, Globe, ArrowLeft, Loader2, Save, Check , Leaf, Sprout } from "lucide-react";
+import { Download, Globe, ArrowLeft, Loader2, Save, Check, Sprout } from "lucide-react";
+import Header from "@/components/Header";
 
 
 // personalInformation={personal_information}
@@ -21,6 +22,197 @@ import { User, LayoutDashboard, Download, Globe, ArrowLeft, Loader2, Save, Check
 //          projects={projects_data}
 //          mainColor={selectedColor}
 //          backgroundColor={backgroundColor}
+
+// Custom template renderer for custom sections
+const CustomTemplateRender = ({ resumeData, mainColor, backgroundColor }: { resumeData: ParsedResume; mainColor: string; backgroundColor: string }) => {
+  const [sections, setSections] = useState<any[]>([]);
+  
+  useEffect(() => {
+    const storedSections = localStorage.getItem('customSections');
+    if (storedSections) {
+      setSections(JSON.parse(storedSections));
+    }
+  }, []);
+
+  if (sections.length === 0) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-12 max-w-4xl mx-auto text-center">
+        <p className="text-gray-600">No custom sections found</p>
+      </div>
+    );
+  }
+
+  const fontSizeClasses: Record<string, string> = {
+    small: 'text-sm',
+    medium: 'text-base',
+    large: 'text-lg'
+  };
+
+  const headingSizeClasses: Record<string, string> = {
+    small: 'text-xl',
+    medium: 'text-2xl',
+    large: 'text-4xl'
+  };
+
+  const spacingClasses: Record<string, string> = {
+    compact: 'space-y-2',
+    normal: 'space-y-4',
+    spacious: 'space-y-8'
+  };
+
+  return (
+    <div className="p-8" style={{ backgroundColor }}>
+      {sections.filter(s => s.visible).map((section) => {
+        const fontSize = section.style?.fontSize || 'medium';
+        const spacing = section.style?.spacing || 'normal';
+        
+        // Header Section
+        if (section.type === 'header') {
+          return (
+            <div key={section.id} className={`mb-8 ${spacingClasses[spacing]}`}>
+              <h1 className={`font-bold mb-2 ${headingSizeClasses[fontSize]}`} style={{ color: mainColor }}>
+                {resumeData.personal_information?.full_name || 'Your Name'}
+              </h1>
+              <p className={`text-muted-foreground ${fontSizeClasses[fontSize]}`}>
+                {resumeData.overview?.career_name || 'Your Title'}
+              </p>
+            </div>
+          );
+        }
+        
+        // About Section
+        if (section.type === 'about') {
+          return (
+            <div key={section.id} className={`mb-8 ${spacingClasses[spacing]}`}>
+              <h2 className={`font-bold mb-4 ${headingSizeClasses[fontSize]}`} style={{ color: mainColor }}>
+                About
+              </h2>
+              <p className={`text-muted-foreground leading-relaxed ${fontSizeClasses[fontSize]}`}>
+                {resumeData.overview?.resume_summary || 'No summary available'}
+              </p>
+            </div>
+          );
+        }
+        
+        // Experience Section
+        if (section.type === 'experience') {
+          return (
+            <div key={section.id} className={`mb-8 ${spacingClasses[spacing]}`}>
+              <h2 className={`font-bold mb-4 ${headingSizeClasses[fontSize]}`} style={{ color: mainColor }}>
+                Experience
+              </h2>
+              <div className={section.layout === 'cards' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-4'}>
+                {resumeData.experience?.map((exp, i) => (
+                  <div key={i} className={section.layout === 'cards' ? 'p-4 border rounded-lg bg-card' : ''}>
+                    <h3 className={`font-semibold ${fontSizeClasses[fontSize]}`}>{exp.company}</h3>
+                    <p className="text-muted-foreground text-xs">{exp.employed_dates}</p>
+                    <p className={`mt-2 ${fontSizeClasses[fontSize]}`}>{exp.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+        
+        // Projects Section
+        if (section.type === 'projects') {
+          return (
+            <div key={section.id} className={`mb-8 ${spacingClasses[spacing]}`}>
+              <h2 className={`font-bold mb-4 ${headingSizeClasses[fontSize]}`} style={{ color: mainColor }}>
+                Projects
+              </h2>
+              <div className={section.layout === 'cards' ? 'grid grid-cols-1 md:grid-cols-2 gap-4' : 'space-y-4'}>
+                {resumeData.projects?.map((proj, i) => (
+                  <div key={i} className={section.layout === 'cards' ? 'p-4 border rounded-lg bg-card' : ''}>
+                    <h3 className={`font-semibold ${fontSizeClasses[fontSize]}`} style={{ color: mainColor }}>{proj.title}</h3>
+                    <p className={`mt-2 ${fontSizeClasses[fontSize]}`}>{proj.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        }
+        
+        // Skills Section
+        if (section.type === 'skills') {
+          return (
+            <div key={section.id} className={`mb-8 ${spacingClasses[spacing]}`}>
+              <h2 className={`font-bold mb-4 ${headingSizeClasses[fontSize]}`} style={{ color: mainColor }}>
+                Skills
+              </h2>
+              <div className={section.layout === 'cards' ? 'grid grid-cols-3 md:grid-cols-4 gap-2' : 'flex flex-wrap gap-2'}>
+                {resumeData.skills?.map((skill, i) => (
+                  <span
+                    key={i}
+                    className="px-3 py-1 rounded-md text-sm"
+                    style={{
+                      backgroundColor: `${mainColor}20`,
+                      color: mainColor,
+                      borderColor: mainColor
+                    }}
+                  >
+                    {skill}
+                  </span>
+                ))}
+              </div>
+            </div>
+          );
+        }
+        
+        // Education Section
+        if (section.type === 'education') {
+          return (
+            <div key={section.id} className={`mb-8 ${spacingClasses[spacing]}`}>
+              <h2 className={`font-bold mb-4 ${headingSizeClasses[fontSize]}`} style={{ color: mainColor }}>
+                Education
+              </h2>
+              <div>
+                <h3 className={`font-semibold ${fontSizeClasses[fontSize]}`}>
+                  {resumeData.personal_information?.education?.school || 'School Name'}
+                </h3>
+                {resumeData.personal_information?.education?.majors && (
+                  <p className={`text-muted-foreground ${fontSizeClasses[fontSize]}`}>
+                    Major: {resumeData.personal_information.education.majors.join(', ')}
+                  </p>
+                )}
+                {resumeData.personal_information?.education?.expected_grad && (
+                  <p className={`text-muted-foreground ${fontSizeClasses[fontSize]}`}>
+                    Expected Graduation: {resumeData.personal_information.education.expected_grad}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        }
+        
+        // Contact Section
+        if (section.type === 'contact') {
+          return (
+            <div key={section.id} className={`mb-8 ${spacingClasses[spacing]}`}>
+              <h2 className={`font-bold mb-4 ${headingSizeClasses[fontSize]}`} style={{ color: mainColor }}>
+                Contact
+              </h2>
+              <div className={section.layout === 'split' ? 'grid grid-cols-2 gap-4' : 'space-y-2'}>
+                {resumeData.personal_information?.contact_info?.email && (
+                  <p className={fontSizeClasses[fontSize]}>
+                    Email: {resumeData.personal_information.contact_info.email}
+                  </p>
+                )}
+                {resumeData.personal_information?.contact_info?.phone && (
+                  <p className={fontSizeClasses[fontSize]}>
+                    Phone: {resumeData.personal_information.contact_info.phone}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        }
+        
+        return null;
+      })}
+    </div>
+  );
+};
 
 // Full template render component
 const FullTemplateRender = ({ templateId, resumeData, mainColor, backgroundColor }: { templateId: string; resumeData: ParsedResume; mainColor: string; backgroundColor: string }) => {
@@ -82,6 +274,14 @@ const FullTemplateRender = ({ templateId, resumeData, mainColor, backgroundColor
         />
         </div>
       );
+    case 'custom':
+      return (
+        <CustomTemplateRender
+          resumeData={resumeData}
+          mainColor={mainColor}
+          backgroundColor={backgroundColor}
+        />
+      );
     default:
       return (
         <div className="bg-white rounded-lg shadow-lg p-12 max-w-4xl mx-auto text-center">
@@ -109,17 +309,27 @@ export default function PreviewPage() {
     const storedTemplate = localStorage.getItem('selectedTemplate');
     const storedColor = localStorage.getItem('selectedColor');
     const storedMode = localStorage.getItem('selectedMode');
+    const storedCustomSections = localStorage.getItem('customSections');
     
-    if (storedResumeData) {
-      setResumeData(JSON.parse(storedResumeData));
-    }
-    if (storedTemplate) {
-      setSelectedTemplate(storedTemplate);
+    // Handle custom sections from customize page
+    if (storedCustomSections && storedTemplate === 'custom') {
+      // If coming from customize page, we still need resumeData
+      if (storedResumeData) {
+        setResumeData(JSON.parse(storedResumeData));
+      }
+      setSelectedTemplate('custom');
+    } else {
+      // Normal flow from templates page
+      if (storedResumeData) {
+        setResumeData(JSON.parse(storedResumeData));
+      }
+      if (storedTemplate) {
+        setSelectedTemplate(storedTemplate);
+      }
     }
 
     setMainColor(storedColor || '#2563EB');
     setBackgroundColor(storedMode === 'light' ? '#F8FAFC' : '#0B1220');
-
 
     // Simulate website generation
     setTimeout(() => {
@@ -129,11 +339,6 @@ export default function PreviewPage() {
 
 
 
-  const handleSignOut = async () => {
-    await session.auth.signOut();
-    router.push('/signin');
-  };
-
   const handleStartOver = () => {
     localStorage.removeItem('resumeData');
     localStorage.removeItem('selectedTemplate');
@@ -141,9 +346,6 @@ export default function PreviewPage() {
     router.push('/upload');
   };
 
-  const handleNavigation = (path: string) => {
-    router.push(path);
-  };
 
   const templateNames: Record<string, string> = {
     '1': 'Modern Minimal',
@@ -168,28 +370,14 @@ export default function PreviewPage() {
     return null;
   }
 
-  if (!resumeData || !selectedTemplate) {
+  if (!resumeData || (!selectedTemplate && !localStorage.getItem('customSections'))) {
     return (
-      <div className="min-h-screen bg-muted/30">
-        {/* Header */}
-        <header className="bg-background border-b sticky top-0 z-50">
-          <div className="container-base">
-            <div className="flex items-center justify-between py-4">
-              <div>
-                <Leaf className="w-5 h-5 text-emerald-600" />
-                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
-              </div>
-              <Button onClick={handleSignOut} variant="outline" size="sm">
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </header>
-
+      <div className="min-h-screen">
+        <Header currentPage="preview" />
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
             <p className="text-muted-foreground mb-4">Missing data. Please start over.</p>
-            <Button onClick={handleStartOver}>
+            <Button onClick={handleStartOver} className="bg-emerald-600 hover:bg-emerald-700 text-white">
               Start Over
             </Button>
           </div>
@@ -200,21 +388,8 @@ export default function PreviewPage() {
 
   if (isGenerating) {
     return (
-      <div className="min-h-screen bg-muted/30">
-        {/* Header */}
-        <header className="bg-background border-b sticky top-0 z-50">
-          <div className="container-base">
-            <div className="flex items-center justify-between py-4">
-              <div>
-                <Leaf className="w-5 h-5 text-emerald-600" />
-                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
-              </div>
-              <Button onClick={handleSignOut} variant="outline" size="sm">
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </header>
+      <div className="min-h-screen">
+        <Header currentPage="preview" />
 
         <div className="flex items-center justify-center min-h-[calc(100vh-80px)]">
           <div className="text-center">
@@ -248,7 +423,8 @@ export default function PreviewPage() {
         '1': 'Modern Minimal',
         '2': 'Classic Professional',
         '3': 'Creative Bold',
-        '4': 'Elegant Sophisticated'
+        '4': 'Elegant Sophisticated',
+        'custom': 'Custom Template'
       };
       const templateName = templateNames[selectedTemplate] || 'Portfolio';
 
@@ -364,54 +540,8 @@ export default function PreviewPage() {
   };
 
   return (
-    <div className="min-h-screen bg-muted/30">
-      {/* Header */}
-      <header className="bg-background border-b sticky top-0 z-50">
-        <div className="container-base">
-          <div className="flex items-center justify-between py-4">
-            {/* Left side - Logo */}
-            <div className="flex items-center gap-8">
-              <div>
-                <Leaf className="w-5 h-5 text-emerald-600" />
-                <h1 className="text-xl font-bold gradient-text">Foliage</h1>
-              </div>
-              
-              {/* Navigation Tabs */}
-              <nav className="hidden md:flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  className="gap-2"
-                  onClick={() => handleNavigation('/dashboard')}
-                >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
-                </Button>
-                <Button
-                  variant="ghost"
-                  className="gap-2"
-                  onClick={() => handleNavigation('/profile')}
-                >
-                  <User className="w-4 h-4" />
-                  Profile
-                </Button>
-              </nav>
-            </div>
-
-            {/* Right side - User info and actions */}
-            <div className="flex items-center gap-3">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <User className="w-3 h-3 text-emerald-700" />
-                </div>
-                <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
-              </div>
-              <Button onClick={handleSignOut} variant="outline" size="sm">
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen">
+      <Header currentPage="preview" />
 
       {/* Main Content */}
       <main className="py-8">
@@ -433,7 +563,7 @@ export default function PreviewPage() {
               <div>
                 <h2 className="text-3xl font-bold tracking-tight">Your Portfolio Website</h2>
                 <div className="flex items-center gap-2 mt-2">
-                  <Badge variant="secondary">{templateNames[selectedTemplate] || `Template ${selectedTemplate}`}</Badge>
+                  <Badge variant="secondary">{selectedTemplate === 'custom' ? 'Custom Template' : (templateNames[selectedTemplate] || `Template ${selectedTemplate}`)}</Badge>
                   <span className="text-muted-foreground text-sm">Preview Mode</span>
                 </div>
               </div>
