@@ -21,6 +21,11 @@ app.add_middleware(
 
 app.include_router(api_router)
 
-@app.get("/liveliness")
+@app.get("/")
 async def root():
     return {"ping": "pong"}
+
+@app.get("/liveliness")
+async def alive():
+    return {"ping": "pong"}
+
