@@ -81,7 +81,7 @@ export default function UploadPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
+          <Loader2 className="w-12 h-12 animate-spin text-[var(--color-primary)] mx-auto mb-4" />
           <p className="text-muted-foreground">Preparing your garden...</p>
         </div>
       </div>
@@ -89,7 +89,7 @@ export default function UploadPage() {
   }
 
   if (!info.user) {
-    router.push('/signin');
+    router.push('/signin?next=/upload');
     return null;
   }
 
@@ -102,7 +102,7 @@ export default function UploadPage() {
         <div className="container-base max-w-2xl">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center gap-2 mb-4">
-              <Sprout className="w-10 h-10 text-emerald-600" />
+              <Sprout className="w-10 h-10 text-[var(--color-primary)]" />
             </div>
             <h2 className="text-3xl font-bold mb-2">Plant Your Story</h2>
             <p className="text-muted-foreground">
@@ -111,10 +111,10 @@ export default function UploadPage() {
           </div>
 
           {/* Upload Card */}
-          <Card className="shadow-lg border border-emerald-100 bg-white/80 backdrop-blur-sm">
+          <Card className="shadow-lg border border-[var(--color-border)]/80 bg-[var(--color-card)]/78 backdrop-blur-sm">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-2xl">
-                <Sprout className="w-6 h-6 text-emerald-600" />
+                <Sprout className="w-6 h-6 text-[var(--color-primary)]" />
                 Upload Your Resume
               </CardTitle>
               <CardDescription>
@@ -128,15 +128,15 @@ export default function UploadPage() {
                     type="file"
                     accept=".pdf,.docx"
                     onChange={handleFileChange}
-                    className="w-full p-8 border-2 border-dashed border-emerald-200 rounded-lg cursor-pointer transition-all hover:border-emerald-400 hover:bg-emerald-50/50 focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700"
+                    className="w-full p-8 border-2 border-dashed border-[var(--color-border)] rounded-lg cursor-pointer transition-all bg-[var(--color-background)]/55 hover:border-[var(--color-primary)]/55 hover:bg-[var(--color-accent)]/45 focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] focus:ring-offset-2 focus:ring-offset-[var(--color-background)] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary)] file:text-[var(--color-primary-foreground)] hover:file:bg-[var(--color-primary)]/90"
                   />
                 </div>
                 
                 {file && (
-                  <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-100 rounded-lg">
-                    <FileText className="w-4 h-4 text-emerald-600" />
-                    <span className="text-sm flex-1 text-emerald-900">
-                      {file.name} <span className="text-emerald-600">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                  <div className="flex items-center gap-2 p-3 bg-[var(--color-accent)]/45 border border-[var(--color-border)] rounded-lg">
+                    <FileText className="w-4 h-4 text-[var(--color-primary)]" />
+                    <span className="text-sm flex-1 text-[var(--color-foreground)]">
+                      {file.name} <span className="text-[var(--color-primary)]">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
                     </span>
                   </div>
                 )}
@@ -144,7 +144,7 @@ export default function UploadPage() {
                 <Button 
                   type="submit" 
                   disabled={!file || loading}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
+                  className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-[var(--color-primary-foreground)] shadow-lg"
                   size="lg"
                 >
                   {loading ? (
@@ -173,22 +173,22 @@ export default function UploadPage() {
           </Card>
 
           {/* Info Section */}
-          <div className="mt-8 p-6 bg-gradient-to-br from-emerald-50 to-green-50 border border-emerald-100 rounded-lg">
-            <h3 className="font-semibold mb-3 flex items-center gap-2 text-emerald-900">
-              <Leaf className="w-5 h-5 text-emerald-600" />
+          <div className="mt-8 p-6 panel-soft">
+            <h3 className="font-semibold mb-3 flex items-center gap-2 text-[var(--color-foreground)]">
+              <Leaf className="w-5 h-5 text-[var(--color-primary)]" />
               Your Growth Journey
             </h3>
-            <ul className="space-y-3 text-sm text-muted-foreground">
+            <ul className="space-y-3 text-sm text-[var(--color-muted-foreground)]">
               <li className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-semibold">1</span>
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] flex items-center justify-center text-xs font-semibold">1</span>
                 <span>AI parses your resume, extracting every detail like nutrients from rich soil</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-semibold">2</span>
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] flex items-center justify-center text-xs font-semibold">2</span>
                 <span>Choose from nature-inspired templates that let your story bloom</span>
               </li>
               <li className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-600 text-white flex items-center justify-center text-xs font-semibold">3</span>
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] flex items-center justify-center text-xs font-semibold">3</span>
                 <span>Customize and publish your portfolio, ready to branch out and grow</span>
               </li>
             </ul>

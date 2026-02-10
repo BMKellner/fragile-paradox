@@ -1,28 +1,21 @@
 "use client"
 
 import { useState, Suspense } from "react"
+import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { createClient } from "@/utils/supabase/client"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { 
-  Sparkles, 
-  Layout, 
-  Shield, 
-  Palette,
-  Globe,
-  Zap,
-  Eye,
-  Share2,
-  Edit3
-} from "lucide-react"
+import { ArrowUpRight, Blocks, Globe, Sparkles, SwatchBook } from "lucide-react"
 
 function SignInButton() {
   const [isGoogleLoading, setIsGoogleLoading] = useState<boolean>(false)
   const supabase = createClient()
   const searchParams = useSearchParams()
-  const next = searchParams.get("next")
+  const requestedNext = searchParams.get("next")
+  const next = requestedNext && requestedNext.startsWith("/") && !requestedNext.startsWith("//")
+    ? requestedNext
+    : "/dashboard"
 
   async function signInWithGoogle() {
     setIsGoogleLoading(true)
@@ -30,14 +23,11 @@ function SignInButton() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ""
-            }`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
         },
       })
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
     } catch (error) {
       console.error("Error during sign-in:", error)
       setIsGoogleLoading(false)
@@ -51,11 +41,11 @@ function SignInButton() {
       disabled={isGoogleLoading}
       variant="outline"
       size="lg"
-      className="w-full"
+      className="w-full gap-2 border-[var(--color-primary)]/35 hover:bg-[var(--color-primary)]/10"
     >
       {isGoogleLoading ? (
         <>
-          <div className="spinner w-4 h-4"></div>
+          <div className="spinner w-4 h-4" />
           Signing in...
         </>
       ) : (
@@ -73,163 +63,93 @@ function SignInButton() {
   )
 }
 
+const capabilities = [
+  {
+    icon: Blocks,
+    title: "Structured Content",
+    description: "Resume data stays consistent from upload through preview.",
+  },
+  {
+    icon: SwatchBook,
+    title: "Design Controls",
+    description: "Use templates and customization with a coherent visual system.",
+  },
+  {
+    icon: Globe,
+    title: "Publish Flow",
+    description: "Save and manage portfolio versions from one workspace.",
+  },
+]
+
 export default function SignInPage() {
-  const features = [
-    {
-      icon: Zap,
-      title: "Real-Time Updates",
-      description: "Update your portfolio instantly and see changes live",
-      color: "bg-blue-50 text-blue-600"
-    },
-    {
-      icon: Palette,
-      title: "Choose Your Style",
-      description: "Select from 50+ professionally designed templates",
-      color: "bg-purple-50 text-purple-600"
-    },
-    {
-      icon: Globe,
-      title: "Custom Domain",
-      description: "Get a unique portfolio link or use your own domain",
-      color: "bg-green-50 text-green-600"
-    },
-    {
-      icon: Edit3,
-      title: "Easy Customization",
-      description: "Edit colors, fonts, and layouts without any coding",
-      color: "bg-amber-50 text-amber-600"
-    },
-    {
-      icon: Eye,
-      title: "Live Preview",
-      description: "Preview your portfolio before publishing it live",
-      color: "bg-rose-50 text-rose-600"
-    },
-    {
-      icon: Share2,
-      title: "One-Click Sharing",
-      description: "Share your portfolio with recruiters instantly",
-      color: "bg-indigo-50 text-indigo-600"
-    }
-  ];
-
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Sign In Section */}
-      <section className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
-          {/* Logo/Title Section */}
-          <div className="text-center">
-            <Badge className="mb-4" variant="secondary">
+    <div className="min-h-screen soft-surface relative overflow-x-clip">
+      <div className="floating-orb floating-orb-1" aria-hidden />
+
+      <main className="container-base py-12 sm:py-18 lg:py-20">
+        <div className="grid lg:grid-cols-[1.05fr_0.95fr] gap-8 items-start">
+          <section className="reveal-soft space-y-6">
+            <Badge variant="secondary" className="border border-[var(--color-primary)]/30 bg-[var(--color-card)]/70">
               <Sparkles className="w-3 h-3 mr-1" />
-              AI Resume Parser
+              Authentication
             </Badge>
-            <h1 className="text-4xl font-bold mb-2">
-              <span className="gradient-text">Resume Parser</span>
-            </h1>
-            <p className="text-muted-foreground">
-              Transform your resume into a stunning portfolio website
-            </p>
-          </div>
 
-          {/* Sign In Card */}
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-2xl text-center">Welcome Back</CardTitle>
-              <CardDescription className="text-center">
-                Sign in to create your professional portfolio
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Suspense fallback={
-                <Button variant="outline" size="lg" className="w-full" disabled>
-                  <div className="spinner w-4 h-4"></div>
-                  Loading...
-                </Button>
-              }>
-                <SignInButton />
-              </Suspense>
+            <div>
+              <h1 className="text-5xl sm:text-6xl leading-[0.94] tracking-tight">
+                Continue where
+                <span className="gradient-text block">you left off.</span>
+              </h1>
+              <p className="text-lg text-muted-foreground mt-5 max-w-xl leading-relaxed">
+                Sign in to access templates, profile edits, and portfolio publishing in a single workflow.
+              </p>
+            </div>
 
-              <div className="relative">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-card px-2 text-muted-foreground">
-                    What you&apos;ll get
-                  </span>
-                </div>
+            <div className="grid sm:grid-cols-2 gap-3">
+              {capabilities.map((item, index) => (
+                <article key={item.title} className={`panel-soft subtle-lift p-4 reveal-soft reveal-soft-delay-${Math.min(index + 1, 3)}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <item.icon className="w-4 h-4 text-[var(--color-primary)]" />
+                    <h3 className="text-xl">{item.title}</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{item.description}</p>
+                </article>
+              ))}
+            </div>
+          </section>
+
+          <section className="reveal-soft reveal-soft-delay-2">
+            <div className="panel-soft p-6 sm:p-7">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">Workspace Access</p>
+              <h2 className="text-4xl mt-2">Welcome Back</h2>
+              <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+                Authenticate with Google to continue building and managing your portfolio projects.
+              </p>
+
+              <div className="mt-6">
+                <Suspense
+                  fallback={
+                    <Button variant="outline" size="lg" className="w-full" disabled>
+                      <div className="spinner w-4 h-4" />
+                      Loading...
+                    </Button>
+                  }
+                >
+                  <SignInButton />
+                </Suspense>
               </div>
 
-              {/* Quick Feature List */}
-              <div className="space-y-3 pt-2">
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-md bg-secondary">
-                    <Sparkles className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">AI-Powered</p>
-                    <p className="text-xs text-muted-foreground">Intelligent resume parsing</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-md bg-secondary">
-                    <Layout className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">50+ Templates</p>
-                    <p className="text-xs text-muted-foreground">Professional designs</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-md bg-secondary">
-                    <Shield className="w-4 h-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">Secure</p>
-                    <p className="text-xs text-muted-foreground">Your data is protected</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Link className="inline-flex items-center gap-1 text-sm mt-6 text-muted-foreground hover:text-foreground transition-colors" href="/home" aria-label="Return to home">
+                Return to Home
+                <ArrowUpRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </section>
         </div>
-      </section>
+      </main>
 
-      {/* Features Section */}
-      <section className="py-16 bg-muted/30">
-        <div className="container-base">
-          <div className="text-center max-w-3xl mx-auto mb-12">
-            <h2 className="text-3xl font-bold mb-4">
-              Everything You Need to Build Your Portfolio
-            </h2>
-            <p className="text-muted-foreground">
-              Powerful features designed to help you create a standout professional portfolio
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-            {features.map((feature, index) => (
-              <Card key={index} className="border-none shadow-sm hover:shadow-md transition-shadow">
-                <CardContent className="pt-6">
-                  <div className={`w-12 h-12 rounded-lg ${feature.color} flex items-center justify-center mb-4`}>
-                    <feature.icon className="w-6 h-6" />
-                  </div>
-                  <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="py-6 border-t mt-auto">
+      <footer className="border-t border-[var(--color-border)]/80 py-6 bg-[var(--color-card)]/45">
         <div className="container-base text-center">
-          <p className="text-sm text-muted-foreground">
-            Need help? <a href="#" className="underline hover:text-foreground">Contact support</a>
-          </p>
+          <p className="text-sm text-muted-foreground">Foliage authentication portal</p>
         </div>
       </footer>
     </div>

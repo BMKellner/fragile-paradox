@@ -262,7 +262,7 @@ export default function TemplatesPage() {
   }
 
   if (!info.user) {
-    router.push('/signin');
+    router.push('/signin?next=/templates');
     return null;
   }
 

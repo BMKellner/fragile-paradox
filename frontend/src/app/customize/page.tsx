@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import ThemeToggle from "@/components/ThemeToggle";
 import { 
   User, 
   LayoutDashboard, 
@@ -156,7 +157,7 @@ export default function CustomizePage() {
 
   const handleSignOut = async () => {
     await session.auth.signOut();
-    router.push('/signin');
+    router.push('/signin?next=/customize');
   };
 
   const handleNavigation = (path: string) => {
@@ -271,7 +272,7 @@ export default function CustomizePage() {
   }
 
   if (!info.user) {
-    router.push('/signin');
+    router.push('/signin?next=/customize');
     return null;
   }
 
@@ -282,9 +283,14 @@ export default function CustomizePage() {
         <div className="container-base">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center gap-8">
-              <div>
+              <button
+                type="button"
+                onClick={() => router.push('/home')}
+                className="text-left bg-transparent border-0 p-0 cursor-pointer"
+                aria-label="Go to homepage"
+              >
                 <h1 className="text-xl font-bold gradient-text">Foliage</h1>
-              </div>
+              </button>
               
               <nav className="hidden md:flex items-center gap-1">
                 <Button
@@ -307,8 +313,9 @@ export default function CustomizePage() {
             </div>
 
             <div className="flex items-center gap-3">
+              <ThemeToggle />
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center overflow-hidden">
+                <div className="w-6 h-6 rounded-full bg-[var(--color-primary)]/18 flex items-center justify-center overflow-hidden">
                   {profileImageUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -317,7 +324,7 @@ export default function CustomizePage() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <User className="w-3 h-3 text-emerald-700" />
+                    <User className="w-3 h-3 text-[var(--color-primary)]" />
                   )}
                 </div>
                 <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
