@@ -13,6 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, Globe, ArrowLeft, Loader2, Save, Check } from "lucide-react";
 import Header from "@/components/Header";
+import {
+  buildCustomLayoutTemplate,
+  tryParseCustomLayoutTemplate,
+  type PortfolioDataWithCustomTemplate,
+} from "@/lib/custom-template";
 
 // personalInformation={personal_information}
 //          overviewData={overview_data}
@@ -320,9 +325,18 @@ export default function PreviewPage() {
     const storedColor = localStorage.getItem('selectedColor');
     const storedMode = localStorage.getItem('selectedMode');
     const storedCustomSections = localStorage.getItem('customSections');
+    const storedSerializedLayout = localStorage.getItem('customLayoutSerialized');
+    const parsedSerializedLayout = tryParseCustomLayoutTemplate(storedSerializedLayout);
+    const effectiveCustomSections =
+      storedCustomSections ??
+      (parsedSerializedLayout ? JSON.stringify(parsedSerializedLayout.sections) : null);
+
+    if (!storedCustomSections && parsedSerializedLayout?.sections) {
+      localStorage.setItem('customSections', JSON.stringify(parsedSerializedLayout.sections));
+    }
     
     // Handle custom sections from customize page
-    if (storedCustomSections && storedTemplate === 'custom') {
+    if (effectiveCustomSections && storedTemplate === 'custom') {
       // If coming from customize page, we still need resumeData
       if (storedResumeData) {
         setResumeData(JSON.parse(storedResumeData));
@@ -442,10 +456,33 @@ export default function PreviewPage() {
       const existingPortfolioId = localStorage.getItem('currentPortfolioId');
 
       // Prepare portfolio data
+      const customSectionsRaw = localStorage.getItem('customSections');
+      const customSections = customSectionsRaw ? JSON.parse(customSectionsRaw) : [];
+      const serializedCustomTemplate =
+        selectedTemplate === 'custom'
+          ? buildCustomLayoutTemplate({
+              sections: customSections,
+              selectedColor: mainColor,
+              displayMode: backgroundColor === '#F8FAFC' ? 'light' : 'dark',
+            })
+          : null;
+
+      const dataToSave: PortfolioDataWithCustomTemplate =
+        selectedTemplate === 'custom'
+          ? {
+              ...resumeData,
+              __custom_template: serializedCustomTemplate ?? undefined,
+            }
+          : resumeData;
+
+      if (serializedCustomTemplate) {
+        localStorage.setItem('customLayoutSerialized', JSON.stringify(serializedCustomTemplate));
+      }
+
       const portfolioData = {
         name: `${resumeData.personal_information?.full_name || 'My'} Portfolio - ${templateName}`,
         template_id: selectedTemplate,
-        data: resumeData,
+        data: dataToSave,
         color: mainColor,
         display_mode: backgroundColor === '#F8FAFC' ? 'light' : 'dark',
         is_published: false
@@ -651,4 +688,3 @@ export default function PreviewPage() {
     </div>
   );
 }
-

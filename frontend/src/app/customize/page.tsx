@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
@@ -27,9 +27,17 @@ import {
   Code,
   ChevronLeft,
   ChevronRight,
-  PanelLeftClose
+  PanelLeftClose,
+  Download,
+  Upload
 } from "lucide-react";
 import { ParsedResume } from "@/constants/ResumeFormat";
+import {
+  buildCustomLayoutTemplate,
+  serializeCustomLayoutTemplate,
+  tryParseCustomLayoutTemplate,
+  type CustomLayoutSection,
+} from "@/lib/custom-template";
 
 interface Section {
   id: string;
@@ -67,11 +75,24 @@ export default function CustomizePage() {
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
+  const templateFileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const createSerializedTemplate = () => {
+    const template = buildCustomLayoutTemplate({
+      sections: sections as CustomLayoutSection[],
+      selectedColor,
+      displayMode,
+    });
+
+    return serializeCustomLayoutTemplate(template);
+  };
 
   useEffect(() => {
     const storedData = localStorage.getItem('resumeData');
     const storedColor = localStorage.getItem('selectedColor');
     const storedMode = localStorage.getItem('selectedMode') as ('light'|'dark') | null;
+    const storedSerializedTemplate = localStorage.getItem("customLayoutSerialized");
+    const parsedSerializedTemplate = tryParseCustomLayoutTemplate(storedSerializedTemplate);
     
     if (storedData) {
       const parsed = JSON.parse(storedData) as ParsedResume;
@@ -88,12 +109,18 @@ export default function CustomizePage() {
         { id: '7', type: 'contact', layout: 'split', visible: true }
       ];
       setSections(initialSections);
+
+      if (parsedSerializedTemplate) {
+        setSections(parsedSerializedTemplate.sections as Section[]);
+        setSelectedColor(parsedSerializedTemplate.settings.selected_color);
+        setDisplayMode(parsedSerializedTemplate.settings.display_mode);
+      }
     } else {
       router.push('/upload');
     }
 
-    if (storedColor) setSelectedColor(storedColor);
-    if (storedMode) setDisplayMode(storedMode);
+    if (storedColor && !parsedSerializedTemplate) setSelectedColor(storedColor);
+    if (storedMode && !parsedSerializedTemplate) setDisplayMode(storedMode);
     
     setIsLoading(false);
   }, [router]);
@@ -108,6 +135,16 @@ export default function CustomizePage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sections]);
+
+  useEffect(() => {
+    const template = buildCustomLayoutTemplate({
+      sections: sections as CustomLayoutSection[],
+      selectedColor,
+      displayMode,
+    });
+
+    localStorage.setItem("customLayoutSerialized", serializeCustomLayoutTemplate(template));
+  }, [sections, selectedColor, displayMode]);
 
   const handleSignOut = async () => {
     await session.auth.signOut();
@@ -197,13 +234,78 @@ export default function CustomizePage() {
   };
 
   const handlePreview = () => {
+    const serialized = createSerializedTemplate();
+
     // Save all necessary data for preview
     localStorage.setItem('customSections', JSON.stringify(sections));
     localStorage.setItem('resumeData', JSON.stringify(resumeData));
     localStorage.setItem('selectedTemplate', 'custom'); // Mark as custom template
     localStorage.setItem('selectedColor', selectedColor);
     localStorage.setItem('selectedMode', displayMode);
+    if (serialized) {
+      localStorage.setItem("customLayoutSerialized", serialized);
+    }
     router.push('/preview');
+  };
+
+  const handleDownloadLayoutTemplate = () => {
+    const serialized = createSerializedTemplate();
+    if (!serialized || !resumeData) return;
+
+    localStorage.setItem("customLayoutSerialized", serialized);
+
+    const fullName = resumeData.personal_information?.full_name || "template";
+    const safeName = fullName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    const fileName = `${safeName || "template"}_layout_template.json`;
+
+    const blob = new Blob([serialized], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportLayoutTemplate = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const raw = await file.text();
+      const parsedTemplate = tryParseCustomLayoutTemplate(raw);
+
+      if (!parsedTemplate) {
+        alert("Invalid template file. Please upload a Foliage layout template JSON.");
+        return;
+      }
+
+      const importedSections = parsedTemplate.sections.map((section, index) => ({
+        ...section,
+        id: section.id || `${Date.now()}-${index}`,
+      }));
+
+      setSections(importedSections as Section[]);
+      setSelectedSection(null);
+      setSelectedColor(parsedTemplate.settings.selected_color);
+      setDisplayMode(parsedTemplate.settings.display_mode);
+
+      localStorage.setItem("customSections", JSON.stringify(importedSections));
+      localStorage.setItem("selectedColor", parsedTemplate.settings.selected_color);
+      localStorage.setItem("selectedMode", parsedTemplate.settings.display_mode);
+      localStorage.setItem(
+        "customLayoutSerialized",
+        serializeCustomLayoutTemplate(parsedTemplate)
+      );
+    } catch {
+      alert("Could not read that template file. Please try a valid JSON template.");
+    } finally {
+      event.target.value = "";
+    }
   };
 
   const colorOptions = [
@@ -451,10 +553,37 @@ export default function CustomizePage() {
                   )}
                 </div>
 
-                <Button onClick={handlePreview} size="sm" className="gap-2">
-                  <Save className="w-3 h-3" />
-                  Save & Preview
-                </Button>
+                <div className="flex items-center gap-2">
+                  <input
+                    ref={templateFileInputRef}
+                    type="file"
+                    accept="application/json,.json"
+                    onChange={handleImportLayoutTemplate}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => templateFileInputRef.current?.click()}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Upload className="w-3 h-3" />
+                    Import Template
+                  </Button>
+                  <Button
+                    onClick={handleDownloadLayoutTemplate}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Download className="w-3 h-3" />
+                    Download Template
+                  </Button>
+                  <Button onClick={handlePreview} size="sm" className="gap-2">
+                    <Save className="w-3 h-3" />
+                    Save & Preview
+                  </Button>
+                </div>
               </div>
 
               {/* Canvas Preview */}
@@ -998,4 +1127,3 @@ export default function CustomizePage() {
     </div>
   );
 }
-
