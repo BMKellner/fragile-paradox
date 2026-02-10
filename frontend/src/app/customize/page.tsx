@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
@@ -67,6 +67,8 @@ export default function CustomizePage() {
   const [draggedSection, setDraggedSection] = useState<string | null>(null);
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(true);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const profileImageUrlRef = useRef<string | null>(null);
 
   useEffect(() => {
     const storedData = localStorage.getItem('resumeData');
@@ -97,6 +99,49 @@ export default function CustomizePage() {
     
     setIsLoading(false);
   }, [router]);
+
+  const fetchProfileImage = async () => {
+    if (!info.user) return;
+
+    try {
+      const supabaseSession = await session.auth.getSession();
+      const token = supabaseSession.data.session?.access_token;
+      if (!token) return;
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/pfp`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        if (profileImageUrlRef.current) {
+          URL.revokeObjectURL(profileImageUrlRef.current);
+        }
+        profileImageUrlRef.current = url;
+        setProfileImageUrl(url);
+      }
+    } catch (error) {
+      console.error("Failed to load profile picture:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (info.user) {
+      fetchProfileImage();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [info.user]);
+
+  useEffect(() => {
+    return () => {
+      if (profileImageUrlRef.current) {
+        URL.revokeObjectURL(profileImageUrlRef.current);
+      }
+    };
+  }, []);
 
   // Sync selectedSection with sections array when sections change
   useEffect(() => {
@@ -263,8 +308,17 @@ export default function CustomizePage() {
 
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-muted/50">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <User className="w-3 h-3 text-emerald-700" />
+                <div className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center overflow-hidden">
+                  {profileImageUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profileImageUrl}
+                      alt="Profile"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <User className="w-3 h-3 text-emerald-700" />
+                  )}
                 </div>
                 <span className="text-sm font-medium">{info.user.email?.split('@')[0]}</span>
               </div>
@@ -998,4 +1052,3 @@ export default function CustomizePage() {
     </div>
   );
 }
-

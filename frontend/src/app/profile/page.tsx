@@ -20,7 +20,7 @@ import {
   Loader2
 } from "lucide-react";
 import Header from "@/components/Header";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -29,6 +29,13 @@ export default function ProfilePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [profileImageError, setProfileImageError] = useState<string | null>(null);
+  const [profileImageLoading, setProfileImageLoading] = useState(false);
+  const [selectedPfpFile, setSelectedPfpFile] = useState<File | null>(null);
+  const [pfpPreviewUrl, setPfpPreviewUrl] = useState<string | null>(null);
+  const [isUploadingPfp, setIsUploadingPfp] = useState(false);
+  const profileImageUrlRef = useRef<string | null>(null);
 
   // Profile form state
   const [profile, setProfile] = useState({
@@ -118,6 +125,70 @@ export default function ProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [info.user]);
 
+  const fetchProfileImage = async () => {
+    if (!info.user) return;
+    setProfileImageLoading(true);
+    setProfileImageError(null);
+
+    try {
+      const supabaseSession = await session.auth.getSession();
+      const token = supabaseSession.data.session?.access_token;
+      if (!token) {
+        setProfileImageLoading(false);
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/pfp`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        if (profileImageUrlRef.current) {
+          URL.revokeObjectURL(profileImageUrlRef.current);
+        }
+        profileImageUrlRef.current = url;
+        setProfileImageUrl(url);
+      } else if (response.status !== 404) {
+        const text = await response.text();
+        setProfileImageError(text || 'Failed to load profile picture');
+      }
+    } catch (error) {
+      console.error('Error fetching profile picture:', error);
+      setProfileImageError('Failed to load profile picture');
+    } finally {
+      setProfileImageLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (info.user) {
+      fetchProfileImage();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [info.user]);
+
+  useEffect(() => {
+    if (!selectedPfpFile) {
+      setPfpPreviewUrl(null);
+      return;
+    }
+    const url = URL.createObjectURL(selectedPfpFile);
+    setPfpPreviewUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [selectedPfpFile]);
+
+  useEffect(() => {
+    return () => {
+      if (profileImageUrlRef.current) {
+        URL.revokeObjectURL(profileImageUrlRef.current);
+      }
+    };
+  }, []);
+
   const handleSave = async () => {
     setIsSaving(true);
     setSaveMessage(null);
@@ -171,6 +242,63 @@ export default function ProfilePage() {
     }
   };
 
+  const handlePfpChange = (file: File | null) => {
+    if (!file) {
+      setSelectedPfpFile(null);
+      return;
+    }
+    if (!["image/jpeg", "image/png"].includes(file.type)) {
+      setProfileImageError("Only JPG and PNG files are supported.");
+      return;
+    }
+    setProfileImageError(null);
+    setSelectedPfpFile(file);
+  };
+
+  const handleUploadPfp = async () => {
+    if (!selectedPfpFile) {
+      setProfileImageError("Please choose a JPG or PNG file first.");
+      return;
+    }
+
+    setIsUploadingPfp(true);
+    setProfileImageError(null);
+
+    try {
+      const supabaseSession = await session.auth.getSession();
+      const token = supabaseSession.data.session?.access_token;
+      if (!token) {
+        throw new Error("Not authenticated");
+      }
+
+      const formData = new FormData();
+      formData.append("file", selectedPfpFile);
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/pfp`, {
+        method: "POST",
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || "Failed to upload profile picture");
+      }
+
+      setSelectedPfpFile(null);
+      await fetchProfileImage();
+    } catch (error) {
+      console.error("Error uploading profile picture:", error);
+      setProfileImageError(
+        error instanceof Error ? error.message : "Failed to upload profile picture"
+      );
+    } finally {
+      setIsUploadingPfp(false);
+    }
+  };
+
   const handleInputChange = (field: string, value: string) => {
     setProfile(prev => ({ ...prev, [field]: value }));
   };
@@ -206,6 +334,61 @@ export default function ProfilePage() {
           </div>
 
           <div className="space-y-6">
+            {/* Profile Picture */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Profile Picture</CardTitle>
+                <CardDescription>
+                  Upload a JPG or PNG image to use across your profile
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-6">
+                  <div className="h-24 w-24 rounded-full bg-muted/50 border flex items-center justify-center overflow-hidden">
+                    {pfpPreviewUrl || profileImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={pfpPreviewUrl || profileImageUrl || ""}
+                        alt="Profile"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-xs text-muted-foreground">No image</div>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <Label htmlFor="profilePicture">Upload</Label>
+                    <input
+                      id="profilePicture"
+                      type="file"
+                      accept="image/png,image/jpeg"
+                      onChange={(e) => handlePfpChange(e.target.files?.[0] || null)}
+                      className="block w-full text-sm file:mr-4 file:py-2 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-emerald-600 file:text-white hover:file:bg-emerald-700"
+                    />
+                    <div className="flex items-center gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleUploadPfp}
+                        disabled={isUploadingPfp || !selectedPfpFile}
+                      >
+                        {isUploadingPfp ? "Uploading..." : "Upload"}
+                      </Button>
+                      {profileImageLoading && (
+                        <span className="text-xs text-muted-foreground">Loading current image...</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {profileImageError && (
+                  <div className="p-3 rounded-md bg-red-50 text-red-800 border border-red-200 text-sm">
+                    {profileImageError}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Personal Information */}
             <Card>
               <CardHeader>
@@ -409,4 +592,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
