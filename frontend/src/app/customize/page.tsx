@@ -29,7 +29,8 @@ import {
   ChevronRight,
   PanelLeftClose,
   Download,
-  Upload
+  Upload,
+  RotateCcw
 } from "lucide-react";
 import { ParsedResume } from "@/constants/ResumeFormat";
 import {
@@ -254,9 +255,9 @@ export default function CustomizePage() {
 
     localStorage.setItem("customLayoutSerialized", serialized);
 
-    const fullName = resumeData.personal_information?.full_name || "template";
+    const fullName = resumeData.personal_information?.full_name || "layout";
     const safeName = fullName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
-    const fileName = `${safeName || "template"}_layout_template.json`;
+    const fileName = `${safeName || "layout"}_layout.json`;
 
     const blob = new Blob([serialized], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -280,7 +281,7 @@ export default function CustomizePage() {
       const parsedTemplate = tryParseCustomLayoutTemplate(raw);
 
       if (!parsedTemplate) {
-        alert("Invalid template file. Please upload a Foliage layout template JSON.");
+        alert("Invalid layout file. Please upload a Foliage layout JSON.");
         return;
       }
 
@@ -302,10 +303,31 @@ export default function CustomizePage() {
         serializeCustomLayoutTemplate(parsedTemplate)
       );
     } catch {
-      alert("Could not read that template file. Please try a valid JSON template.");
+      alert("Could not read that layout file. Please try a valid JSON layout.");
     } finally {
       event.target.value = "";
     }
+  };
+
+  const handleResetLayout = () => {
+    if (sections.length === 0) return;
+    const typedConfirmation = window.prompt(
+      "Type RESET to confirm resetting this layout to an empty page."
+    );
+    if (typedConfirmation !== "RESET") return;
+
+    setSections([]);
+    setSelectedSection(null);
+    localStorage.setItem("customSections", JSON.stringify([]));
+
+    const serialized = serializeCustomLayoutTemplate(
+      buildCustomLayoutTemplate({
+        sections: [],
+        selectedColor,
+        displayMode,
+      })
+    );
+    localStorage.setItem("customLayoutSerialized", serialized);
   };
 
   const colorOptions = [
@@ -414,10 +436,21 @@ export default function CustomizePage() {
 
                 {/* Sections List */}
                 <div className="p-4">
-                  <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                    <GripVertical className="w-4 h-4" />
-                    Your Sections
-                  </h3>
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <h3 className="font-semibold text-sm flex items-center gap-2">
+                      <GripVertical className="w-4 h-4" />
+                      Your Sections
+                    </h3>
+                    <Button
+                      onClick={handleResetLayout}
+                      size="sm"
+                      variant="destructive"
+                      className="h-7 px-2 gap-1 text-xs shrink-0"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Reset
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground mb-3">Drag to reorder</p>
                   <div className="space-y-1.5">
                     {sections.length === 0 ? (
@@ -489,8 +522,8 @@ export default function CustomizePage() {
             {/* Main Canvas - Preview */}
             <div className="flex-1 overflow-hidden relative">
               {/* Top Toolbar */}
-              <div className="absolute top-0 left-0 right-0 bg-background/95 backdrop-blur border-b px-4 py-2 flex items-center justify-between z-10">
-                <div className="flex items-center gap-2">
+              <div className="absolute top-0 left-0 right-0 bg-background/95 backdrop-blur border-b px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto z-10">
+                <div className="flex items-center gap-2 shrink-0">
                   <Button 
                     variant="ghost" 
                     size="sm"
@@ -512,7 +545,7 @@ export default function CustomizePage() {
                 </div>
 
                 {/* Color and Display Options */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 shrink-0">
                   <div className="flex items-center gap-2">
                     {colorOptions.map((c) => (
                       <button
@@ -553,7 +586,7 @@ export default function CustomizePage() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 shrink-0">
                   <input
                     ref={templateFileInputRef}
                     type="file"
@@ -568,7 +601,7 @@ export default function CustomizePage() {
                     className="gap-2"
                   >
                     <Upload className="w-3 h-3" />
-                    Import Template
+                    Import Layout
                   </Button>
                   <Button
                     onClick={handleDownloadLayoutTemplate}
@@ -577,7 +610,7 @@ export default function CustomizePage() {
                     className="gap-2"
                   >
                     <Download className="w-3 h-3" />
-                    Download Template
+                    Download Layout
                   </Button>
                   <Button onClick={handlePreview} size="sm" className="gap-2">
                     <Save className="w-3 h-3" />
