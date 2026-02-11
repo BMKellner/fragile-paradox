@@ -304,7 +304,7 @@ export default function TemplatesPage() {
           {/* Page Header */}
           <div className="mb-8">
             <h2 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-3">
-              <TreePine className="w-8 h-8 text-emerald-600" />
+              <TreePine className="w-8 h-8 text-[var(--color-primary)]" />
               Choose Your Template
             </h2>
             <p className="text-muted-foreground">
@@ -326,7 +326,9 @@ export default function TemplatesPage() {
                         localStorage.setItem('selectedColor', c.value);
                       }}
                       className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        selectedColor === c.value ? 'ring-2 ring-offset-2 ring-emerald-500 scale-110' : 'border-muted hover:scale-105'
+                        selectedColor === c.value
+                          ? 'ring-2 ring-offset-2 ring-offset-[var(--color-background)] ring-[var(--color-primary)] scale-110'
+                          : 'border-muted hover:scale-105'
                       }`}
                       style={{ backgroundColor: c.value }}
                     />
@@ -345,7 +347,9 @@ export default function TemplatesPage() {
                         localStorage.setItem('selectedMode', mode);
                       }}
                       className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                        displayMode === mode ? 'bg-emerald-600 text-white' : 'hover:bg-emerald-50'
+                        displayMode === mode
+                          ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
+                          : 'hover:bg-[var(--color-accent)]'
                       }`}
                     >
                       {mode[0].toUpperCase() + mode.slice(1)}
@@ -366,8 +370,8 @@ export default function TemplatesPage() {
                     key={template.id}
                     className={`cursor-pointer transition-all border ${
                       selectedTemplate === template.id
-                        ? 'ring-2 ring-emerald-500 border-emerald-200 shadow-xl bg-emerald-50/50'
-                        : 'border-emerald-100 bg-white/70 backdrop-blur-sm shadow-md hover:shadow-xl'
+                        ? 'ring-2 ring-[var(--color-primary)] border-[var(--color-primary)]/35 shadow-xl bg-[var(--color-primary)]/12'
+                        : 'border-[var(--color-border)]/85 bg-[var(--color-card)]/76 backdrop-blur-sm shadow-md hover:border-[var(--color-primary)]/30 hover:bg-[var(--color-card)]/88 hover:shadow-xl'
                     }`}
                     style={selectedTemplate === template.id ? {
                       boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
@@ -382,7 +386,7 @@ export default function TemplatesPage() {
                           <CardTitle className="flex items-center gap-2">
                             {template.name}
                             {selectedTemplate === template.id && (
-                              <Check className="w-5 h-5 text-emerald-600" />
+                              <Check className="w-5 h-5 text-[var(--color-primary)]" />
                             )}
                           </CardTitle>
                           <CardDescription>{template.description}</CardDescription>

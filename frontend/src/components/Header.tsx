@@ -136,8 +136,8 @@ export default function Header({ showNav = true, currentPage }: HeaderProps) {
               onClick={() => router.push('/home')}
               aria-label="Go to homepage"
             >
-              <Leaf className="w-5 h-5 text-[var(--color-primary)]" />
-              <h1 className="text-xl font-bold gradient-text">Foliage</h1>
+              <Leaf className="w-7 h-7 text-[var(--color-primary)]" />
+              <h1 className="text-3xl leading-[1.3] font-bold gradient-text">Foliage</h1>
             </button>
             
             {/* Navigation Tabs */}
