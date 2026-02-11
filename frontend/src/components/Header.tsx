@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -13,57 +13,102 @@ interface HeaderProps {
   currentPage?: 'home' | 'dashboard' | 'profile' | 'upload' | 'templates' | 'preview' | 'customize';
 }
 
+const profileImageCache = new Map<string, string>();
+const profileImageRequests = new Map<string, Promise<string | null>>();
+
+function setCachedProfileImage(userId: string, nextUrl: string) {
+  const previousUrl = profileImageCache.get(userId);
+  if (previousUrl && previousUrl !== nextUrl) {
+    URL.revokeObjectURL(previousUrl);
+  }
+  profileImageCache.set(userId, nextUrl);
+}
+
+function clearCachedProfileImage(userId?: string) {
+  if (userId) {
+    const cachedUrl = profileImageCache.get(userId);
+    if (cachedUrl) {
+      URL.revokeObjectURL(cachedUrl);
+      profileImageCache.delete(userId);
+    }
+    profileImageRequests.delete(userId);
+    return;
+  }
+
+  profileImageCache.forEach((cachedUrl) => URL.revokeObjectURL(cachedUrl));
+  profileImageCache.clear();
+  profileImageRequests.clear();
+}
+
 export default function Header({ showNav = true, currentPage }: HeaderProps) {
   const router = useRouter();
   const info = useUser();
   const session = createClient();
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
-  const profileImageUrlRef = useRef<string | null>(null);
 
-  const fetchProfileImage = async () => {
-    if (!info.user) return;
+  const fetchProfileImage = async (userId: string): Promise<string | null> => {
+    const existingRequest = profileImageRequests.get(userId);
+    if (existingRequest) return existingRequest;
 
-    try {
-      const supabaseSession = await session.auth.getSession();
-      const token = supabaseSession.data.session?.access_token;
-      if (!token) return;
+    const request = (async () => {
+      try {
+        const supabaseSession = await session.auth.getSession();
+        const token = supabaseSession.data.session?.access_token;
+        if (!token) return null;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/pfp`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/pfp`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          setCachedProfileImage(userId, url);
+          return url;
         }
-      });
-
-      if (response.ok) {
-        const blob = await response.blob();
-        const url = URL.createObjectURL(blob);
-        if (profileImageUrlRef.current) {
-          URL.revokeObjectURL(profileImageUrlRef.current);
-        }
-        profileImageUrlRef.current = url;
-        setProfileImageUrl(url);
+      } catch (error) {
+        console.error("Failed to load profile picture:", error);
       }
-    } catch (error) {
-      console.error("Failed to load profile picture:", error);
-    }
+      return null;
+    })();
+
+    profileImageRequests.set(userId, request);
+    request.finally(() => {
+      profileImageRequests.delete(userId);
+    });
+
+    return request;
   };
 
   useEffect(() => {
-    if (info.user) {
-      fetchProfileImage();
+    const userId = info.user?.id;
+    if (!userId) {
+      setProfileImageUrl(null);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [info.user]);
 
-  useEffect(() => {
-    return () => {
-      if (profileImageUrlRef.current) {
-        URL.revokeObjectURL(profileImageUrlRef.current);
+    const cachedUrl = profileImageCache.get(userId);
+    if (cachedUrl) {
+      setProfileImageUrl(cachedUrl);
+    }
+
+    let isCancelled = false;
+    void fetchProfileImage(userId).then((nextUrl) => {
+      if (!isCancelled && nextUrl) {
+        setProfileImageUrl(nextUrl);
       }
+    });
+
+    return () => {
+      isCancelled = true;
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [info.user?.id]);
 
   const handleSignOut = async () => {
+    clearCachedProfileImage(info.user?.id);
     await session.auth.signOut();
     router.push('/signin');
   };
