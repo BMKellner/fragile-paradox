@@ -504,7 +504,7 @@ export default function PreviewPage() {
   }
 
   if (!info.user) {
-    router.push('/signin');
+    router.push('/signin?next=/preview');
     return null;
   }
 
