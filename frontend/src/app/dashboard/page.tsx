@@ -20,13 +20,13 @@ import {
 } from "lucide-react";
 import Header from "@/components/Header";
 import { useState, useEffect } from "react";
-import { ParsedResume } from "@/constants/ResumeFormat";
+import { PortfolioDataWithCustomTemplate } from "@/lib/custom-template";
 
 interface Website {
   id: string;
   name: string;
   template_id: string;
-  data: ParsedResume;
+  data: PortfolioDataWithCustomTemplate;
   color: string;
   display_mode: string;
   is_published: boolean;
@@ -113,6 +113,15 @@ export default function DashboardPage() {
     localStorage.setItem('selectedTemplate', website.template_id);
     localStorage.setItem('selectedColor', website.color);
     localStorage.setItem('selectedMode', website.display_mode);
+
+    if (website.data.__custom_template?.sections && website.template_id === 'custom') {
+      localStorage.setItem('customSections', JSON.stringify(website.data.__custom_template.sections));
+      localStorage.setItem('customLayoutSerialized', JSON.stringify(website.data.__custom_template));
+    } else {
+      localStorage.removeItem('customSections');
+      localStorage.removeItem('customLayoutSerialized');
+    }
+
     router.push('/preview');
   };
 

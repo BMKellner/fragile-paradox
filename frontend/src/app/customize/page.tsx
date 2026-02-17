@@ -1,6 +1,5 @@
 'use client';
-
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
@@ -28,9 +27,18 @@ import {
   Code,
   ChevronLeft,
   ChevronRight,
-  PanelLeftClose
+  PanelLeftClose,
+  Download,
+  Upload,
+  RotateCcw
 } from "lucide-react";
 import { ParsedResume } from "@/constants/ResumeFormat";
+import {
+  buildCustomLayoutTemplate,
+  serializeCustomLayoutTemplate,
+  tryParseCustomLayoutTemplate,
+  type CustomLayoutSection,
+} from "@/lib/custom-template";
 
 interface Section {
   id: string;
@@ -70,11 +78,42 @@ export default function CustomizePage() {
   const [rightSidebarOpen, setRightSidebarOpen] = useState(true);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const profileImageUrlRef = useRef<string | null>(null);
+  const templateFileInputRef = useRef<HTMLInputElement | null>(null);
+  const lastSavedSignatureRef = useRef<string | null>(null);
+
+  const currentSignature = useMemo(() => {
+    if (!resumeData) return null;
+    return JSON.stringify({
+      resumeData,
+      sections,
+      selectedColor,
+      displayMode,
+    });
+  }, [resumeData, sections, selectedColor, displayMode]);
+
+  const isDirty = useMemo(() => {
+    if (!currentSignature) return false;
+    if (!lastSavedSignatureRef.current) return false;
+    return currentSignature !== lastSavedSignatureRef.current;
+  }, [currentSignature]);
+
+  const createSerializedTemplate = () => {
+    const template = buildCustomLayoutTemplate({
+      sections: sections as CustomLayoutSection[],
+      selectedColor,
+      displayMode,
+    });
+
+    return serializeCustomLayoutTemplate(template);
+  };
+
 
   useEffect(() => {
     const storedData = localStorage.getItem('resumeData');
     const storedColor = localStorage.getItem('selectedColor');
     const storedMode = localStorage.getItem('selectedMode') as ('light'|'dark') | null;
+    const storedSerializedTemplate = localStorage.getItem("customLayoutSerialized");
+    const parsedSerializedTemplate = tryParseCustomLayoutTemplate(storedSerializedTemplate);
     
     if (storedData) {
       const parsed = JSON.parse(storedData) as ParsedResume;
@@ -91,12 +130,18 @@ export default function CustomizePage() {
         { id: '7', type: 'contact', layout: 'split', visible: true }
       ];
       setSections(initialSections);
+
+      if (parsedSerializedTemplate) {
+        setSections(parsedSerializedTemplate.sections as Section[]);
+        setSelectedColor(parsedSerializedTemplate.settings.selected_color);
+        setDisplayMode(parsedSerializedTemplate.settings.display_mode);
+      }
     } else {
       router.push('/upload');
     }
 
-    if (storedColor) setSelectedColor(storedColor);
-    if (storedMode) setDisplayMode(storedMode);
+    if (storedColor && !parsedSerializedTemplate) setSelectedColor(storedColor);
+    if (storedMode && !parsedSerializedTemplate) setDisplayMode(storedMode);
     
     setIsLoading(false);
   }, [router]);
@@ -155,12 +200,47 @@ export default function CustomizePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sections]);
 
+  useEffect(() => {
+    if (!currentSignature) return;
+    if (!lastSavedSignatureRef.current) {
+      lastSavedSignatureRef.current = currentSignature;
+    }
+  }, [currentSignature]);
+
+  useEffect(() => {
+    const handler = (event: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
+  useEffect(() => {
+    const template = buildCustomLayoutTemplate({
+      sections: sections as CustomLayoutSection[],
+      selectedColor,
+      displayMode,
+    });
+
+    localStorage.setItem("customLayoutSerialized", serializeCustomLayoutTemplate(template));
+  }, [sections, selectedColor, displayMode]);
+
+  const confirmDiscardIfDirty = () => {
+    if (!isDirty) return true;
+    return window.confirm("You have unsaved changes. Are you sure you want to exit?");
+  };
+
   const handleSignOut = async () => {
+    if (!confirmDiscardIfDirty()) return;
     await session.auth.signOut();
     router.push('/signin?next=/customize');
   };
 
   const handleNavigation = (path: string) => {
+    if (!confirmDiscardIfDirty()) return;
     router.push(path);
   };
 
@@ -243,13 +323,102 @@ export default function CustomizePage() {
   };
 
   const handlePreview = () => {
+    const serialized = createSerializedTemplate();
+
     // Save all necessary data for preview
     localStorage.setItem('customSections', JSON.stringify(sections));
     localStorage.setItem('resumeData', JSON.stringify(resumeData));
     localStorage.setItem('selectedTemplate', 'custom'); // Mark as custom template
     localStorage.setItem('selectedColor', selectedColor);
     localStorage.setItem('selectedMode', displayMode);
+    if (serialized) {
+      localStorage.setItem("customLayoutSerialized", serialized);
+    }
+    if (currentSignature) {
+      lastSavedSignatureRef.current = currentSignature;
+    }
     router.push('/preview');
+  };
+
+  const handleDownloadLayoutTemplate = () => {
+    const serialized = createSerializedTemplate();
+    if (!serialized || !resumeData) return;
+
+    localStorage.setItem("customLayoutSerialized", serialized);
+
+    const fullName = resumeData.personal_information?.full_name || "layout";
+    const safeName = fullName.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_");
+    const fileName = `${safeName || "layout"}_layout.json`;
+
+    const blob = new Blob([serialized], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportLayoutTemplate = async (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const raw = await file.text();
+      const parsedTemplate = tryParseCustomLayoutTemplate(raw);
+
+      if (!parsedTemplate) {
+        alert("Invalid layout file. Please upload a Foliage layout JSON.");
+        return;
+      }
+
+      const importedSections = parsedTemplate.sections.map((section, index) => ({
+        ...section,
+        id: section.id || `${Date.now()}-${index}`,
+      }));
+
+      setSections(importedSections as Section[]);
+      setSelectedSection(null);
+      setSelectedColor(parsedTemplate.settings.selected_color);
+      setDisplayMode(parsedTemplate.settings.display_mode);
+
+      localStorage.setItem("customSections", JSON.stringify(importedSections));
+      localStorage.setItem("selectedColor", parsedTemplate.settings.selected_color);
+      localStorage.setItem("selectedMode", parsedTemplate.settings.display_mode);
+      localStorage.setItem(
+        "customLayoutSerialized",
+        serializeCustomLayoutTemplate(parsedTemplate)
+      );
+    } catch {
+      alert("Could not read that layout file. Please try a valid JSON layout.");
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const handleResetLayout = () => {
+    if (sections.length === 0) return;
+    const typedConfirmation = window.prompt(
+      "Type RESET to confirm resetting this layout to an empty page."
+    );
+    if (typedConfirmation !== "RESET") return;
+
+    setSections([]);
+    setSelectedSection(null);
+    localStorage.setItem("customSections", JSON.stringify([]));
+
+    const serialized = serializeCustomLayoutTemplate(
+      buildCustomLayoutTemplate({
+        sections: [],
+        selectedColor,
+        displayMode,
+      })
+    );
+    localStorage.setItem("customLayoutSerialized", serialized);
   };
 
   const colorOptions = [
@@ -373,10 +542,21 @@ export default function CustomizePage() {
 
                 {/* Sections List */}
                 <div className="p-4">
-                  <h3 className="font-semibold text-sm mb-2 flex items-center gap-2">
-                    <GripVertical className="w-4 h-4" />
-                    Your Sections
-                  </h3>
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <h3 className="font-semibold text-sm flex items-center gap-2">
+                      <GripVertical className="w-4 h-4" />
+                      Your Sections
+                    </h3>
+                    <Button
+                      onClick={handleResetLayout}
+                      size="sm"
+                      variant="destructive"
+                      className="h-7 px-2 gap-1 text-xs shrink-0"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Reset
+                    </Button>
+                  </div>
                   <p className="text-xs text-muted-foreground mb-3">Drag to reorder</p>
                   <div className="space-y-1.5">
                     {sections.length === 0 ? (
@@ -448,12 +628,12 @@ export default function CustomizePage() {
             {/* Main Canvas - Preview */}
             <div className="flex-1 overflow-hidden relative">
               {/* Top Toolbar */}
-              <div className="absolute top-0 left-0 right-0 bg-background/95 backdrop-blur border-b px-4 py-2 flex items-center justify-between z-10">
-                <div className="flex items-center gap-2">
-                  <Button 
-                    variant="ghost" 
+              <div className="absolute top-0 left-0 right-0 bg-background/95 backdrop-blur border-b px-4 py-2 flex items-center justify-between gap-2 overflow-x-auto z-10">
+                <div className="flex items-center gap-2 shrink-0">
+                  <Button
+                    variant="ghost"
                     size="sm"
-                    onClick={() => router.push('/templates')}
+                    onClick={() => handleNavigation('/templates')}
                     className="gap-2"
                   >
                     <ArrowLeft className="w-4 h-4" />
@@ -471,7 +651,7 @@ export default function CustomizePage() {
                 </div>
 
                 {/* Color and Display Options */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4 shrink-0">
                   <div className="flex items-center gap-2">
                     {colorOptions.map((c) => (
                       <button
@@ -512,10 +692,37 @@ export default function CustomizePage() {
                   )}
                 </div>
 
-                <Button onClick={handlePreview} size="sm" className="gap-2">
-                  <Save className="w-3 h-3" />
-                  Save & Preview
-                </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  <input
+                    ref={templateFileInputRef}
+                    type="file"
+                    accept="application/json,.json"
+                    onChange={handleImportLayoutTemplate}
+                    className="hidden"
+                  />
+                  <Button
+                    onClick={() => templateFileInputRef.current?.click()}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Upload className="w-3 h-3" />
+                    Import Layout
+                  </Button>
+                  <Button
+                    onClick={handleDownloadLayoutTemplate}
+                    size="sm"
+                    variant="outline"
+                    className="gap-2"
+                  >
+                    <Download className="w-3 h-3" />
+                    Download Layout
+                  </Button>
+                  <Button onClick={handlePreview} size="sm" className="gap-2">
+                    <Save className="w-3 h-3" />
+                    Save & Preview
+                  </Button>
+                </div>
               </div>
 
               {/* Canvas Preview */}

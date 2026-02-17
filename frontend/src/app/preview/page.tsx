@@ -11,8 +11,13 @@ import CreativeBoldPortfolio from "@/components/PortfolioTemplates/CreativeBold"
 import ElegantSophisticatedPortfolio from "@/components/PortfolioTemplates/ElegantSophisticated";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, Globe, ArrowLeft, Loader2, Save, Check } from "lucide-react";
+import { Download, Globe, ArrowLeft, Loader2, Save, Check, X } from "lucide-react";
 import Header from "@/components/Header";
+import {
+  buildCustomLayoutTemplate,
+  tryParseCustomLayoutTemplate,
+  type PortfolioDataWithCustomTemplate,
+} from "@/lib/custom-template";
 
 // personalInformation={personal_information}
 //          overviewData={overview_data}
@@ -309,9 +314,22 @@ export default function PreviewPage() {
   const [isGenerating, setIsGenerating] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', message: string} | null>(null);
+  const [showResumeModal, setShowResumeModal] = useState(false);
+  const [resumeOptions, setResumeOptions] = useState<ResumeOption[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState<string | null>(null);
+  const [isLoadingResumes, setIsLoadingResumes] = useState(false);
+  const [resumeError, setResumeError] = useState<string | null>(null);
   const router = useRouter();
   const info = useUser();
   const session = createClient();
+
+  type ResumeOption = {
+    id: string;
+    title: string | null;
+    file_path?: string | null;
+    data: ParsedResume;
+    created_at?: string | null;
+  };
 
   useEffect(() => {
     // Get data from localStorage
@@ -320,9 +338,18 @@ export default function PreviewPage() {
     const storedColor = localStorage.getItem('selectedColor');
     const storedMode = localStorage.getItem('selectedMode');
     const storedCustomSections = localStorage.getItem('customSections');
+    const storedSerializedLayout = localStorage.getItem('customLayoutSerialized');
+    const parsedSerializedLayout = tryParseCustomLayoutTemplate(storedSerializedLayout);
+    const effectiveCustomSections =
+      storedCustomSections ??
+      (parsedSerializedLayout ? JSON.stringify(parsedSerializedLayout.sections) : null);
+
+    if (!storedCustomSections && parsedSerializedLayout?.sections) {
+      localStorage.setItem('customSections', JSON.stringify(parsedSerializedLayout.sections));
+    }
     
     // Handle custom sections from customize page
-    if (storedCustomSections && storedTemplate === 'custom') {
+    if (effectiveCustomSections && storedTemplate === 'custom') {
       // If coming from customize page, we still need resumeData
       if (storedResumeData) {
         setResumeData(JSON.parse(storedResumeData));
@@ -354,6 +381,107 @@ export default function PreviewPage() {
     localStorage.removeItem('selectedTemplate');
     localStorage.removeItem('currentPortfolioId');
     router.push('/upload');
+  };
+
+  const openResumeModal = async () => {
+    setShowResumeModal(true);
+    setIsLoadingResumes(true);
+    setResumeError(null);
+
+    try {
+      const supabaseSession = await session.auth.getSession();
+      const token = supabaseSession.data.session?.access_token;
+
+      if (!token) {
+        setResumeError("Please sign in to view your resumes.");
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/resumes/`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        setResumeError("Failed to load resumes. Please try again.");
+        return;
+      }
+
+      const data = await response.json();
+      setResumeOptions(data || []);
+      if (data?.length) {
+        setSelectedResumeId(data[0].id);
+      }
+    } catch (error) {
+      console.error("Error loading resumes:", error);
+      setResumeError("Failed to load resumes. Please try again.");
+    } finally {
+      setIsLoadingResumes(false);
+    }
+  };
+
+  const handleDownloadSelectedResume = async () => {
+    if (!selectedResumeId) return;
+
+    const selected = resumeOptions.find((resume) => resume.id === selectedResumeId);
+    if (!selected) return;
+
+    try {
+      const supabaseSession = await session.auth.getSession();
+      const token = supabaseSession.data.session?.access_token;
+
+      if (!token) {
+        setResumeError("Please sign in to download resumes.");
+        return;
+      }
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/resumes/${selectedResumeId}/download`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        setResumeError("Failed to download the resume. Please try again.");
+        return;
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      const fileNameBase = selected.title || "resume";
+      const ext = selected.file_path?.split(".").pop() || "";
+      const normalizedBase = fileNameBase.replace(/[^a-z0-9._-]/gi, "_");
+      const fileName =
+        ext && !normalizedBase.toLowerCase().endsWith(`.${ext}`)
+          ? `${normalizedBase}.${ext}`
+          : normalizedBase;
+
+      anchor.href = url;
+      anchor.download = fileName || "resume";
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Error downloading resume:", error);
+      setResumeError("Failed to download the resume. Please try again.");
+    }
+  };
+
+  const handleConfirmResumeSelection = () => {
+    if (!selectedResumeId) return;
+
+    const selected = resumeOptions.find((resume) => resume.id === selectedResumeId);
+    if (!selected) return;
+
+    setResumeData(selected.data);
+    localStorage.setItem("resumeData", JSON.stringify(selected.data));
+    setShowResumeModal(false);
   };
 
 
@@ -442,10 +570,33 @@ export default function PreviewPage() {
       const existingPortfolioId = localStorage.getItem('currentPortfolioId');
 
       // Prepare portfolio data
+      const customSectionsRaw = localStorage.getItem('customSections');
+      const customSections = customSectionsRaw ? JSON.parse(customSectionsRaw) : [];
+      const serializedCustomTemplate =
+        selectedTemplate === 'custom'
+          ? buildCustomLayoutTemplate({
+              sections: customSections,
+              selectedColor: mainColor,
+              displayMode: backgroundColor === '#F8FAFC' ? 'light' : 'dark',
+            })
+          : null;
+
+      const dataToSave: PortfolioDataWithCustomTemplate =
+        selectedTemplate === 'custom'
+          ? {
+              ...resumeData,
+              __custom_template: serializedCustomTemplate ?? undefined,
+            }
+          : resumeData;
+
+      if (serializedCustomTemplate) {
+        localStorage.setItem('customLayoutSerialized', JSON.stringify(serializedCustomTemplate));
+      }
+
       const portfolioData = {
         name: `${resumeData.personal_information?.full_name || 'My'} Portfolio - ${templateName}`,
         template_id: selectedTemplate,
-        data: resumeData,
+        data: dataToSave,
         color: mainColor,
         display_mode: backgroundColor === '#F8FAFC' ? 'light' : 'dark',
         is_published: false
@@ -645,9 +796,94 @@ export default function PreviewPage() {
             >
               Back to Dashboard
             </Button>
+            <Button
+              variant="outline"
+              onClick={openResumeModal}
+            >
+              Choose Different Resume
+            </Button>
           </div>
         </div>
       </main>
+      {showResumeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-background shadow-lg">
+            <div className="flex items-start justify-between border-b px-4 py-3">
+              <div>
+                <h3 className="text-lg font-semibold">Choose a Resume</h3>
+                <p className="text-sm text-muted-foreground">Switch the resume data used for this layout.</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowResumeModal(false)}
+                className="h-8 w-8 p-0"
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="px-4 py-3">
+              {isLoadingResumes ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading resumes...
+                </div>
+              ) : resumeError ? (
+                <div className="text-sm text-destructive">{resumeError}</div>
+              ) : resumeOptions.length === 0 ? (
+                <div className="text-sm text-muted-foreground">No resumes found.</div>
+              ) : (
+                <div className="max-h-64 overflow-y-auto rounded-md border">
+                  {resumeOptions.map((resume) => {
+                    const isSelected = resume.id === selectedResumeId;
+                    const createdAt = resume.created_at
+                      ? new Date(resume.created_at).toLocaleDateString()
+                      : "";
+                    return (
+                      <button
+                        key={resume.id}
+                        onClick={() => setSelectedResumeId(resume.id)}
+                        className={`flex w-full flex-col gap-1 border-b px-3 py-2 text-left text-sm transition-colors ${
+                          isSelected
+                            ? "bg-emerald-50 text-emerald-900"
+                            : "hover:bg-muted/50"
+                        }`}
+                      >
+                        <span className="font-medium">
+                          {resume.title || "Untitled Resume"}
+                        </span>
+                        {createdAt && (
+                          <span className="text-xs text-muted-foreground">
+                            Uploaded {createdAt}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-between border-t px-4 py-3">
+              <Button
+                variant="outline"
+                onClick={handleDownloadSelectedResume}
+                disabled={!selectedResumeId || isLoadingResumes}
+              >
+                Download Resume
+              </Button>
+              <Button
+                onClick={handleConfirmResumeSelection}
+                disabled={!selectedResumeId || isLoadingResumes}
+              >
+                Select
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
