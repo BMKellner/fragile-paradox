@@ -1,19 +1,15 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentType } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
-import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, Check, ArrowRight, Sparkles, Loader2, TreePine, Sprout } from "lucide-react";
 import Header from "@/components/Header";
 import { ParsedResume } from "@/constants/ResumeFormat";
-import ModernMinimalistPortfolio from "@/components/PortfolioTemplates/ModernMinimalist";
-import ClassicProfessionalPortfolio from "@/components/PortfolioTemplates/ClassicProfessional";
-import CreativeBoldPortfolio from "@/components/PortfolioTemplates/CreativeBold";
-import ElegantSophisticatedPortfolio from "@/components/PortfolioTemplates/ElegantSophisticated";
 
 interface Template {
   id: string;
@@ -21,6 +17,41 @@ interface Template {
   description: string;
   category: string;
 }
+
+type TemplateComponentProps = {
+  personalInformation?: ParsedResume["personal_information"];
+  overviewData?: ParsedResume["overview"];
+  projects?: ParsedResume["projects"];
+  experience?: ParsedResume["experience"];
+  skills?: ParsedResume["skills"];
+  mainColor: string;
+  backgroundColor: string;
+};
+
+const templateLoadFallback = () => (
+  <div className="rounded-lg border border-dashed border-[var(--color-border)] p-6 text-sm text-muted-foreground">
+    Loading template preview...
+  </div>
+);
+
+const templateComponentMap: Record<string, ComponentType<TemplateComponentProps>> = {
+  "1": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ModernMinimalist"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "2": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ClassicProfessional"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "3": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/CreativeBold"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "4": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ElegantSophisticated"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+};
 
 const templates: Template[] = [
   {
@@ -87,56 +118,27 @@ const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }:
   const skills_data = resumeData?.skills
 
   const getPreviewContent = () => {
-    switch (templateId) {
-      case '1':
-        return <ModernMinimalistPortfolio
-         personalInformation={personal_information}
-         overviewData={overview_data}
-         experience={experience_data}
-         skills={skills_data}
-         projects={projects_data}
-         mainColor={selectedColor}
-         backgroundColor={backgroundColor}
-         />
+    const SelectedTemplate = templateComponentMap[templateId];
 
-      case '2':
-        return <ClassicProfessionalPortfolio
-          personalInformation={personal_information}
-         overviewData={overview_data}
-         experience={experience_data}
-         skills={skills_data}
-         projects={projects_data}
-         mainColor={selectedColor}
-         backgroundColor={backgroundColor}
-        />;
-      case '3':
-        return <CreativeBoldPortfolio 
-        personalInformation={personal_information}
-         overviewData={overview_data}
-         experience={experience_data}
-         skills={skills_data}
-         projects={projects_data}
-         mainColor={selectedColor}
-         backgroundColor={backgroundColor}
-         />
-        ;
-      case '4':
-        return <ElegantSophisticatedPortfolio
-        personalInformation={personal_information}
-         overviewData={overview_data}
-         experience={experience_data}
-         skills={skills_data}
-         projects={projects_data}
-         mainColor={selectedColor}
-         backgroundColor={backgroundColor}
-         />
-      default:
-        return (
-          <div className="bg-card rounded-lg border p-8 text-center">
-            <p className="text-muted-foreground">Preview for {templateId}</p>
-          </div>
-        );
+    if (!SelectedTemplate) {
+      return (
+        <div className="bg-card rounded-lg border p-8 text-center">
+          <p className="text-muted-foreground">Preview for {templateId}</p>
+        </div>
+      );
     }
+
+    return (
+      <SelectedTemplate
+        personalInformation={personal_information}
+        overviewData={overview_data}
+        experience={experience_data}
+        skills={skills_data}
+        projects={projects_data}
+        mainColor={selectedColor}
+        backgroundColor={backgroundColor}
+      />
+    );
   };
 
   return (

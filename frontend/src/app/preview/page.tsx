@@ -1,14 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ComponentType } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
 import { ParsedResume } from "@/constants/ResumeFormat";
-import ModernMinimalistPortfolio from "@/components/PortfolioTemplates/ModernMinimalist";
-import ClassicProfessionalPortfolio from "@/components/PortfolioTemplates/ClassicProfessional";
-import CreativeBoldPortfolio from "@/components/PortfolioTemplates/CreativeBold";
-import ElegantSophisticatedPortfolio from "@/components/PortfolioTemplates/ElegantSophisticated";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, Globe, ArrowLeft, Loader2, Save, Check, X } from "lucide-react";
@@ -38,6 +35,41 @@ interface CustomSection {
     spacing?: 'compact' | 'normal' | 'spacious';
   };
 }
+
+type TemplateComponentProps = {
+  personalInformation?: ParsedResume["personal_information"];
+  overviewData?: ParsedResume["overview"];
+  projects?: ParsedResume["projects"];
+  experience?: ParsedResume["experience"];
+  skills?: ParsedResume["skills"];
+  mainColor: string;
+  backgroundColor: string;
+};
+
+const templateLoadFallback = () => (
+  <div className="rounded-lg border border-dashed border-[var(--color-border)] p-6 text-sm text-muted-foreground">
+    Loading portfolio template...
+  </div>
+);
+
+const templateComponentMap: Record<string, ComponentType<TemplateComponentProps>> = {
+  "1": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ModernMinimalist"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "2": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ClassicProfessional"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "3": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/CreativeBold"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "4": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ElegantSophisticated"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+};
 
 const CustomTemplateRender = ({ resumeData, mainColor, backgroundColor }: { resumeData: ParsedResume; mainColor: string; backgroundColor: string }) => {
   const [sections, setSections] = useState<CustomSection[]>([]);
@@ -238,72 +270,36 @@ const FullTemplateRender = ({ templateId, resumeData, mainColor, backgroundColor
   const projects_data = resumeData.projects;
   const experience_data = resumeData.experience;
 
-  switch (templateId) {
-    case '1':
-      return (
-        <ModernMinimalistPortfolio
-          personalInformation={personal_information}
-          overviewData={overview_data}
-          experience={experience_data}
-          skills={skills_data}
-          projects={projects_data}
-          mainColor={mainColor}
-          backgroundColor={backgroundColor}
-        />
-      );
-    case '2':
-      return (
-      <ClassicProfessionalPortfolio
-          personalInformation={personal_information}
-          overviewData={overview_data}
-          experience={experience_data}
-          skills={skills_data}
-          projects={projects_data}
-          mainColor={mainColor}
-          backgroundColor={backgroundColor}
+  if (templateId === "custom") {
+    return (
+      <CustomTemplateRender
+        resumeData={resumeData}
+        mainColor={mainColor}
+        backgroundColor={backgroundColor}
       />
-      );
-    case '3':
-      return (
-        <CreativeBoldPortfolio
-          personalInformation={personal_information}
-          overviewData={overview_data}
-          experience={experience_data}
-          skills={skills_data}
-          projects={projects_data}
-          mainColor={mainColor}
-          backgroundColor={backgroundColor}
-        />
-      );
-    case '4':
-      return (
-        <div className={`bg-${backgroundColor}`}>
-          <ElegantSophisticatedPortfolio
-          personalInformation={personal_information}
-          overviewData={overview_data}
-          experience={experience_data}
-          skills={skills_data}
-          projects={projects_data}
-          mainColor={mainColor}
-          backgroundColor={backgroundColor}
-        />
-        </div>
-      );
-    case 'custom':
-      return (
-        <CustomTemplateRender
-          resumeData={resumeData}
-          mainColor={mainColor}
-          backgroundColor={backgroundColor}
-        />
-      );
-    default:
-      return (
-        <div className="bg-white rounded-lg shadow-lg p-12 max-w-4xl mx-auto text-center">
-          <p className="text-gray-600">Template {templateId} preview</p>
-        </div>
-      );
+    );
   }
+
+  const SelectedTemplate = templateComponentMap[templateId];
+  if (!SelectedTemplate) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-12 max-w-4xl mx-auto text-center">
+        <p className="text-gray-600">Template {templateId} preview</p>
+      </div>
+    );
+  }
+
+  return (
+    <SelectedTemplate
+      personalInformation={personal_information}
+      overviewData={overview_data}
+      experience={experience_data}
+      skills={skills_data}
+      projects={projects_data}
+      mainColor={mainColor}
+      backgroundColor={backgroundColor}
+    />
+  );
 };
 
 export default function PreviewPage() {
