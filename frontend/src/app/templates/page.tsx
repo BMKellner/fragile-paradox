@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, type ComponentType } from "react";
+import { useState, useEffect, useRef, type ComponentType } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
@@ -17,6 +17,43 @@ interface Template {
   description: string;
   category: string;
 }
+
+const presetColorOptions = [
+  { id: "forest", value: "#10B981", label: "Forest Green" },
+  { id: "moss", value: "#4D7C0F", label: "Moss" },
+  { id: "sage", value: "#84CC16", label: "Sage" },
+  { id: "teal", value: "#0F766E", label: "Ocean Teal" },
+  { id: "bark", value: "#92400E", label: "Bark Brown" },
+  { id: "sky", value: "#0EA5E9", label: "Sky Blue" },
+];
+
+const normalizeHexColor = (value: string): string | null => {
+  const trimmed = value.trim();
+
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
+    return trimmed.toUpperCase();
+  }
+
+  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+    const [, r, g, b] = trimmed;
+    return `#${r}${r}${g}${g}${b}${b}`.toUpperCase();
+  }
+
+  return null;
+};
+
+const getContrastTextColor = (hexColor: string): string => {
+  const normalized = normalizeHexColor(hexColor);
+  if (!normalized) return "#FFFFFF";
+
+  const hex = normalized.replace("#", "");
+  const r = Number.parseInt(hex.slice(0, 2), 16);
+  const g = Number.parseInt(hex.slice(2, 4), 16);
+  const b = Number.parseInt(hex.slice(4, 6), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+
+  return brightness > 160 ? "#111827" : "#FFFFFF";
+};
 
 type TemplateComponentProps = {
   personalInformation?: ParsedResume["personal_information"];
@@ -212,7 +249,10 @@ export default function TemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>('#2563EB');
+  const [customColor, setCustomColor] = useState<string>('#2563EB');
+  const [isCustomColorSelected, setIsCustomColorSelected] = useState<boolean>(false);
   const [displayMode, setDisplayMode] = useState<'light' | 'dark'>('light');
+  const customColorInputRef = useRef<HTMLInputElement | null>(null);
   const router = useRouter();
   const info = useUser();
 
@@ -231,7 +271,15 @@ export default function TemplatesPage() {
 
     // load previously chosen color
     const storedColor = localStorage.getItem('selectedColor');
-    if (storedColor) setSelectedColor(storedColor);
+    if (storedColor) {
+      const normalized = normalizeHexColor(storedColor);
+      if (normalized) {
+        setSelectedColor(normalized);
+        setCustomColor(normalized);
+        const isPreset = presetColorOptions.some((option) => option.value.toUpperCase() === normalized);
+        setIsCustomColorSelected(!isPreset);
+      }
+    }
     // load previously chosen display mode
     const storedMode = localStorage.getItem('selectedMode') as ('light'|'dark') | null;
     if (storedMode) setDisplayMode(storedMode);
@@ -286,15 +334,20 @@ export default function TemplatesPage() {
     );
   }
 
-  // color options for picker - nature-inspired palette
-  const colorOptions = [
-    { id: 'forest', value: '#10B981', label: 'Forest Green' },
-    { id: 'moss', value: '#4D7C0F', label: 'Moss' },
-    { id: 'sage', value: '#84CC16', label: 'Sage' },
-    { id: 'teal', value: '#0F766E', label: 'Ocean Teal' },
-    { id: 'bark', value: '#92400E', label: 'Bark Brown' },
-    { id: 'sky', value: '#0EA5E9', label: 'Sky Blue' },
-  ];
+  const setColorSelection = (value: string, useCustomColor: boolean) => {
+    const normalized = normalizeHexColor(value);
+    if (!normalized) return;
+
+    setSelectedColor(normalized);
+    setCustomColor(normalized);
+    setIsCustomColorSelected(useCustomColor);
+    localStorage.setItem('selectedColor', normalized);
+  };
+
+  const openCustomColorPicker = () => {
+    setColorSelection(customColor, true);
+    customColorInputRef.current?.click();
+  };
 
   return (
     <div className="min-h-screen">
@@ -317,24 +370,48 @@ export default function TemplatesPage() {
             <div className="flex flex-wrap items-center gap-6 mt-6">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium">Color:</span>
-                <div className="flex items-center gap-2">
-                  {colorOptions.map((c) => (
+                <div className="flex flex-wrap items-center gap-2">
+                  {presetColorOptions.map((c) => (
                     <button
                       key={c.id}
                       aria-label={`Choose ${c.label}`}
                       title={c.label}
-                      onClick={() => {
-                        setSelectedColor(c.value);
-                        localStorage.setItem('selectedColor', c.value);
-                      }}
+                      onClick={() => setColorSelection(c.value, false)}
                       className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        selectedColor === c.value
+                        !isCustomColorSelected && selectedColor === c.value.toUpperCase()
                           ? 'ring-2 ring-offset-2 ring-offset-[var(--color-background)] ring-[var(--color-primary)] scale-110'
                           : 'border-muted hover:scale-105'
                       }`}
                       style={{ backgroundColor: c.value }}
                     />
                   ))}
+
+                  <button
+                    aria-label="Use custom color"
+                    title="Use custom color"
+                    onClick={openCustomColorPicker}
+                    className={`ml-1 w-10 h-10 rounded-full border-2 text-[8px] font-semibold uppercase tracking-wide transition-all ${
+                      isCustomColorSelected
+                        ? 'ring-2 ring-offset-2 ring-offset-[var(--color-background)] ring-[var(--color-primary)] scale-110'
+                        : 'border-muted hover:scale-105'
+                    }`}
+                    style={{
+                      backgroundColor: customColor,
+                      color: getContrastTextColor(customColor),
+                    }}
+                  >
+                    Custom
+                  </button>
+
+                  <input
+                    type="color"
+                    ref={customColorInputRef}
+                    value={normalizeHexColor(customColor) ?? '#2563EB'}
+                    onChange={(event) => setColorSelection(event.target.value, true)}
+                    className="sr-only"
+                    aria-label="Choose custom color"
+                    title="Choose custom color"
+                  />
                 </div>
               </div>
               
