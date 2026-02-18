@@ -39,6 +39,12 @@ const templateNames: Record<string, string> = {
   '2': 'Classic Professional',
   '3': 'Creative Bold',
   '4': 'Elegant Sophisticated',
+  '5': 'SideRail Pro',
+  '6': 'Editorial Story',
+  '7': 'IDE Clean',
+  '8': 'Timeline Narrative',
+  '9': 'Bold Brand',
+  '10': 'Minimal Creator Hub',
 };
 
 export default function DashboardPage() {
@@ -113,6 +119,11 @@ export default function DashboardPage() {
     localStorage.setItem('selectedTemplate', website.template_id);
     localStorage.setItem('selectedColor', website.color);
     localStorage.setItem('selectedMode', website.display_mode);
+    if (website.data.__template_config) {
+      localStorage.setItem('templateConfig', JSON.stringify(website.data.__template_config));
+    } else {
+      localStorage.removeItem('templateConfig');
+    }
 
     if (website.data.__custom_template?.sections && website.template_id === 'custom') {
       localStorage.setItem('customSections', JSON.stringify(website.data.__custom_template.sections));
@@ -137,7 +148,7 @@ export default function DashboardPage() {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: ${website.display_mode === 'dark' ? '#0B1220' : '#F8FAFC'};
+      background: ${website.display_mode === 'dark' ? '#111111' : '#F8FAFC'};
       color: ${website.display_mode === 'dark' ? '#fff' : '#1a202c'};
       padding: 20px;
     }

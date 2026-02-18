@@ -26,9 +26,8 @@ import { useState, useEffect, useRef } from "react";
 export default function ProfilePage() {
   const router = useRouter();
   const info = useUser();
-  const session = createClient();
+  const supabase = createClient();
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
   const [profileImageError, setProfileImageError] = useState<string | null>(null);
@@ -40,7 +39,7 @@ export default function ProfilePage() {
 
   const [profile, setProfile] = useState({
     fullName: "",
-    email: info.user?.email || "",
+    email: "",
     phone: "",
     location: "",
     bio: "",
@@ -51,91 +50,25 @@ export default function ProfilePage() {
     company: "",
   });
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      if (!info.user) return;
-
-      const authData = {
-        fullName: info.user.user_metadata?.full_name || info.user.user_metadata?.name || "",
-        email: info.user.email || "",
-        phone: info.user.user_metadata?.phone || "",
-        location: "",
-        bio: "",
-        linkedin: "",
-        github: "",
-        website: "",
-        title: "",
-        company: "",
-      };
-
-      try {
-        const supabaseSession = await session.auth.getSession();
-        const token = supabaseSession.data.session?.access_token;
-
-        if (!token) {
-          setProfile(authData);
-          setIsLoading(false);
-          return;
-        }
-
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profiles/me`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data) {
-            setProfile({
-              fullName: data.full_name || authData.fullName,
-              email: data.email || authData.email,
-              phone: data.phone || authData.phone,
-              location: data.location || authData.location,
-              bio: data.bio || authData.bio,
-              linkedin: data.linkedin || authData.linkedin,
-              github: data.github || authData.github,
-              website: data.website || authData.website,
-              title: data.title || authData.title,
-              company: data.company || authData.company,
-            });
-          } else {
-            setProfile(authData);
-          }
-        } else {
-          setProfile(authData);
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        setProfile(authData);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (info.user) {
-      fetchProfile();
+  const getAccessToken = async () => {
+    if (info.session?.access_token) {
+      return info.session.access_token;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [info.user]);
 
-  const fetchProfileImage = async () => {
-    if (!info.user) return;
+    const supabaseSession = await supabase.auth.getSession();
+    return supabaseSession.data.session?.access_token ?? null;
+  };
+
+  const fetchProfileImage = async (token: string, signal?: AbortSignal) => {
     setProfileImageLoading(true);
     setProfileImageError(null);
 
     try {
-      const supabaseSession = await session.auth.getSession();
-      const token = supabaseSession.data.session?.access_token;
-      if (!token) {
-        setProfileImageLoading(false);
-        return;
-      }
-
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/pfp`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
+        signal,
       });
 
       if (response.ok) {
@@ -146,11 +79,16 @@ export default function ProfilePage() {
         }
         profileImageUrlRef.current = url;
         setProfileImageUrl(url);
+      } else if (response.status === 404) {
+        setProfileImageUrl(null);
       } else if (response.status !== 404) {
         const text = await response.text();
         setProfileImageError(text || 'Failed to load profile picture');
       }
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
       console.error('Error fetching profile picture:', error);
       setProfileImageError('Failed to load profile picture');
     } finally {
@@ -159,11 +97,78 @@ export default function ProfilePage() {
   };
 
   useEffect(() => {
-    if (info.user) {
-      fetchProfileImage();
+    if (!info.loading && !info.user) {
+      router.replace('/signin?next=/profile');
     }
+  }, [info.loading, info.user, router]);
+
+  useEffect(() => {
+    if (!info.user) return;
+
+    const authData = {
+      fullName: info.user.user_metadata?.full_name || info.user.user_metadata?.name || "",
+      email: info.user.email || "",
+      phone: info.user.user_metadata?.phone || "",
+      location: "",
+      bio: "",
+      linkedin: "",
+      github: "",
+      website: "",
+      title: "",
+      company: "",
+    };
+
+    setProfile(authData);
+
+    const token = info.session?.access_token;
+    if (!token) return;
+
+    const controller = new AbortController();
+    let isCancelled = false;
+
+    const fetchProfile = async () => {
+      try {
+        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profiles/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          signal: controller.signal,
+        });
+
+        if (!response.ok || isCancelled) return;
+
+        const data = await response.json();
+        if (!data || isCancelled) return;
+
+        setProfile({
+          fullName: data.full_name || authData.fullName,
+          email: data.email || authData.email,
+          phone: data.phone || authData.phone,
+          location: data.location || authData.location,
+          bio: data.bio || authData.bio,
+          linkedin: data.linkedin || authData.linkedin,
+          github: data.github || authData.github,
+          website: data.website || authData.website,
+          title: data.title || authData.title,
+          company: data.company || authData.company,
+        });
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          return;
+        }
+        console.error('Error fetching profile:', error);
+      }
+    };
+
+    void fetchProfile();
+    void fetchProfileImage(token, controller.signal);
+
+    return () => {
+      isCancelled = true;
+      controller.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [info.user]);
+  }, [info.user?.id, info.session?.access_token]);
 
   useEffect(() => {
     if (!selectedPfpFile) {
@@ -188,8 +193,7 @@ export default function ProfilePage() {
     setSaveMessage(null);
 
     try {
-      const supabaseSession = await session.auth.getSession();
-      const token = supabaseSession.data.session?.access_token;
+      const token = await getAccessToken();
 
       if (!token) {
         throw new Error('Not authenticated');
@@ -257,8 +261,7 @@ export default function ProfilePage() {
     setProfileImageError(null);
 
     try {
-      const supabaseSession = await session.auth.getSession();
-      const token = supabaseSession.data.session?.access_token;
+      const token = await getAccessToken();
       if (!token) {
         throw new Error("Not authenticated");
       }
@@ -280,7 +283,7 @@ export default function ProfilePage() {
       }
 
       setSelectedPfpFile(null);
-      await fetchProfileImage();
+      await fetchProfileImage(token);
     } catch (error) {
       console.error("Error uploading profile picture:", error);
       setProfileImageError(error instanceof Error ? error.message : "Failed to upload profile picture");
@@ -293,7 +296,7 @@ export default function ProfilePage() {
     setProfile((prev) => ({ ...prev, [field]: value }));
   };
 
-  if (info.loading || isLoading) {
+  if (info.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -305,7 +308,6 @@ export default function ProfilePage() {
   }
 
   if (!info.user) {
-    router.push('/signin?next=/profile');
     return null;
   }
 

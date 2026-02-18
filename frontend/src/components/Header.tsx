@@ -1,5 +1,6 @@
 'use client';
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useUser } from "@/hooks/use-user";
@@ -43,22 +44,18 @@ function clearCachedProfileImage(userId?: string) {
 export default function Header({ showNav = true, currentPage }: HeaderProps) {
   const router = useRouter();
   const info = useUser();
-  const session = createClient();
+  const supabase = createClient();
   const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
 
-  const fetchProfileImage = async (userId: string): Promise<string | null> => {
+  const fetchProfileImage = async (userId: string, accessToken: string): Promise<string | null> => {
     const existingRequest = profileImageRequests.get(userId);
     if (existingRequest) return existingRequest;
 
     const request = (async () => {
       try {
-        const supabaseSession = await session.auth.getSession();
-        const token = supabaseSession.data.session?.access_token;
-        if (!token) return null;
-
         const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/pfp`, {
           headers: {
-            'Authorization': `Bearer ${token}`
+            Authorization: `Bearer ${accessToken}`,
           }
         });
 
@@ -84,7 +81,8 @@ export default function Header({ showNav = true, currentPage }: HeaderProps) {
 
   useEffect(() => {
     const userId = info.user?.id;
-    if (!userId) {
+    const accessToken = info.session?.access_token;
+    if (!userId || !accessToken) {
       setProfileImageUrl(null);
       return;
     }
@@ -95,7 +93,7 @@ export default function Header({ showNav = true, currentPage }: HeaderProps) {
     }
 
     let isCancelled = false;
-    void fetchProfileImage(userId).then((nextUrl) => {
+    void fetchProfileImage(userId, accessToken).then((nextUrl) => {
       if (!isCancelled && nextUrl) {
         setProfileImageUrl(nextUrl);
       }
@@ -104,17 +102,12 @@ export default function Header({ showNav = true, currentPage }: HeaderProps) {
     return () => {
       isCancelled = true;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [info.user?.id]);
+  }, [info.user?.id, info.session?.access_token]);
 
   const handleSignOut = async () => {
     clearCachedProfileImage(info.user?.id);
-    await session.auth.signOut();
+    await supabase.auth.signOut();
     router.push('/signin');
-  };
-
-  const handleNavigation = (path: string) => {
-    router.push(path);
   };
 
   const signInPath = currentPage && currentPage !== 'home'
@@ -144,20 +137,24 @@ export default function Header({ showNav = true, currentPage }: HeaderProps) {
             {showNav && (
               <nav className="hidden md:flex items-center gap-1">
                 <Button
+                  asChild
                   variant="ghost"
                   className={`gap-2 ${currentPage === 'dashboard' ? 'bg-[var(--color-primary)]/15 text-[var(--color-foreground)]' : ''}`}
-                  onClick={() => handleNavigation(dashboardPath)}
                 >
-                  <LayoutDashboard className="w-4 h-4" />
-                  Dashboard
+                  <Link href={dashboardPath}>
+                    <LayoutDashboard className="w-4 h-4" />
+                    Dashboard
+                  </Link>
                 </Button>
                 <Button
+                  asChild
                   variant="ghost"
                   className={`gap-2 ${currentPage === 'profile' ? 'bg-[var(--color-primary)]/15 text-[var(--color-foreground)]' : ''}`}
-                  onClick={() => handleNavigation(profilePath)}
                 >
-                  <User className="w-4 h-4" />
-                  Profile
+                  <Link href={profilePath}>
+                    <User className="w-4 h-4" />
+                    Profile
+                  </Link>
                 </Button>
               </nav>
             )}
@@ -189,8 +186,8 @@ export default function Header({ showNav = true, currentPage }: HeaderProps) {
           ) : (
             <div className="flex items-center gap-3">
               <ThemeToggle />
-              <Button onClick={() => router.push(signInPath)} variant="outline" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-accent)]">
-                Sign In
+              <Button asChild variant="outline" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-accent)]">
+                <Link href={signInPath}>Sign In</Link>
               </Button>
             </div>
           )}

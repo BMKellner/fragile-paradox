@@ -1,14 +1,11 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, type ComponentType } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
 import { ParsedResume } from "@/constants/ResumeFormat";
-import ModernMinimalistPortfolio from "@/components/PortfolioTemplates/ModernMinimalist";
-import ClassicProfessionalPortfolio from "@/components/PortfolioTemplates/ClassicProfessional";
-import CreativeBoldPortfolio from "@/components/PortfolioTemplates/CreativeBold";
-import ElegantSophisticatedPortfolio from "@/components/PortfolioTemplates/ElegantSophisticated";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, Globe, ArrowLeft, Loader2, Save, Check, X } from "lucide-react";
@@ -18,6 +15,13 @@ import {
   tryParseCustomLayoutTemplate,
   type PortfolioDataWithCustomTemplate,
 } from "@/lib/custom-template";
+import {
+  deserializeTemplateConfig,
+  normalizeTemplateConfig,
+  serializeTemplateConfig,
+  type TemplateConfig,
+} from "@/lib/template-config";
+import { fetchTemplateConfig, saveTemplateConfig } from "@/lib/template-config-api";
 
 // personalInformation={personal_information}
 //          overviewData={overview_data}
@@ -38,6 +42,69 @@ interface CustomSection {
     spacing?: 'compact' | 'normal' | 'spacious';
   };
 }
+
+type TemplateComponentProps = {
+  personalInformation?: ParsedResume["personal_information"];
+  overviewData?: ParsedResume["overview"];
+  projects?: ParsedResume["projects"];
+  experience?: ParsedResume["experience"];
+  skills?: ParsedResume["skills"];
+  mainColor: string;
+  backgroundColor: string;
+  templateConfig?: TemplateConfig;
+};
+
+const templateLoadFallback = () => (
+  <div className="rounded-lg border border-dashed border-[var(--color-border)] p-6 text-sm text-muted-foreground">
+    Loading portfolio template...
+  </div>
+);
+
+const templateComponentMap: Record<string, ComponentType<TemplateComponentProps>> = {
+  "1": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ModernMinimalist"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "2": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ClassicProfessional"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "3": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/CreativeBold"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "4": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ElegantSophisticated"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "5": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/SideRailPro"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "6": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/EditorialStory"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "7": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/IDEClean"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "8": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/TimelineNarrative"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "9": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/BoldBrand"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "10": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/MinimalCreatorHub"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+};
+
+const LIGHT_DISPLAY_BG = "#F8FAFC";
+const DARK_DISPLAY_BG = "#111111";
 
 const CustomTemplateRender = ({ resumeData, mainColor, backgroundColor }: { resumeData: ParsedResume; mainColor: string; backgroundColor: string }) => {
   const [sections, setSections] = useState<CustomSection[]>([]);
@@ -230,7 +297,19 @@ const CustomTemplateRender = ({ resumeData, mainColor, backgroundColor }: { resu
 };
 
 // Full template render component
-const FullTemplateRender = ({ templateId, resumeData, mainColor, backgroundColor }: { templateId: string; resumeData: ParsedResume; mainColor: string; backgroundColor: string }) => {
+const FullTemplateRender = ({
+  templateId,
+  resumeData,
+  mainColor,
+  backgroundColor,
+  templateConfig,
+}: {
+  templateId: string;
+  resumeData: ParsedResume;
+  mainColor: string;
+  backgroundColor: string;
+  templateConfig?: TemplateConfig;
+}) => {
 
   const personal_information = resumeData.personal_information;
   const overview_data = resumeData.overview;
@@ -238,79 +317,45 @@ const FullTemplateRender = ({ templateId, resumeData, mainColor, backgroundColor
   const projects_data = resumeData.projects;
   const experience_data = resumeData.experience;
 
-  switch (templateId) {
-    case '1':
-      return (
-        <ModernMinimalistPortfolio
-          personalInformation={personal_information}
-          overviewData={overview_data}
-          experience={experience_data}
-          skills={skills_data}
-          projects={projects_data}
-          mainColor={mainColor}
-          backgroundColor={backgroundColor}
-        />
-      );
-    case '2':
-      return (
-      <ClassicProfessionalPortfolio
-          personalInformation={personal_information}
-          overviewData={overview_data}
-          experience={experience_data}
-          skills={skills_data}
-          projects={projects_data}
-          mainColor={mainColor}
-          backgroundColor={backgroundColor}
+  if (templateId === "custom") {
+    return (
+      <CustomTemplateRender
+        resumeData={resumeData}
+        mainColor={mainColor}
+        backgroundColor={backgroundColor}
       />
-      );
-    case '3':
-      return (
-        <CreativeBoldPortfolio
-          personalInformation={personal_information}
-          overviewData={overview_data}
-          experience={experience_data}
-          skills={skills_data}
-          projects={projects_data}
-          mainColor={mainColor}
-          backgroundColor={backgroundColor}
-        />
-      );
-    case '4':
-      return (
-        <div className={`bg-${backgroundColor}`}>
-          <ElegantSophisticatedPortfolio
-          personalInformation={personal_information}
-          overviewData={overview_data}
-          experience={experience_data}
-          skills={skills_data}
-          projects={projects_data}
-          mainColor={mainColor}
-          backgroundColor={backgroundColor}
-        />
-        </div>
-      );
-    case 'custom':
-      return (
-        <CustomTemplateRender
-          resumeData={resumeData}
-          mainColor={mainColor}
-          backgroundColor={backgroundColor}
-        />
-      );
-    default:
-      return (
-        <div className="bg-white rounded-lg shadow-lg p-12 max-w-4xl mx-auto text-center">
-          <p className="text-gray-600">Template {templateId} preview</p>
-        </div>
-      );
+    );
   }
+
+  const SelectedTemplate = templateComponentMap[templateId];
+  if (!SelectedTemplate) {
+    return (
+      <div className="bg-white rounded-lg shadow-lg p-12 max-w-4xl mx-auto text-center">
+        <p className="text-gray-600">Template {templateId} preview</p>
+      </div>
+    );
+  }
+
+  return (
+    <SelectedTemplate
+      personalInformation={personal_information}
+      overviewData={overview_data}
+      experience={experience_data}
+      skills={skills_data}
+      projects={projects_data}
+      mainColor={mainColor}
+      backgroundColor={backgroundColor}
+      templateConfig={templateConfig}
+    />
+  );
 };
 
 export default function PreviewPage() {
   const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [mainColor, setMainColor] = useState<string>('#2563EB');
-  const [backgroundColor, setBackgroundColor] = useState<string>('#F8FAFC');
+  const [backgroundColor, setBackgroundColor] = useState<string>(LIGHT_DISPLAY_BG);
+  const [templateConfig, setTemplateConfig] = useState<TemplateConfig | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', message: string} | null>(null);
@@ -321,7 +366,7 @@ export default function PreviewPage() {
   const [resumeError, setResumeError] = useState<string | null>(null);
   const router = useRouter();
   const info = useUser();
-  const session = createClient();
+  const session = useMemo(() => createClient(), []);
 
   type ResumeOption = {
     id: string;
@@ -332,47 +377,132 @@ export default function PreviewPage() {
   };
 
   useEffect(() => {
-    // Get data from localStorage
-    const storedResumeData = localStorage.getItem('resumeData');
-    const storedTemplate = localStorage.getItem('selectedTemplate');
-    const storedColor = localStorage.getItem('selectedColor');
-    const storedMode = localStorage.getItem('selectedMode');
-    const storedCustomSections = localStorage.getItem('customSections');
-    const storedSerializedLayout = localStorage.getItem('customLayoutSerialized');
-    const parsedSerializedLayout = tryParseCustomLayoutTemplate(storedSerializedLayout);
-    const effectiveCustomSections =
-      storedCustomSections ??
-      (parsedSerializedLayout ? JSON.stringify(parsedSerializedLayout.sections) : null);
+    let isCancelled = false;
 
-    if (!storedCustomSections && parsedSerializedLayout?.sections) {
-      localStorage.setItem('customSections', JSON.stringify(parsedSerializedLayout.sections));
-    }
-    
-    // Handle custom sections from customize page
-    if (effectiveCustomSections && storedTemplate === 'custom') {
-      // If coming from customize page, we still need resumeData
+    const loadPreviewState = async () => {
+      const storedResumeData = localStorage.getItem('resumeData');
+      const storedTemplate = localStorage.getItem('selectedTemplate');
+      const storedColor = localStorage.getItem('selectedColor');
+      const storedMode = localStorage.getItem('selectedMode');
+      const storedCustomSections = localStorage.getItem('customSections');
+      const storedSerializedLayout = localStorage.getItem('customLayoutSerialized');
+      const storedTemplateConfig = deserializeTemplateConfig(localStorage.getItem('templateConfig'));
+      const parsedSerializedLayout = tryParseCustomLayoutTemplate(storedSerializedLayout);
+      const effectiveCustomSections =
+        storedCustomSections ??
+        (parsedSerializedLayout ? JSON.stringify(parsedSerializedLayout.sections) : null);
+
+      if (!storedCustomSections && parsedSerializedLayout?.sections) {
+        localStorage.setItem('customSections', JSON.stringify(parsedSerializedLayout.sections));
+      }
+
+      let parsedResume: ParsedResume | null = null;
       if (storedResumeData) {
-        setResumeData(JSON.parse(storedResumeData));
+        try {
+          parsedResume = JSON.parse(storedResumeData) as ParsedResume;
+          if (!isCancelled) setResumeData(parsedResume);
+        } catch {
+          parsedResume = null;
+        }
       }
-      setSelectedTemplate('custom');
-    } else {
-      // Normal flow from templates page
-      if (storedResumeData) {
-        setResumeData(JSON.parse(storedResumeData));
+
+      if (effectiveCustomSections && storedTemplate === 'custom') {
+        if (!isCancelled) {
+          setSelectedTemplate('custom');
+          setTemplateConfig(null);
+        }
+      } else if (storedTemplate) {
+        if (!isCancelled) setSelectedTemplate(storedTemplate);
+
+        if (storedTemplate !== 'custom' && parsedResume) {
+          let workingConfig = normalizeTemplateConfig({
+            templateId: storedTemplate,
+            resumeData: parsedResume,
+            config: storedTemplateConfig,
+            fallbackTheme: {
+              primaryColor: storedColor || '#2563EB',
+              backgroundColor:
+                storedMode === 'light' ? LIGHT_DISPLAY_BG : DARK_DISPLAY_BG,
+              mode: storedMode === 'light' ? 'light' : 'dark',
+            },
+          });
+
+          const existingPortfolioId = localStorage.getItem('currentPortfolioId');
+          if (existingPortfolioId) {
+            try {
+              const supabaseSession = await session.auth.getSession();
+              const token = supabaseSession.data.session?.access_token;
+              if (token) {
+                const remoteConfig = await fetchTemplateConfig({
+                  portfolioId: existingPortfolioId,
+                  token,
+                });
+                if (remoteConfig) {
+                  workingConfig = normalizeTemplateConfig({
+                    templateId: storedTemplate,
+                    resumeData: parsedResume,
+                    config: remoteConfig,
+                    fallbackTheme: {
+                      primaryColor: storedColor || '#2563EB',
+                      backgroundColor:
+                        storedMode === 'light' ? LIGHT_DISPLAY_BG : DARK_DISPLAY_BG,
+                      mode: storedMode === 'light' ? 'light' : 'dark',
+                    },
+                  });
+                }
+              }
+            } catch (error) {
+              console.error('Error loading remote template config:', error);
+            }
+          }
+
+          localStorage.setItem('templateConfig', serializeTemplateConfig(workingConfig));
+          if (!isCancelled) setTemplateConfig(workingConfig);
+        }
       }
-      if (storedTemplate) {
-        setSelectedTemplate(storedTemplate);
+
+      if (!isCancelled) {
+        setMainColor(storedColor || '#2563EB');
+        setBackgroundColor(storedMode === 'light' ? LIGHT_DISPLAY_BG : DARK_DISPLAY_BG);
       }
+
+      window.setTimeout(() => {
+        if (!isCancelled) setIsGenerating(false);
+      }, 2000);
+    };
+
+    loadPreviewState();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [session]);
+
+  useEffect(() => {
+    if (!resumeData || !selectedTemplate || selectedTemplate === 'custom') return;
+
+    const normalized = normalizeTemplateConfig({
+      templateId: selectedTemplate,
+      resumeData,
+      config: templateConfig,
+      fallbackTheme: {
+        primaryColor: mainColor,
+        backgroundColor,
+        mode: backgroundColor === LIGHT_DISPLAY_BG ? 'light' : 'dark',
+      },
+    });
+
+    const nextSignature = serializeTemplateConfig(normalized);
+    const currentSignature = templateConfig
+      ? serializeTemplateConfig(templateConfig)
+      : null;
+
+    if (currentSignature !== nextSignature) {
+      setTemplateConfig(normalized);
     }
 
-    setMainColor(storedColor || '#2563EB');
-    setBackgroundColor(storedMode === 'light' ? '#F8FAFC' : '#0B1220');
-
-    // Simulate website generation
-    setTimeout(() => {
-      setIsGenerating(false);
-    }, 2000);
-  }, []);
+    localStorage.setItem('templateConfig', nextSignature);
+  }, [resumeData, selectedTemplate, mainColor, backgroundColor, templateConfig]);
 
 
 
@@ -380,6 +510,7 @@ export default function PreviewPage() {
     localStorage.removeItem('resumeData');
     localStorage.removeItem('selectedTemplate');
     localStorage.removeItem('currentPortfolioId');
+    localStorage.removeItem('templateConfig');
     router.push('/upload');
   };
 
@@ -489,7 +620,13 @@ export default function PreviewPage() {
     '1': 'Modern Minimal',
     '2': 'Classic Professional', 
     '3': 'Creative Bold',
-    '4': 'Elegant Sophisticated'
+    '4': 'Elegant Sophisticated',
+    '5': 'SideRail Pro',
+    '6': 'Editorial Story',
+    '7': 'IDE Clean',
+    '8': 'Timeline Narrative',
+    '9': 'Bold Brand',
+    '10': 'Minimal Creator Hub',
   };
 
   if (info.loading) {
@@ -562,12 +699,31 @@ export default function PreviewPage() {
         '2': 'Classic Professional',
         '3': 'Creative Bold',
         '4': 'Elegant Sophisticated',
+        '5': 'SideRail Pro',
+        '6': 'Editorial Story',
+        '7': 'IDE Clean',
+        '8': 'Timeline Narrative',
+        '9': 'Bold Brand',
+        '10': 'Minimal Creator Hub',
         'custom': 'Custom Template'
       };
       const templateName = templateNames[selectedTemplate] || 'Portfolio';
 
       // Check if editing existing portfolio
       const existingPortfolioId = localStorage.getItem('currentPortfolioId');
+      const currentTemplateConfig =
+        selectedTemplate !== 'custom'
+          ? normalizeTemplateConfig({
+              templateId: selectedTemplate,
+              resumeData,
+              config: templateConfig,
+              fallbackTheme: {
+                primaryColor: mainColor,
+                backgroundColor,
+                mode: backgroundColor === LIGHT_DISPLAY_BG ? 'light' : 'dark',
+              },
+            })
+          : null;
 
       // Prepare portfolio data
       const customSectionsRaw = localStorage.getItem('customSections');
@@ -577,7 +733,7 @@ export default function PreviewPage() {
           ? buildCustomLayoutTemplate({
               sections: customSections,
               selectedColor: mainColor,
-              displayMode: backgroundColor === '#F8FAFC' ? 'light' : 'dark',
+              displayMode: backgroundColor === LIGHT_DISPLAY_BG ? 'light' : 'dark',
             })
           : null;
 
@@ -587,10 +743,16 @@ export default function PreviewPage() {
               ...resumeData,
               __custom_template: serializedCustomTemplate ?? undefined,
             }
-          : resumeData;
+          : {
+              ...resumeData,
+              __template_config: currentTemplateConfig ?? undefined,
+            };
 
       if (serializedCustomTemplate) {
         localStorage.setItem('customLayoutSerialized', JSON.stringify(serializedCustomTemplate));
+      }
+      if (currentTemplateConfig) {
+        localStorage.setItem('templateConfig', serializeTemplateConfig(currentTemplateConfig));
       }
 
       const portfolioData = {
@@ -598,7 +760,7 @@ export default function PreviewPage() {
         template_id: selectedTemplate,
         data: dataToSave,
         color: mainColor,
-        display_mode: backgroundColor === '#F8FAFC' ? 'light' : 'dark',
+        display_mode: backgroundColor === LIGHT_DISPLAY_BG ? 'light' : 'dark',
         is_published: false
       };
 
@@ -644,6 +806,15 @@ export default function PreviewPage() {
       if (response.ok) {
         const savedPortfolio = await response.json();
         localStorage.setItem('currentPortfolioId', savedPortfolio.id);
+
+        if (selectedTemplate !== 'custom' && currentTemplateConfig) {
+          await saveTemplateConfig({
+            portfolioId: savedPortfolio.id,
+            token,
+            config: currentTemplateConfig,
+          });
+        }
+
         setSaveMessage({ type: 'success', message: 'Portfolio saved successfully!' });
         setTimeout(() => setSaveMessage(null), 3000);
       } else {
@@ -659,7 +830,30 @@ export default function PreviewPage() {
   };
 
   const handleDownload = () => {
-    // Generate HTML file for download
+    const sectionHtml =
+      selectedTemplate !== 'custom' && templateConfig
+        ? templateConfig.sections
+            .filter((section) => section.enabled)
+            .map((section) => {
+              const title =
+                typeof (section.content as { title?: unknown }).title === 'string'
+                  ? ((section.content as { title?: string }).title as string)
+                  : section.type;
+              const summary =
+                typeof (section.content as { summary?: unknown }).summary === 'string'
+                  ? ((section.content as { summary?: string }).summary as string)
+                  : '';
+
+              return `
+    <section class=\"section\">
+      <h2>${title}</h2>
+      ${summary ? `<p>${summary}</p>` : ''}
+    </section>`;
+            })
+            .join('')
+        : '';
+
+    // Generate HTML file for download using TemplateConfig sections when available.
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -671,7 +865,7 @@ export default function PreviewPage() {
     body { 
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
       background: ${backgroundColor};
-      color: ${backgroundColor === '#0B1220' ? '#fff' : '#1a202c'};
+      color: ${backgroundColor === LIGHT_DISPLAY_BG ? '#1a202c' : '#fff'};
       padding: 20px;
     }
     .container { max-width: 1200px; margin: 0 auto; }
@@ -682,9 +876,9 @@ export default function PreviewPage() {
 </head>
 <body>
   <div class="container">
-    <!-- Portfolio content would be rendered here -->
     <h1>${resumeData.personal_information?.full_name || 'Portfolio'}</h1>
     <p>${resumeData.overview?.resume_summary || ''}</p>
+    ${sectionHtml}
   </div>
 </body>
 </html>`;
@@ -784,7 +978,13 @@ export default function PreviewPage() {
           {/* Portfolio Preview */}
           <div className="rounded-lg overflow-hidden shadow-lg bg-background">
             {resumeData && selectedTemplate && (
-              <FullTemplateRender templateId={selectedTemplate} resumeData={resumeData} mainColor={mainColor} backgroundColor={backgroundColor}/>
+              <FullTemplateRender
+                templateId={selectedTemplate}
+                resumeData={resumeData}
+                mainColor={mainColor}
+                backgroundColor={backgroundColor}
+                templateConfig={templateConfig ?? undefined}
+              />
             )}
           </div>
 
