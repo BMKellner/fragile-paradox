@@ -39,6 +39,12 @@ const templateNames: Record<string, string> = {
   '2': 'Classic Professional',
   '3': 'Creative Bold',
   '4': 'Elegant Sophisticated',
+  '5': 'SideRail Pro',
+  '6': 'Editorial Story',
+  '7': 'IDE Clean',
+  '8': 'Timeline Narrative',
+  '9': 'Bold Brand',
+  '10': 'Minimal Creator Hub',
 };
 
 export default function DashboardPage() {

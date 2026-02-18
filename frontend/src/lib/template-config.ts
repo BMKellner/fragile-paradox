@@ -16,7 +16,17 @@ import {
   normalizeProjects,
 } from "@/components/PortfolioTemplates/shared/portfolioData";
 
-export type BuiltInTemplateId = "1" | "2" | "3" | "4";
+export type BuiltInTemplateId =
+  | "1"
+  | "2"
+  | "3"
+  | "4"
+  | "5"
+  | "6"
+  | "7"
+  | "8"
+  | "9"
+  | "10";
 export type TemplateId = BuiltInTemplateId | string;
 
 export enum SectionType {
@@ -234,6 +244,48 @@ const TEMPLATE_THEME_DEFAULTS: Record<BuiltInTemplateId, TemplateThemeConfig> = 
     backgroundColor: "#111111",
     accentGradient: "linear-gradient(120deg, #d4af37 0%, #f59e0b 100%)",
   },
+  "5": {
+    palette: "side-rail-pro",
+    mode: "light",
+    primaryColor: "#0f766e",
+    backgroundColor: "#f8fafc",
+    accentGradient: "linear-gradient(120deg, #0f766e 0%, #14b8a6 100%)",
+  },
+  "6": {
+    palette: "editorial-story",
+    mode: "light",
+    primaryColor: "#7c2d12",
+    backgroundColor: "#fdfbf7",
+    accentGradient: "linear-gradient(120deg, #7c2d12 0%, #b45309 100%)",
+  },
+  "7": {
+    palette: "ide-clean",
+    mode: "dark",
+    primaryColor: "#22d3ee",
+    backgroundColor: "#0b1221",
+    accentGradient: "linear-gradient(120deg, #22d3ee 0%, #3b82f6 100%)",
+  },
+  "8": {
+    palette: "timeline-narrative",
+    mode: "light",
+    primaryColor: "#f59e0b",
+    backgroundColor: "#fffdf7",
+    accentGradient: "linear-gradient(120deg, #f59e0b 0%, #f97316 100%)",
+  },
+  "9": {
+    palette: "bold-brand",
+    mode: "dark",
+    primaryColor: "#ff4d6d",
+    backgroundColor: "#0b0b14",
+    accentGradient: "linear-gradient(120deg, #ff4d6d 0%, #ff9e2c 100%)",
+  },
+  "10": {
+    palette: "minimal-creator-hub",
+    mode: "light",
+    primaryColor: "#16a34a",
+    backgroundColor: "#f7faf7",
+    accentGradient: "linear-gradient(120deg, #16a34a 0%, #84cc16 100%)",
+  },
 };
 
 const DEFAULT_SECTION_ORDER: SectionType[] = [
@@ -293,6 +345,36 @@ const VARIANT_BY_TEMPLATE: Record<BuiltInTemplateId, Partial<Record<SectionType,
     [SectionType.Hero]: "lux-serif",
     [SectionType.Projects]: "elevated-grid",
     [SectionType.Contact]: "signature-card",
+  },
+  "5": {
+    [SectionType.Hero]: "identity-rail",
+    [SectionType.Projects]: "stacked-feature-rows",
+    [SectionType.Contact]: "rail-contact",
+  },
+  "6": {
+    [SectionType.Hero]: "editorial-feature",
+    [SectionType.Projects]: "case-study-columns",
+    [SectionType.Contact]: "letter-signoff",
+  },
+  "7": {
+    [SectionType.Hero]: "terminal-banner",
+    [SectionType.Projects]: "panel-cards",
+    [SectionType.Contact]: "inline-terminal",
+  },
+  "8": {
+    [SectionType.Hero]: "narrative-intro",
+    [SectionType.Experience]: "vertical-timeline",
+    [SectionType.Contact]: "timeline-footer",
+  },
+  "9": {
+    [SectionType.Hero]: "oversized-brand",
+    [SectionType.Projects]: "hero-cards",
+    [SectionType.Contact]: "bold-cta",
+  },
+  "10": {
+    [SectionType.Hero]: "creator-compact",
+    [SectionType.Skills]: "uses-grid",
+    [SectionType.Contact]: "minimal-links",
   },
 };
 

@@ -77,6 +77,30 @@ const templateComponentMap: Record<string, ComponentType<TemplateComponentProps>
     ssr: false,
     loading: templateLoadFallback,
   }),
+  "5": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/SideRailPro"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "6": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/EditorialStory"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "7": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/IDEClean"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "8": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/TimelineNarrative"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "9": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/BoldBrand"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "10": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/MinimalCreatorHub"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
 };
 
 const LIGHT_DISPLAY_BG = "#F8FAFC";
@@ -596,7 +620,13 @@ export default function PreviewPage() {
     '1': 'Modern Minimal',
     '2': 'Classic Professional', 
     '3': 'Creative Bold',
-    '4': 'Elegant Sophisticated'
+    '4': 'Elegant Sophisticated',
+    '5': 'SideRail Pro',
+    '6': 'Editorial Story',
+    '7': 'IDE Clean',
+    '8': 'Timeline Narrative',
+    '9': 'Bold Brand',
+    '10': 'Minimal Creator Hub',
   };
 
   if (info.loading) {
@@ -669,6 +699,12 @@ export default function PreviewPage() {
         '2': 'Classic Professional',
         '3': 'Creative Bold',
         '4': 'Elegant Sophisticated',
+        '5': 'SideRail Pro',
+        '6': 'Editorial Story',
+        '7': 'IDE Clean',
+        '8': 'Timeline Narrative',
+        '9': 'Bold Brand',
+        '10': 'Minimal Creator Hub',
         'custom': 'Custom Template'
       };
       const templateName = templateNames[selectedTemplate] || 'Portfolio';
