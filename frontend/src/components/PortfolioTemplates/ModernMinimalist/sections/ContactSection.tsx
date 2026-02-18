@@ -3,20 +3,34 @@ import { Mail, MapPin, Phone, Linkedin } from "lucide-react";
 import styles from "../ModernMinimalist.module.css";
 
 type ContactSectionProps = {
+  sectionId?: string;
+  title?: string;
+  subtitle?: string;
+  ctaLabel?: string;
   email: string;
   phone: string;
   address: string;
   linkedin: string;
 };
 
-export function ContactSection({ email, phone, address, linkedin }: ContactSectionProps) {
+export function ContactSection({
+  sectionId = "contact",
+  title = "Contact",
+  subtitle = "Interested in working together? Let's build something meaningful.",
+  ctaLabel = "Send me an email",
+  email,
+  phone,
+  address,
+  linkedin,
+}: ContactSectionProps) {
   return (
-    <section id="contact" className={`${styles.section} ${styles.contactSection} reveal`}>
+    <section id={sectionId} className={`${styles.section} ${styles.contactSection} reveal`}>
       <header className={styles.sectionHeaderCentered}>
         <h2>
-          Contact<span className={styles.titleDot}>.</span>
+          {title || "Contact"}
+          <span className={styles.titleDot}>.</span>
         </h2>
-        <p>Interested in working together? Let&apos;s build something meaningful.</p>
+        <p>{subtitle || "Interested in working together? Let's build something meaningful."}</p>
       </header>
 
       <div className={styles.contactList}>
@@ -56,7 +70,7 @@ export function ContactSection({ email, phone, address, linkedin }: ContactSecti
         className={styles.primaryButton}
         aria-label="Send me an email"
       >
-        Send me an email
+        {ctaLabel || "Send me an email"}
       </a>
     </section>
   );

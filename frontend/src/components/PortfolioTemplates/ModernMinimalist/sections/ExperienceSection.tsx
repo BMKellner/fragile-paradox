@@ -2,17 +2,26 @@ import styles from "../ModernMinimalist.module.css";
 import type { NormalizedExperience } from "../types";
 
 type ExperienceSectionProps = {
+  sectionId?: string;
+  title?: string;
+  subtitle?: string;
   experience: NormalizedExperience[];
 };
 
-export function ExperienceSection({ experience }: ExperienceSectionProps) {
+export function ExperienceSection({
+  sectionId = "experience",
+  title = "Experience",
+  subtitle = "Career highlights shown as a clean timeline with outcome-focused details.",
+  experience,
+}: ExperienceSectionProps) {
   return (
-    <section id="experience" className={`${styles.section} reveal`}>
+    <section id={sectionId} className={`${styles.section} reveal`}>
       <header className={styles.sectionHeader}>
         <h2>
-          Experience<span className={styles.titleDot}>.</span>
+          {title || "Experience"}
+          <span className={styles.titleDot}>.</span>
         </h2>
-        <p>Career highlights shown as a clean timeline with outcome-focused details.</p>
+        <p>{subtitle || "Career highlights shown as a clean timeline with outcome-focused details."}</p>
       </header>
 
       {experience.length ? (

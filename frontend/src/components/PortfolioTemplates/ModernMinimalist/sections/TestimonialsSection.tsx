@@ -3,17 +3,26 @@ import styles from "../ModernMinimalist.module.css";
 import type { Testimonial } from "../types";
 
 type TestimonialsSectionProps = {
+  sectionId?: string;
+  title?: string;
+  subtitle?: string;
   testimonials: Testimonial[];
 };
 
-export function TestimonialsSection({ testimonials }: TestimonialsSectionProps) {
+export function TestimonialsSection({
+  sectionId = "testimonials",
+  title = "Testimonials",
+  subtitle = "Feedback from collaborators across product, engineering, and leadership teams.",
+  testimonials,
+}: TestimonialsSectionProps) {
   return (
-    <section id="testimonials" className={`${styles.section} reveal`}>
+    <section id={sectionId} className={`${styles.section} reveal`}>
       <header className={styles.sectionHeaderCentered}>
         <h2>
-          Testimonials<span className={styles.titleDot}>.</span>
+          {title || "Testimonials"}
+          <span className={styles.titleDot}>.</span>
         </h2>
-        <p>Feedback from collaborators across product, engineering, and leadership teams.</p>
+        <p>{subtitle || "Feedback from collaborators across product, engineering, and leadership teams."}</p>
       </header>
 
       <div className={styles.testimonialsGrid}>

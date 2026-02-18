@@ -4,6 +4,7 @@ import type {
   PersonalInformation,
   Project,
 } from "@/constants/ResumeFormat";
+import type { TemplateConfig } from "@/lib/template-config";
 
 export type ModernMinimalistProps = {
   personalInformation?: PersonalInformation;
@@ -13,6 +14,7 @@ export type ModernMinimalistProps = {
   skills?: string[];
   mainColor?: string;
   backgroundColor?: string;
+  templateConfig?: TemplateConfig;
 };
 
 export type TabKey =

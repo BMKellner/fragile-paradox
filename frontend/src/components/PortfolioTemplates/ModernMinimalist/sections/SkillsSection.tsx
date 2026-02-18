@@ -3,6 +3,9 @@ import styles from "../ModernMinimalist.module.css";
 import type { SkillCategory } from "../types";
 
 type SkillsSectionProps = {
+  sectionId?: string;
+  title?: string;
+  subtitle?: string;
   categories: SkillCategory[];
 };
 
@@ -13,14 +16,20 @@ const categoryIcon: Record<string, typeof Code> = {
   "Tools & Platforms": Wrench,
 };
 
-export function SkillsSection({ categories }: SkillsSectionProps) {
+export function SkillsSection({
+  sectionId = "skills",
+  title = "Skills",
+  subtitle = "Core technologies grouped by discipline for quick scanning.",
+  categories,
+}: SkillsSectionProps) {
   return (
-    <section id="skills" className={`${styles.section} reveal`}>
+    <section id={sectionId} className={`${styles.section} reveal`}>
       <header className={styles.sectionHeaderCentered}>
         <h2>
-          Skills<span className={styles.titleDot}>.</span>
+          {title || "Skills"}
+          <span className={styles.titleDot}>.</span>
         </h2>
-        <p>Core technologies grouped by discipline for quick scanning.</p>
+        <p>{subtitle || "Core technologies grouped by discipline for quick scanning."}</p>
       </header>
 
       <div className={styles.skillCategoriesGrid}>

@@ -2,11 +2,15 @@ import styles from "../ModernMinimalist.module.css";
 import type { PortfolioStats } from "../types";
 
 type AboutSectionProps = {
+  sectionId?: string;
+  title?: string;
+  subtitle?: string;
   fullName: string;
   initials: string;
   summary: string;
   stats: PortfolioStats;
   education: {
+    label?: string;
     school: string;
     majors: string[];
     expectedGrad: string;
@@ -14,6 +18,9 @@ type AboutSectionProps = {
 };
 
 export function AboutSection({
+  sectionId = "about",
+  title = "About",
+  subtitle = "Focused on clean architecture, thoughtful interfaces, and scalable delivery.",
   fullName,
   initials,
   summary,
@@ -28,12 +35,13 @@ export function AboutSection({
   ];
 
   return (
-    <section id="about" className={`${styles.section} reveal`}>
+    <section id={sectionId} className={`${styles.section} reveal`}>
       <header className={styles.sectionHeader}>
         <h2>
-          About<span className={styles.titleDot}>.</span>
+          {title || "About"}
+          <span className={styles.titleDot}>.</span>
         </h2>
-        <p>Focused on clean architecture, thoughtful interfaces, and scalable delivery.</p>
+        <p>{subtitle || "Focused on clean architecture, thoughtful interfaces, and scalable delivery."}</p>
       </header>
 
       <div className={styles.aboutGrid}>
@@ -56,7 +64,7 @@ export function AboutSection({
 
           {(education.school || education.majors.length > 0 || education.expectedGrad) && (
             <div className={styles.educationLine}>
-              <strong>{education.school || "Education"}</strong>
+              <strong>{education.label || education.school || "Education"}</strong>
               <span>
                 {[...education.majors, education.expectedGrad ? `Expected ${education.expectedGrad}` : ""]
                   .filter(Boolean)

@@ -113,6 +113,11 @@ export default function DashboardPage() {
     localStorage.setItem('selectedTemplate', website.template_id);
     localStorage.setItem('selectedColor', website.color);
     localStorage.setItem('selectedMode', website.display_mode);
+    if (website.data.__template_config) {
+      localStorage.setItem('templateConfig', JSON.stringify(website.data.__template_config));
+    } else {
+      localStorage.removeItem('templateConfig');
+    }
 
     if (website.data.__custom_template?.sections && website.template_id === 'custom') {
       localStorage.setItem('customSections', JSON.stringify(website.data.__custom_template.sections));

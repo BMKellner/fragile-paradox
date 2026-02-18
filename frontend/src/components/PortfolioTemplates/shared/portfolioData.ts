@@ -4,6 +4,7 @@ import type {
   PersonalInformation,
   Project,
 } from "@/constants/ResumeFormat";
+import type { TemplateConfig } from "@/lib/template-config";
 
 export type TemplateProps = {
   personalInformation?: PersonalInformation;
@@ -13,6 +14,7 @@ export type TemplateProps = {
   skills?: string[];
   mainColor?: string;
   backgroundColor?: string;
+  templateConfig?: TemplateConfig;
 };
 
 export type SectionId =

@@ -2,6 +2,9 @@ import { Check, Copy, Mail } from "lucide-react";
 import styles from "../ElegantSophisticated.module.css";
 
 type HeroSectionProps = {
+  sectionId?: string;
+  title?: string;
+  primaryCtaLabel?: string;
   initials: string;
   fullName: string;
   careerName: string;
@@ -12,6 +15,9 @@ type HeroSectionProps = {
 };
 
 export function HeroSection({
+  sectionId = "home",
+  title = "Portfolio",
+  primaryCtaLabel = "Send Message",
   initials,
   fullName,
   careerName,
@@ -21,10 +27,10 @@ export function HeroSection({
   emailCopied,
 }: HeroSectionProps) {
   return (
-    <section id="home" className={styles.hero} data-reveal>
+    <section id={sectionId} className={styles.hero} data-reveal>
       <div className={styles.mono}>{initials}</div>
 
-      <p className={styles.kicker}>Portfolio</p>
+      <p className={styles.kicker}>{title || "Portfolio"}</p>
       <h1>{fullName}</h1>
       <p className={styles.role}>{careerName || "Engineering Professional"}</p>
       <p className={styles.summary}>{summary}</p>
@@ -32,7 +38,7 @@ export function HeroSection({
       <div className={styles.heroActions}>
         <a href={`mailto:${email || "hello@example.com"}`} className={styles.primaryButton}>
           <Mail size={15} />
-          Send Message
+          {primaryCtaLabel || "Send Message"}
         </a>
         {email ? (
           <button type="button" className={styles.secondaryButton} onClick={onCopyEmail} aria-label="Copy email address">

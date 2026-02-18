@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Eye, Check, ArrowRight, Sparkles, Loader2, TreePine, Sprout } from "lucide-react";
 import Header from "@/components/Header";
 import { ParsedResume } from "@/constants/ResumeFormat";
+import { TemplateConfig } from "@/lib/template-config";
 
 interface Template {
   id: string;
@@ -66,6 +67,7 @@ type TemplateComponentProps = {
   skills?: ParsedResume["skills"];
   mainColor: string;
   backgroundColor: string;
+  templateConfig?: TemplateConfig;
 };
 
 const templateLoadFallback = () => (
@@ -513,13 +515,21 @@ export default function TemplatesPage() {
                 </div>
 
                 <Button
-                  onClick={() => router.push('/customize')}
+                  onClick={() => {
+                    if (!selectedTemplate) return;
+                    localStorage.setItem('selectedTemplate', selectedTemplate);
+                    localStorage.setItem('selectedColor', selectedColor);
+                    localStorage.setItem('selectedMode', displayMode);
+                    localStorage.removeItem('templateConfig');
+                    router.push('/customize');
+                  }}
                   variant="outline"
+                  disabled={!selectedTemplate}
                   className="w-full gap-2 border-emerald-200 hover:bg-emerald-50"
                   size="lg"
                 >
                   <Sparkles className="w-4 h-4 text-emerald-600" />
-                  Cultivate from Scratch
+                  Open Template Editor
                 </Button>
               </div>
             </div>

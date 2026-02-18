@@ -4,17 +4,26 @@ import styles from "../ModernMinimalist.module.css";
 import type { NormalizedProject } from "../types";
 
 type ProjectsSectionProps = {
+  sectionId?: string;
+  title?: string;
+  subtitle?: string;
   projects: NormalizedProject[];
 };
 
-export function ProjectsSection({ projects }: ProjectsSectionProps) {
+export function ProjectsSection({
+  sectionId = "projects",
+  title = "Projects",
+  subtitle = "Selected product and engineering work with measurable outcomes.",
+  projects,
+}: ProjectsSectionProps) {
   return (
-    <section id="projects" className={`${styles.section} reveal`}>
+    <section id={sectionId} className={`${styles.section} reveal`}>
       <header className={styles.sectionHeaderCentered}>
         <h2>
-          Projects<span className={styles.titleDot}>.</span>
+          {title || "Projects"}
+          <span className={styles.titleDot}>.</span>
         </h2>
-        <p>Selected product and engineering work with measurable outcomes.</p>
+        <p>{subtitle || "Selected product and engineering work with measurable outcomes."}</p>
       </header>
 
       {projects.length ? (

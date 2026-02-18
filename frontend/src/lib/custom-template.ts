@@ -1,4 +1,5 @@
 import { ParsedResume } from "@/constants/ResumeFormat";
+import { TemplateConfig } from "@/lib/template-config";
 
 export type CustomSectionType =
   | "header"
@@ -38,6 +39,7 @@ export interface CustomLayoutTemplateV1 {
 
 export interface PortfolioDataWithCustomTemplate extends ParsedResume {
   __custom_template?: CustomLayoutTemplateV1;
+  __template_config?: TemplateConfig;
 }
 
 export function buildCustomLayoutTemplate(params: {

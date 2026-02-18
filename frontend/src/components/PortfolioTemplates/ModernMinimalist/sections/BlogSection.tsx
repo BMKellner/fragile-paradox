@@ -2,17 +2,28 @@ import styles from "../ModernMinimalist.module.css";
 import type { BlogPreview } from "../types";
 
 type BlogSectionProps = {
+  sectionId?: string;
+  title?: string;
+  subtitle?: string;
+  ctaLabel?: string;
   preview: BlogPreview;
 };
 
-export function BlogSection({ preview }: BlogSectionProps) {
+export function BlogSection({
+  sectionId = "blog",
+  title = "Blog",
+  subtitle = "Writing focused on engineering process, product tradeoffs, and delivery lessons.",
+  ctaLabel = "View all posts",
+  preview,
+}: BlogSectionProps) {
   return (
-    <section id="blog" className={`${styles.section} reveal`}>
+    <section id={sectionId} className={`${styles.section} reveal`}>
       <header className={styles.sectionHeaderCentered}>
         <h2>
-          Blog<span className={styles.titleDot}>.</span>
+          {title || "Blog"}
+          <span className={styles.titleDot}>.</span>
         </h2>
-        <p>Writing focused on engineering process, product tradeoffs, and delivery lessons.</p>
+        <p>{subtitle || "Writing focused on engineering process, product tradeoffs, and delivery lessons."}</p>
       </header>
 
       <article className={styles.blogCard}>
@@ -34,7 +45,7 @@ export function BlogSection({ preview }: BlogSectionProps) {
       </article>
 
       <a href="#" className={styles.viewAllLink}>
-        View all posts
+        {ctaLabel || "View all posts"}
       </a>
     </section>
   );
