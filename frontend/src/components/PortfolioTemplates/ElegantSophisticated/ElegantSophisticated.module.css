@@ -1,14 +1,14 @@
 .root {
-  --es-bg: #0f172a;
-  --es-text: #e5e7eb;
-  --es-soft: #cbd5e1;
-  --es-muted: #94a3b8;
+  --es-bg: #111111;
+  --es-text: #f5f5f5;
+  --es-soft: #e4e4e7;
+  --es-muted: #a1a1aa;
   --es-accent: #d4af37;
-  --es-surface: rgba(15, 23, 42, 0.84);
-  --es-surface-strong: rgba(15, 23, 42, 0.94);
-  --es-border: rgba(203, 213, 225, 0.18);
-  --es-chip: rgba(203, 213, 225, 0.12);
-  --es-shadow: 0 22px 38px rgba(2, 6, 23, 0.42);
+  --es-surface: rgba(18, 18, 18, 0.86);
+  --es-surface-strong: rgba(24, 24, 27, 0.94);
+  --es-border: rgba(255, 255, 255, 0.16);
+  --es-chip: rgba(255, 255, 255, 0.08);
+  --es-shadow: 0 22px 38px rgba(0, 0, 0, 0.45);
 
   position: relative;
   min-height: 100vh;

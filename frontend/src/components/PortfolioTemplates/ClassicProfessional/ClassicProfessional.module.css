@@ -7,6 +7,7 @@
   --cp-surface: rgba(255, 255, 255, 0.88);
   --cp-surface-strong: rgba(255, 255, 255, 0.96);
   --cp-border: rgba(15, 23, 42, 0.14);
+  --cp-grid-line: rgba(15, 23, 42, 0.08);
   --cp-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
   --cp-chip-bg: rgba(15, 23, 42, 0.04);
 
@@ -19,14 +20,15 @@
 }
 
 .darkMode {
-  --cp-text: #e2e8f0;
-  --cp-text-soft: #cbd5e1;
-  --cp-muted: #94a3b8;
-  --cp-surface: rgba(15, 23, 42, 0.8);
-  --cp-surface-strong: rgba(15, 23, 42, 0.9);
-  --cp-border: rgba(148, 163, 184, 0.2);
-  --cp-shadow: 0 20px 35px rgba(2, 6, 23, 0.38);
-  --cp-chip-bg: rgba(148, 163, 184, 0.12);
+  --cp-text: #f5f5f5;
+  --cp-text-soft: #e4e4e7;
+  --cp-muted: #a1a1aa;
+  --cp-surface: rgba(18, 18, 18, 0.86);
+  --cp-surface-strong: rgba(24, 24, 27, 0.94);
+  --cp-border: rgba(255, 255, 255, 0.16);
+  --cp-grid-line: rgba(255, 255, 255, 0.06);
+  --cp-shadow: 0 20px 35px rgba(0, 0, 0, 0.42);
+  --cp-chip-bg: rgba(255, 255, 255, 0.08);
 }
 
 .backdrop {
@@ -34,8 +36,8 @@
   inset: 0;
   pointer-events: none;
   background:
-    linear-gradient(90deg, color-mix(in srgb, var(--cp-accent) 8%, transparent) 1px, transparent 1px) 0 0 / 52px 52px,
-    linear-gradient(color-mix(in srgb, var(--cp-accent) 8%, transparent) 1px, transparent 1px) 0 0 / 52px 52px;
+    linear-gradient(90deg, var(--cp-grid-line) 1px, transparent 1px) 0 0 / 52px 52px,
+    linear-gradient(var(--cp-grid-line) 1px, transparent 1px) 0 0 / 52px 52px;
   mask-image: radial-gradient(circle at 30% 20%, black 25%, transparent 75%);
   opacity: 0.4;
 }

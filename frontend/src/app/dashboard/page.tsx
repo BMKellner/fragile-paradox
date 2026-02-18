@@ -137,7 +137,7 @@ export default function DashboardPage() {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: ${website.display_mode === 'dark' ? '#0B1220' : '#F8FAFC'};
+      background: ${website.display_mode === 'dark' ? '#111111' : '#F8FAFC'};
       color: ${website.display_mode === 'dark' ? '#fff' : '#1a202c'};
       padding: 20px;
     }

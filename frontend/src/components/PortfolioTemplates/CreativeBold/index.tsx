@@ -50,7 +50,7 @@ export default function CreativeBoldPortfolio({
   const testimonials = useMemo(() => buildTestimonials(personal.full_name, overview.career_name), [personal.full_name, overview.career_name]);
 
   const accent = sanitizeHexColor(mainColor, "#ef4444");
-  const bg = sanitizeHexColor(backgroundColor, "#0b1220");
+  const bg = sanitizeHexColor(backgroundColor, "#111111");
   const darkMode = !isLightColor(bg, 175);
 
   useEffect(() => {

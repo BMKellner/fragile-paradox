@@ -10,6 +10,7 @@
   --cb-border: rgba(17, 24, 39, 0.15);
   --cb-shadow: 0 16px 34px rgba(17, 24, 39, 0.1);
   --cb-chip: rgba(17, 24, 39, 0.06);
+  --cb-orb-opacity: 0.2;
 
   position: relative;
   min-height: 100vh;
@@ -20,14 +21,15 @@
 }
 
 .darkMode {
-  --cb-text: #f3f4f6;
-  --cb-soft: #d1d5db;
-  --cb-muted: #9ca3af;
-  --cb-surface: rgba(17, 24, 39, 0.74);
-  --cb-surface-strong: rgba(17, 24, 39, 0.9);
-  --cb-border: rgba(156, 163, 175, 0.2);
-  --cb-shadow: 0 24px 40px rgba(2, 6, 23, 0.42);
-  --cb-chip: rgba(156, 163, 175, 0.12);
+  --cb-text: #f5f5f5;
+  --cb-soft: #e4e4e7;
+  --cb-muted: #a1a1aa;
+  --cb-surface: rgba(18, 18, 18, 0.82);
+  --cb-surface-strong: rgba(24, 24, 27, 0.93);
+  --cb-border: rgba(255, 255, 255, 0.16);
+  --cb-shadow: 0 24px 40px rgba(0, 0, 0, 0.45);
+  --cb-chip: rgba(255, 255, 255, 0.09);
+  --cb-orb-opacity: 0.12;
 }
 
 .orbs {
@@ -43,7 +45,7 @@
   height: 28rem;
   border-radius: 999px;
   filter: blur(90px);
-  opacity: 0.2;
+  opacity: var(--cb-orb-opacity);
 }
 
 .orbA {
@@ -55,7 +57,7 @@
 .orbB {
   bottom: -14rem;
   right: -8rem;
-  background: radial-gradient(circle, color-mix(in srgb, var(--cb-accent) 62%, #06b6d4 38%) 0%, transparent 74%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--cb-accent-alt) 78%, var(--cb-accent) 22%) 0%, transparent 74%);
 }
 
 .shell {

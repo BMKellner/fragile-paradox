@@ -50,7 +50,7 @@ export default function ElegantSophisticatedPortfolio({
   const testimonials = useMemo(() => buildTestimonials(personal.full_name, overview.career_name), [personal.full_name, overview.career_name]);
 
   const accent = sanitizeHexColor(mainColor, "#d4af37");
-  const bg = sanitizeHexColor(backgroundColor, "#0f172a");
+  const bg = sanitizeHexColor(backgroundColor, "#111111");
   const lightMode = isLightColor(bg, 175);
 
   useEffect(() => {

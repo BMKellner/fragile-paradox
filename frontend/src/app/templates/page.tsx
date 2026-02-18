@@ -55,6 +55,9 @@ const getContrastTextColor = (hexColor: string): string => {
   return brightness > 160 ? "#111827" : "#FFFFFF";
 };
 
+const LIGHT_DISPLAY_BG = "#F8FAFC";
+const DARK_DISPLAY_BG = "#111111";
+
 type TemplateComponentProps = {
   personalInformation?: ParsedResume["personal_information"];
   overviewData?: ParsedResume["overview"];
@@ -123,8 +126,8 @@ const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }:
 
   // derive simple background color from displayMode
   const backgroundColor = displayMode === 'light'
-    ? '#F8FAFC'        // nice light background (tailwind gray-50-ish)
-    : '#0B1220'     // nice dark background  
+    ? LIGHT_DISPLAY_BG
+    : DARK_DISPLAY_BG;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

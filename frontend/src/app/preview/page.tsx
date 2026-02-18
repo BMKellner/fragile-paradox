@@ -71,6 +71,9 @@ const templateComponentMap: Record<string, ComponentType<TemplateComponentProps>
   }),
 };
 
+const LIGHT_DISPLAY_BG = "#F8FAFC";
+const DARK_DISPLAY_BG = "#111111";
+
 const CustomTemplateRender = ({ resumeData, mainColor, backgroundColor }: { resumeData: ParsedResume; mainColor: string; backgroundColor: string }) => {
   const [sections, setSections] = useState<CustomSection[]>([]);
   
@@ -306,7 +309,7 @@ export default function PreviewPage() {
   const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [mainColor, setMainColor] = useState<string>('#2563EB');
-  const [backgroundColor, setBackgroundColor] = useState<string>('#F8FAFC');
+  const [backgroundColor, setBackgroundColor] = useState<string>(LIGHT_DISPLAY_BG);
   const [isGenerating, setIsGenerating] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', message: string} | null>(null);
@@ -362,7 +365,7 @@ export default function PreviewPage() {
     }
 
     setMainColor(storedColor || '#2563EB');
-    setBackgroundColor(storedMode === 'light' ? '#F8FAFC' : '#0B1220');
+    setBackgroundColor(storedMode === 'light' ? LIGHT_DISPLAY_BG : DARK_DISPLAY_BG);
 
     // Simulate website generation
     setTimeout(() => {
@@ -573,7 +576,7 @@ export default function PreviewPage() {
           ? buildCustomLayoutTemplate({
               sections: customSections,
               selectedColor: mainColor,
-              displayMode: backgroundColor === '#F8FAFC' ? 'light' : 'dark',
+              displayMode: backgroundColor === LIGHT_DISPLAY_BG ? 'light' : 'dark',
             })
           : null;
 
@@ -594,7 +597,7 @@ export default function PreviewPage() {
         template_id: selectedTemplate,
         data: dataToSave,
         color: mainColor,
-        display_mode: backgroundColor === '#F8FAFC' ? 'light' : 'dark',
+        display_mode: backgroundColor === LIGHT_DISPLAY_BG ? 'light' : 'dark',
         is_published: false
       };
 
@@ -667,7 +670,7 @@ export default function PreviewPage() {
     body { 
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
       background: ${backgroundColor};
-      color: ${backgroundColor === '#0B1220' ? '#fff' : '#1a202c'};
+      color: ${backgroundColor === LIGHT_DISPLAY_BG ? '#1a202c' : '#fff'};
       padding: 20px;
     }
     .container { max-width: 1200px; margin: 0 auto; }

@@ -730,7 +730,7 @@ export default function CustomizePage() {
                 <div 
                   className="min-h-full p-12" 
                   style={{ 
-                    backgroundColor: displayMode === 'light' ? '#F8FAFC' : '#0B1220',
+                    backgroundColor: displayMode === 'light' ? '#F8FAFC' : '#111111',
                     color: displayMode === 'light' ? '#1a202c' : '#fff'
                   }}
                 >
