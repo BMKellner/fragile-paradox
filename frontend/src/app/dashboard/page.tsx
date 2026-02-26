@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
+import {
   Layout,
   Clock,
   Plus,
@@ -14,26 +14,38 @@ import {
   Trash2,
   Download,
   Loader2,
-  Sprout,
-  TreePine,
-  Leaf,
-  User
+  Sparkles,
+  Compass,
+  User,
 } from "lucide-react";
 import Header from "@/components/Header";
 import { useState, useEffect } from "react";
-import { ParsedResume } from "@/constants/ResumeFormat";
+import { PortfolioDataWithCustomTemplate } from "@/lib/custom-template";
 
 interface Website {
   id: string;
   name: string;
   template_id: string;
-  data: ParsedResume;
+  data: PortfolioDataWithCustomTemplate;
   color: string;
   display_mode: string;
   is_published: boolean;
   created_at: string;
   updated_at: string;
 }
+
+const templateNames: Record<string, string> = {
+  '1': 'Modern Minimal',
+  '2': 'Classic Professional',
+  '3': 'Creative Bold',
+  '4': 'Elegant Sophisticated',
+  '5': 'SideRail Pro',
+  '6': 'Editorial Story',
+  '7': 'IDE Clean',
+  '8': 'Timeline Narrative',
+  '9': 'Bold Brand',
+  '10': 'Minimal Creator Hub',
+};
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -42,25 +54,20 @@ export default function DashboardPage() {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-
-  // Fetch websites (portfolios)
   useEffect(() => {
     const fetchData = async () => {
       if (!info.user) return;
-      
+
       try {
         const supabaseSession = await session.auth.getSession();
         const token = supabaseSession.data.session?.access_token;
-        
         if (!token) return;
 
-        // Fetch portfolios (websites)
-        const url = process.env.NEXT_PUBLIC_BACKEND_URL
+        const url = process.env.NEXT_PUBLIC_BACKEND_URL;
         const response = await fetch(`${url}/portfolios/`, {
-
           headers: {
-            'Authorization': `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         });
 
         if (response.ok) {
@@ -82,22 +89,21 @@ export default function DashboardPage() {
 
   const handleDeleteWebsite = async (websiteId: string) => {
     if (!confirm('Are you sure you want to delete this website?')) return;
-    
+
     try {
       const supabaseSession = await session.auth.getSession();
       const token = supabaseSession.data.session?.access_token;
-      
       if (!token) return;
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/${websiteId}`, {
         method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`
-        }
+          Authorization: `Bearer ${token}`,
+        },
       });
 
       if (response.ok) {
-        setWebsites(prev => prev.filter(w => w.id !== websiteId));
+        setWebsites((prev) => prev.filter((w) => w.id !== websiteId));
       } else {
         alert('Failed to delete website');
       }
@@ -108,19 +114,30 @@ export default function DashboardPage() {
   };
 
   const handleViewWebsite = (website: Website) => {
-    // Store website data and navigate to preview
     localStorage.setItem('currentPortfolioId', website.id);
     localStorage.setItem('resumeData', JSON.stringify(website.data));
     localStorage.setItem('selectedTemplate', website.template_id);
     localStorage.setItem('selectedColor', website.color);
     localStorage.setItem('selectedMode', website.display_mode);
+    if (website.data.__template_config) {
+      localStorage.setItem('templateConfig', JSON.stringify(website.data.__template_config));
+    } else {
+      localStorage.removeItem('templateConfig');
+    }
+
+    if (website.data.__custom_template?.sections && website.template_id === 'custom') {
+      localStorage.setItem('customSections', JSON.stringify(website.data.__custom_template.sections));
+      localStorage.setItem('customLayoutSerialized', JSON.stringify(website.data.__custom_template));
+    } else {
+      localStorage.removeItem('customSections');
+      localStorage.removeItem('customLayoutSerialized');
+    }
+
     router.push('/preview');
   };
 
   const handleDownloadWebsite = async (website: Website) => {
-    // Generate and download HTML file
     try {
-      // Create a simple HTML structure
       const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -129,9 +146,9 @@ export default function DashboardPage() {
   <title>${website.name}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
+    body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: ${website.display_mode === 'dark' ? '#0B1220' : '#F8FAFC'};
+      background: ${website.display_mode === 'dark' ? '#111111' : '#F8FAFC'};
       color: ${website.display_mode === 'dark' ? '#fff' : '#1a202c'};
       padding: 20px;
     }
@@ -141,11 +158,11 @@ export default function DashboardPage() {
     .section { margin: 20px 0; }
     .item { margin: 15px 0; }
     .skills { display: flex; flex-wrap: wrap; gap: 10px; }
-    .skill { 
-      background: ${website.color}20; 
-      color: ${website.color}; 
-      padding: 5px 15px; 
-      border-radius: 20px; 
+    .skill {
+      background: ${website.color}20;
+      color: ${website.color};
+      padding: 5px 15px;
+      border-radius: 20px;
       font-size: 14px;
     }
     a { color: ${website.color}; text-decoration: none; }
@@ -222,7 +239,6 @@ export default function DashboardPage() {
 </body>
 </html>`;
 
-      // Create blob and download
       const blob = new Blob([html], { type: 'text/html' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -238,13 +254,12 @@ export default function DashboardPage() {
     }
   };
 
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
     const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
+
     if (diffDays === 0) return 'Today';
     if (diffDays === 1) return 'Yesterday';
     if (diffDays < 7) return `${diffDays} days ago`;
@@ -256,241 +271,163 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading your portfolio garden...</p>
+          <Loader2 className="w-12 h-12 animate-spin text-[var(--color-primary)] mx-auto mb-4" />
+          <p className="text-muted-foreground">Loading your workspace...</p>
         </div>
       </div>
     );
   }
 
   if (!info.user) {
-    router.push('/signin');
+    router.push('/signin?next=/dashboard');
     return null;
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen soft-surface relative overflow-x-clip">
+      <div className="floating-orb floating-orb-1" aria-hidden />
       <Header currentPage="dashboard" />
 
-      {/* Main Content */}
-      <main className="py-8">
+      <main className="py-10">
         <div className="container-base max-w-7xl">
-          {/* Page Header with CTA */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <section className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 reveal-soft">
             <div>
-              <h2 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-                <Sprout className="w-8 h-8 text-emerald-600" />
-                Welcome back!
-              </h2>
-              <p className="text-muted-foreground mt-1">
-                Watch your portfolio garden grow
-              </p>
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground mb-1">Portfolio Dashboard</p>
+              <h2 className="text-5xl leading-[0.9]">Your Workspace</h2>
+              <p className="text-muted-foreground mt-2">Manage your saved portfolio versions and continue editing.</p>
             </div>
-            <Button onClick={() => router.push('/upload')} size="lg" className="gap-2 shadow-lg bg-emerald-600 hover:bg-emerald-700 text-white">
+            <Button
+              onClick={() => router.push('/upload')}
+              size="lg"
+              className="gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-[var(--color-primary-foreground)]"
+            >
               <Plus className="w-4 h-4" />
-              Plant New Portfolio
+              New Portfolio
             </Button>
-          </div>
+          </section>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-            <Card className="border border-emerald-100 shadow-md bg-white/70 backdrop-blur-sm hover:shadow-lg transition-all">
+          <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 reveal-soft reveal-soft-delay-1">
+            <Card className="panel-soft subtle-lift">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Total Portfolios</p>
-                    <p className="text-3xl font-bold text-emerald-900">{websites.length}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Growing strong</p>
-                  </div>
-                  <div className="p-3 rounded-full bg-emerald-100">
-                    <Sprout className="w-6 h-6 text-emerald-600" />
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">Total Portfolios</p>
+                <p className="text-4xl leading-none mt-2">{websites.length}</p>
               </CardContent>
             </Card>
-
-            <Card className="border border-green-100 shadow-md bg-white/70 backdrop-blur-sm hover:shadow-lg transition-all">
+            <Card className="panel-soft subtle-lift">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Templates Used</p>
-                    <p className="text-3xl font-bold text-green-900">{new Set(websites.map(w => w.template_id)).size}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Unique designs</p>
-                  </div>
-                  <div className="p-3 rounded-full bg-green-100">
-                    <TreePine className="w-6 h-6 text-green-600" />
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">Templates Used</p>
+                <p className="text-4xl leading-none mt-2">{new Set(websites.map((w) => w.template_id)).size}</p>
               </CardContent>
             </Card>
-
-            <Card className="border border-teal-100 shadow-md bg-white/70 backdrop-blur-sm hover:shadow-lg transition-all">
+            <Card className="panel-soft subtle-lift">
               <CardContent className="p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-1">Published</p>
-                    <p className="text-3xl font-bold text-teal-900">{websites.filter(w => w.is_published).length}</p>
-                    <p className="text-xs text-muted-foreground mt-1">Live & flourishing</p>
-                  </div>
-                  <div className="p-3 rounded-full bg-teal-100">
-                    <Leaf className="w-6 h-6 text-teal-600" />
-                  </div>
-                </div>
+                <p className="text-sm text-muted-foreground">Published</p>
+                <p className="text-4xl leading-none mt-2">{websites.filter((w) => w.is_published).length}</p>
               </CardContent>
             </Card>
-          </div>
+          </section>
 
-          {/* Content Sections */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Recent Websites - Takes up 2 columns */}
-            <div className="lg:col-span-2">
-              <Card className="border border-emerald-100 shadow-md bg-white/70 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-xl flex items-center gap-2">
-                        <TreePine className="w-5 h-5 text-emerald-600" />
-                        Portfolio Garden
-                      </CardTitle>
-                      <CardDescription className="mt-1">
-                        Your growing collection of portfolio websites
-                      </CardDescription>
-                    </div>
-                    <Button variant="ghost" size="sm" onClick={() => router.push('/upload')} className="hover:bg-emerald-50">
-                      <Plus className="w-4 h-4 mr-1" />
-                      Create New
+          <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 reveal-soft reveal-soft-delay-2">
+            <Card className="panel-soft lg:col-span-2">
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-3xl">Recent Portfolios</CardTitle>
+                    <CardDescription>Open, download, or remove saved items.</CardDescription>
+                  </div>
+                  <Compass className="w-5 h-5 text-[var(--color-primary)]" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                {websites.length > 0 ? (
+                  <div className="space-y-3">
+                    {websites.map((website) => (
+                      <article
+                        key={website.id}
+                        className="panel-soft subtle-lift p-4 bg-[var(--color-background)]/72 flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="p-2 rounded-md" style={{ backgroundColor: `${website.color}1f` }}>
+                            <Layout className="w-4 h-4" style={{ color: website.color }} />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{website.name}</p>
+                            <div className="flex items-center gap-3 mt-1 text-xs text-muted-foreground">
+                              <span className="inline-flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {formatDate(website.created_at)}
+                              </span>
+                              {website.is_published && <Badge variant="secondary">Published</Badge>}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="ghost" size="sm" onClick={() => handleViewWebsite(website)} title="View">
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDownloadWebsite(website)} title="Download">
+                            <Download className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleDeleteWebsite(website.id)} title="Delete">
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <Sparkles className="w-8 h-8 mx-auto mb-3 text-[var(--color-primary)]" />
+                    <h3 className="text-2xl mb-2">No portfolios yet</h3>
+                    <p className="text-sm text-muted-foreground mb-4">Create your first portfolio to start building your workspace.</p>
+                    <Button onClick={() => router.push('/upload')} className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-[var(--color-primary-foreground)]">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Create Portfolio
                     </Button>
                   </div>
-                </CardHeader>
-                <CardContent>
-                  {websites.length > 0 ? (
-                    <div className="space-y-3">
-                      {websites.map((website) => (
-                        <div
-                          key={website.id}
-                          className="flex items-center justify-between p-4 rounded-lg border bg-background hover:bg-muted/50 transition-colors"
-                        >
-                          <div className="flex items-center gap-3 flex-1">
-                            <div className="p-2 rounded-md" style={{ backgroundColor: `${website.color}20` }}>
-                              <Layout className="w-4 h-4" style={{ color: website.color }} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium truncate">{website.name}</p>
-                              <div className="flex items-center gap-3 mt-1">
-                                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Clock className="w-3 h-3" />
-                                  {formatDate(website.created_at)}
-                                </span>
-                                {website.is_published && (
-                                  <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
-                                    Published
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleViewWebsite(website)}
-                              title="View website"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDownloadWebsite(website)}
-                              title="Download HTML"
-                            >
-                              <Download className="w-4 h-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => handleDeleteWebsite(website.id)}
-                              title="Delete website"
-                            >
-                              <Trash2 className="w-4 h-4 text-destructive" />
-                            </Button>
-                          </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="panel-soft">
+              <CardHeader>
+                <CardTitle className="text-3xl">Quick Actions</CardTitle>
+                <CardDescription>Jump to the most common tasks.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  className="w-full justify-start gap-2 border-[var(--color-primary)]/35 hover:bg-[var(--color-primary)]/10"
+                  variant="outline"
+                  onClick={() => router.push('/upload')}
+                >
+                  <Plus className="w-4 h-4 text-[var(--color-primary)]" />
+                  New Portfolio
+                </Button>
+                <Button
+                  className="w-full justify-start gap-2 border-[var(--color-primary)]/35 hover:bg-[var(--color-primary)]/10"
+                  variant="outline"
+                  onClick={() => router.push('/profile')}
+                >
+                  <User className="w-4 h-4 text-[var(--color-primary)]" />
+                  Edit Profile
+                </Button>
+
+                {websites.length > 0 && (
+                  <div className="pt-4 border-t">
+                    <p className="text-sm font-medium mb-3">Recent Templates</p>
+                    <div className="space-y-2">
+                      {[...new Set(websites.slice(0, 3).map((w) => w.template_id))].map((templateId) => (
+                        <div key={templateId} className="text-sm text-muted-foreground inline-flex items-center gap-2">
+                          <Layout className="w-3 h-3" />
+                          {templateNames[templateId] || `Template ${templateId}`}
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <div className="p-4 rounded-full bg-emerald-50 inline-block mb-4">
-                        <Sprout className="w-8 h-8 text-emerald-600" />
-                      </div>
-                      <h3 className="font-semibold mb-1">Your garden awaits</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Plant your first portfolio to start growing
-                      </p>
-                      <Button onClick={() => router.push('/upload')} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                        <Sprout className="w-4 h-4 mr-2" />
-                        Plant First Portfolio
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Quick Actions - Takes up 1 column */}
-            <div className="lg:col-span-1">
-              <Card className="border border-emerald-100 shadow-md bg-white/70 backdrop-blur-sm">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <Leaf className="w-5 h-5 text-emerald-600" />
-                    Quick Actions
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    Cultivate your presence
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button 
-                    className="w-full justify-start gap-2 border-emerald-200 hover:bg-emerald-50" 
-                    variant="outline"
-                    onClick={() => router.push('/upload')}
-                  >
-                    <Sprout className="w-4 h-4 text-emerald-600" />
-                    Plant New Portfolio
-                  </Button>
-                  <Button 
-                    className="w-full justify-start gap-2 border-emerald-200 hover:bg-emerald-50" 
-                    variant="outline"
-                    onClick={() => router.push('/profile')}
-                  >
-                    <User className="w-4 h-4 text-emerald-600" />
-                    Tend Profile
-                  </Button>
-                  {websites.length > 0 && (
-                    <div className="pt-4 border-t">
-                      <p className="text-sm font-medium mb-3">Recent Templates</p>
-                      <div className="space-y-2">
-                        {[...new Set(websites.slice(0, 3).map(w => w.template_id))].map((templateId) => {
-                          const templateNames: Record<string, string> = {
-                            '1': 'Modern Minimal',
-                            '2': 'Classic Professional',
-                            '3': 'Creative Bold',
-                            '4': 'Elegant Sophisticated'
-                          };
-                          return (
-                            <div key={templateId} className="flex items-center gap-2 text-sm">
-                              <Layout className="w-3 h-3 text-muted-foreground" />
-                              <span className="text-muted-foreground">{templateNames[templateId] || `Template ${templateId}`}</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </section>
         </div>
       </main>
     </div>

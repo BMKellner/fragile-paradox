@@ -8,7 +8,11 @@ export async function GET(request: Request) {
 
   // Get the authorization code and the 'next' redirect path
   const code = searchParams.get("code")
-  const next = searchParams.get("next") ?? "/"
+  const requestedNext = searchParams.get("next")
+  const next =
+    requestedNext && requestedNext.startsWith("/") && !requestedNext.startsWith("//")
+      ? requestedNext
+      : "/dashboard"
 
   if (code) {
     // Create a Supabase client
@@ -18,7 +22,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error) {
-      // If successful, redirect to the 'next' path or home
+      // If successful, redirect to the requested safe path or dashboard
       return NextResponse.redirect(`${origin}${next}`)
     }
   }

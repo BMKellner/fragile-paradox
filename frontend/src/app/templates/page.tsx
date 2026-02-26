@@ -1,460 +1,558 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState, type ComponentType } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
-import { createClient } from "@/utils/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Eye, Check, ArrowRight, Sparkles, Loader2, TreePine, Sprout } from "lucide-react";
+import { Loader2, MoonStar, Palette, Sparkles, Sun, TreePine } from "lucide-react";
 import Header from "@/components/Header";
 import { ParsedResume } from "@/constants/ResumeFormat";
-import ModernMinimalistPortfolio from "@/components/PortfolioTemplates/ModernMinimalist";
-import ClassicProfessionalPortfolio from "@/components/PortfolioTemplates/ClassicProfessional";
-import CreativeBoldPortfolio from "@/components/PortfolioTemplates/CreativeBold";
-import ElegantSophisticatedPortfolio from "@/components/PortfolioTemplates/ElegantSophisticated";
+import { normalizeTemplateConfig, type TemplateConfig } from "@/lib/template-config";
 
-interface Template {
+type TemplateComponentProps = {
+  personalInformation?: ParsedResume["personal_information"];
+  overviewData?: ParsedResume["overview"];
+  projects?: ParsedResume["projects"];
+  experience?: ParsedResume["experience"];
+  skills?: ParsedResume["skills"];
+  mainColor: string;
+  backgroundColor: string;
+  templateConfig?: TemplateConfig;
+};
+
+type DisplayMode = "light" | "dark";
+
+type TemplateMeta = {
   id: string;
   name: string;
   description: string;
-  category: string;
-}
+  bestFor: Array<"Tech" | "Creative" | "Corporate" | "Academic" | "Writer" | "Creator">;
+};
 
-const templates: Template[] = [
-  {
-    id: '1',
-    name: 'Modern Minimal',
-    description: 'Modern and minimalist design',
-    category: 'Professional'
-  },
-  {
-    id: '2',
-    name: 'Classic Professional',
-    description: 'Classic professional layout',
-    category: 'Traditional'
-  },
-  {
-    id: '3',
-    name: 'Creative Bold',
-    description: 'Creative and bold design',
-    category: 'Modern'
-  },
-  {
-    id: '4',
-    name: 'Elegant Sophisticated',
-    description: 'Elegant and sophisticated',
-    category: 'Premium'
-  }
+const LIGHT_DISPLAY_BG = "#F8FAFC";
+const DARK_DISPLAY_BG = "#111111";
+
+const modeBackground = (mode: DisplayMode): string =>
+  mode === "light" ? LIGHT_DISPLAY_BG : DARK_DISPLAY_BG;
+
+const presetColorOptions = [
+  { id: "evergreen", value: "#16A34A", label: "Evergreen" },
+  { id: "ocean", value: "#0EA5E9", label: "Ocean" },
+  { id: "ember", value: "#F97316", label: "Ember" },
+  { id: "crimson", value: "#DC2626", label: "Crimson" },
+  { id: "indigo", value: "#4F46E5", label: "Indigo" },
+  { id: "charcoal", value: "#334155", label: "Charcoal" },
 ];
 
-// Preview component for each template
-const TemplatePreview = ({ templateId, resumeData, selectedColor, displayMode }: { templateId: string; resumeData: ParsedResume | null; selectedColor: string; displayMode?: 'light' | 'dark' }) => {
-  const [isFullscreen, setIsFullscreen] = useState(false);
+const galleryTemplates: TemplateMeta[] = [
+  {
+    id: "1",
+    name: "Modern Minimal",
+    description: "Sharp modern layout with confident spacing and clean hierarchy.",
+    bestFor: ["Tech", "Corporate"],
+  },
+  {
+    id: "2",
+    name: "Classic Professional",
+    description: "Traditional structure tuned for clarity and executive readability.",
+    bestFor: ["Corporate", "Academic"],
+  },
+  {
+    id: "3",
+    name: "Creative Bold",
+    description: "High-energy structure with strong motion cues and visual rhythm.",
+    bestFor: ["Creative", "Creator"],
+  },
+  {
+    id: "4",
+    name: "Elegant Sophisticated",
+    description: "Refined premium aesthetic with polished typography and spacing.",
+    bestFor: ["Corporate", "Writer"],
+  },
+  {
+    id: "5",
+    name: "SideRail Pro",
+    description: "Identity rail + content flow with scroll-aware navigation anchors.",
+    bestFor: ["Tech", "Corporate"],
+  },
+  {
+    id: "6",
+    name: "Editorial Story",
+    description: "Writing-first case-study format with generous margins and pace.",
+    bestFor: ["Writer", "Academic"],
+  },
+  {
+    id: "7",
+    name: "IDE Clean",
+    description: "Panel-style, tool-native UI language with crisp tags and separators.",
+    bestFor: ["Tech", "Creator"],
+  },
+  {
+    id: "8",
+    name: "Timeline Narrative",
+    description: "Chronological storytelling with timeline controls for key milestones.",
+    bestFor: ["Academic", "Corporate"],
+  },
+  {
+    id: "9",
+    name: "Bold Brand",
+    description: "Oversized hero and high-impact project cards for standout positioning.",
+    bestFor: ["Creative", "Creator"],
+  },
+  {
+    id: "10",
+    name: "Minimal Creator Hub",
+    description: "Dense, tag-forward profile built for creators shipping continuously.",
+    bestFor: ["Creator", "Tech"],
+  },
+];
 
-  // derive simple background color from displayMode
-  const backgroundColor = displayMode === 'light'
-    ? '#F8FAFC'        // nice light background (tailwind gray-50-ish)
-    : '#0B1220'     // nice dark background  
+const normalizeHexColor = (value: string): string | null => {
+  const trimmed = value.trim();
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setIsFullscreen(false);
-    };
-    document.addEventListener('keydown', onKey);
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) {
+    return trimmed.toUpperCase();
+  }
 
-    // lock body scroll while fullscreen
-    if (isFullscreen) {
-      document.documentElement.style.overflow = 'hidden';
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-    }
+  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+    const [, r, g, b] = trimmed;
+    return `#${r}${r}${g}${g}${b}${b}`.toUpperCase();
+  }
 
-    return () => {
-      document.removeEventListener('keydown', onKey);
-      document.documentElement.style.overflow = '';
-      document.body.style.overflow = '';
-    };
-  }, [isFullscreen]);
+  return null;
+};
 
-  const personal_information = resumeData?.personal_information;
-  const overview_data = resumeData?.overview
-  const projects_data = resumeData?.projects
-  const experience_data = resumeData?.experience
-  const skills_data = resumeData?.skills
+const getContrastTextColor = (hexColor: string): string => {
+  const normalized = normalizeHexColor(hexColor);
+  if (!normalized) return "#FFFFFF";
 
-  const getPreviewContent = () => {
-    switch (templateId) {
-      case '1':
-        return <ModernMinimalistPortfolio
-         personalInformation={personal_information}
-         overviewData={overview_data}
-         experience={experience_data}
-         skills={skills_data}
-         projects={projects_data}
-         mainColor={selectedColor}
-         backgroundColor={backgroundColor}
-         />
+  const hex = normalized.replace("#", "");
+  const r = Number.parseInt(hex.slice(0, 2), 16);
+  const g = Number.parseInt(hex.slice(2, 4), 16);
+  const b = Number.parseInt(hex.slice(4, 6), 16);
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
 
-      case '2':
-        return <ClassicProfessionalPortfolio
-          personalInformation={personal_information}
-         overviewData={overview_data}
-         experience={experience_data}
-         skills={skills_data}
-         projects={projects_data}
-         mainColor={selectedColor}
-         backgroundColor={backgroundColor}
-        />;
-      case '3':
-        return <CreativeBoldPortfolio 
-        personalInformation={personal_information}
-         overviewData={overview_data}
-         experience={experience_data}
-         skills={skills_data}
-         projects={projects_data}
-         mainColor={selectedColor}
-         backgroundColor={backgroundColor}
-         />
-        ;
-      case '4':
-        return <ElegantSophisticatedPortfolio
-        personalInformation={personal_information}
-         overviewData={overview_data}
-         experience={experience_data}
-         skills={skills_data}
-         projects={projects_data}
-         mainColor={selectedColor}
-         backgroundColor={backgroundColor}
-         />
-      default:
-        return (
-          <div className="bg-card rounded-lg border p-8 text-center">
-            <p className="text-muted-foreground">Preview for {templateId}</p>
-          </div>
-        );
-    }
-  };
+  return brightness > 160 ? "#111827" : "#FFFFFF";
+};
+
+const mockResumeForGallery: ParsedResume = {
+  resume_pdf: "",
+  portfolio_id: "gallery-preview",
+  personal_information: {
+    full_name: "Alex Rivera",
+    contact_info: {
+      email: "alex@folio.dev",
+      linkedin: "https://www.linkedin.com/in/alexrivera",
+      phone: "+1 (555) 013-8891",
+      address: "Brooklyn, NY",
+    },
+    education: {
+      school: "Pratt Institute",
+      majors: ["Information Experience Design"],
+      minors: ["Creative Coding"],
+      expected_grad: "2024",
+    },
+  },
+  overview: {
+    career_name: "Product Engineer & Visual Storyteller",
+    resume_summary:
+      "I build resilient software and expressive interfaces that help teams communicate ideas clearly and ship with confidence.",
+  },
+  projects: [
+    {
+      title: "Atlas Studio",
+      description:
+        "Designed a multi-tenant creator dashboard that improved onboarding conversion by 31%. https://atlas.example/demo https://github.com/atlas/studio",
+    },
+    {
+      title: "Pulse Narrative",
+      description:
+        "Built a data storytelling workflow with reusable modules for analytics, visuals, and publishing automation.",
+    },
+    {
+      title: "Northlight Platform",
+      description:
+        "Led migration from legacy UI to modular React architecture with measurable performance gains.",
+    },
+  ],
+  experience: [
+    {
+      company: "Northlight Labs",
+      description:
+        "Owned frontend platform standards, launched internal design tokens, and improved release confidence across product teams.",
+      employed_dates: "2022 - Present",
+    },
+    {
+      company: "Studio Meridian",
+      description:
+        "Partnered with design and product to ship customer-facing initiatives focused on retention and usability.",
+      employed_dates: "2019 - 2022",
+    },
+  ],
+  skills: [
+    "TypeScript",
+    "React",
+    "Next.js",
+    "Node.js",
+    "PostgreSQL",
+    "Design Systems",
+    "Storytelling",
+    "Product Strategy",
+  ],
+};
+
+const templateLoadFallback = () => (
+  <div className="rounded-lg border border-dashed border-[var(--color-border)] p-6 text-sm text-muted-foreground">
+    Loading template preview...
+  </div>
+);
+
+const templateComponentMap: Record<string, ComponentType<TemplateComponentProps>> = {
+  "1": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ModernMinimalist"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "2": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ClassicProfessional"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "3": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/CreativeBold"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "4": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ElegantSophisticated"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "5": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/SideRailPro"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "6": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/EditorialStory"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "7": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/IDEClean"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "8": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/TimelineNarrative"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "9": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/BoldBrand"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+  "10": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/MinimalCreatorHub"), {
+    ssr: false,
+    loading: templateLoadFallback,
+  }),
+};
+
+const PREVIEW_SCALE = 0.24;
+
+function TemplateGalleryCard({
+  template,
+  selectedColor,
+  displayMode,
+  active,
+  onSelect,
+}: {
+  template: TemplateMeta;
+  selectedColor: string;
+  displayMode: DisplayMode;
+  active: boolean;
+  onSelect: (templateId: string) => void;
+}) {
+  const SelectedTemplate = templateComponentMap[template.id];
+  const backgroundColor = modeBackground(displayMode);
+
+  const mockConfig = useMemo(
+    () =>
+      normalizeTemplateConfig({
+        templateId: template.id,
+        resumeData: mockResumeForGallery,
+        fallbackTheme: {
+          primaryColor: selectedColor,
+          backgroundColor,
+          mode: displayMode,
+        },
+      }),
+    [template.id, selectedColor, backgroundColor, displayMode]
+  );
 
   return (
-    <Card className="border-2 shadow-lg" style={{ boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)' }}>
-      <CardHeader className="relative">
-        <CardTitle className="flex items-center gap-2">
-          <Eye className="w-5 h-5" />
-          Template Preview
-        </CardTitle>
-        <CardDescription>
-          This is how your portfolio will look with this template
-        </CardDescription>
-        {/* Fullscreen button */}
-        <button
-          aria-label="Open fullscreen preview"
-          title="Open fullscreen preview"
-          onClick={() => {
-            if (templateId) localStorage.setItem('selectedTemplate', templateId);
-            if (selectedColor) localStorage.setItem('selectedColor', selectedColor);
-            if (displayMode) localStorage.setItem('selectedMode', displayMode);
-            setIsFullscreen(true);
-          }}
-          className="absolute top-4 right-4 inline-flex items-center justify-center p-2 rounded-md bg-background border shadow-sm hover:bg-accent"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 110 2H5v2a1 1 0 11-2 0V4zM17 4a1 1 0 00-1-1h-3a1 1 0 100 2h2v2a1 1 0 102 0V4zM4 16a1 1 0 011 1h3a1 1 0 110 2H5a3 3 0 01-3-3v-1a1 1 0 012 0v1zM16 17a1 1 0 100-2h-2v-1a1 1 0 10-2 0v1a3 3 0 003 3h1a1 1 0 100-2h-1z" clipRule="evenodd" />
-          </svg>
-        </button>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-auto max-h-[600px] rounded-lg">
-          {getPreviewContent()}
+    <article
+      className={`group rounded-2xl border bg-[var(--color-card)]/88 p-4 transition duration-300 hover:-translate-y-1 hover:scale-[1.01] hover:shadow-2xl ${
+        active
+          ? "border-[var(--color-primary)]/65 shadow-xl"
+          : "border-[var(--color-border)]/75 hover:border-[var(--color-primary)]/35"
+      }`}
+    >
+      <div className="mb-4 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/35">
+        <div className="relative h-56 overflow-hidden">
+          {SelectedTemplate ? (
+            <div
+              className="absolute inset-0 origin-top-left pointer-events-none"
+              style={{
+                transform: `scale(${PREVIEW_SCALE})`,
+                width: `${100 / PREVIEW_SCALE}%`,
+                height: `${100 / PREVIEW_SCALE}%`,
+              }}
+            >
+              <SelectedTemplate
+                personalInformation={mockResumeForGallery.personal_information}
+                overviewData={mockResumeForGallery.overview}
+                projects={mockResumeForGallery.projects}
+                experience={mockResumeForGallery.experience}
+                skills={mockResumeForGallery.skills}
+                mainColor={selectedColor}
+                backgroundColor={backgroundColor}
+                templateConfig={mockConfig}
+              />
+            </div>
+          ) : (
+            <div className="h-full w-full items-center justify-center text-sm text-muted-foreground" />
+          )}
         </div>
-      </CardContent>
+      </div>
 
-      {/* Full-window overlay preview */}
-      {isFullscreen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 p-6"
-          onClick={() => setIsFullscreen(false)}
-        >
-          <div
-            className="relative w-full h-full max-w-6xl bg-background rounded-lg overflow-auto shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="absolute top-4 right-4 flex items-center space-x-2 z-60">
-              <button
-                aria-label="Close fullscreen preview"
-                title="Close fullscreen preview"
-                onClick={() => setIsFullscreen(false)}
-                className="p-2 rounded-md bg-background border shadow-sm hover:bg-accent"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-            <div className="p-8">
-              {getPreviewContent()}
-            </div>
+      <div className="space-y-2">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold tracking-tight">{template.name}</h3>
+            <p className="text-sm text-muted-foreground">{template.description}</p>
           </div>
+          <Badge variant="outline" className="font-mono text-xs">
+            #{template.id}
+          </Badge>
         </div>
-      )}
-    </Card>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {template.bestFor.map((label) => (
+            <Badge key={`${template.id}-${label}`} className="bg-[var(--color-primary)]/12 text-foreground">
+              {label}
+            </Badge>
+          ))}
+        </div>
+
+        <Button
+          onClick={() => onSelect(template.id)}
+          className="mt-2 w-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:opacity-90"
+        >
+          Select And Customize
+        </Button>
+      </div>
+    </article>
   );
-};
+}
 
 export default function TemplatesPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
-  const [selectedColor, setSelectedColor] = useState<string>('#2563EB');
-  const [displayMode, setDisplayMode] = useState<'light' | 'dark'>('light');
+  const [selectedColor, setSelectedColor] = useState<string>("#2563EB");
+  const [customColor, setCustomColor] = useState<string>("#2563EB");
+  const [isCustomColorSelected, setIsCustomColorSelected] = useState<boolean>(false);
+  const [displayMode, setDisplayMode] = useState<DisplayMode>("light");
   const router = useRouter();
   const info = useUser();
 
   useEffect(() => {
-    const storedData = localStorage.getItem('resumeData');
+    const storedData = localStorage.getItem("resumeData");
     if (storedData) {
       try {
         setResumeData(JSON.parse(storedData) as ParsedResume);
-      } catch (e) {
-        console.error('Failed to parse resumeData from localStorage', e);
-        router.push('/upload');
+      } catch (error) {
+        console.error("Failed to parse resumeData from localStorage", error);
+        router.push("/upload");
       }
     } else {
-      router.push('/upload');
+      router.push("/upload");
     }
 
-    // load previously chosen color
-    const storedColor = localStorage.getItem('selectedColor');
-    if (storedColor) setSelectedColor(storedColor);
-    // load previously chosen display mode
-    const storedMode = localStorage.getItem('selectedMode') as ('light'|'dark') | null;
-    if (storedMode) setDisplayMode(storedMode);
+    const storedTemplate = localStorage.getItem("selectedTemplate");
+    if (storedTemplate) {
+      setSelectedTemplate(storedTemplate);
+    }
+
+    const storedColor = localStorage.getItem("selectedColor");
+    if (storedColor) {
+      const normalized = normalizeHexColor(storedColor);
+      if (normalized) {
+        setSelectedColor(normalized);
+        setCustomColor(normalized);
+        const isPreset = presetColorOptions.some((option) => option.value.toUpperCase() === normalized);
+        setIsCustomColorSelected(!isPreset);
+      }
+    }
+
+    const storedMode = localStorage.getItem("selectedMode") as DisplayMode | null;
+    if (storedMode === "light" || storedMode === "dark") {
+      setDisplayMode(storedMode);
+    }
   }, [router]);
 
+  const setColorSelection = (value: string, useCustomColor: boolean) => {
+    const normalized = normalizeHexColor(value);
+    if (!normalized) return;
 
-  const handleTemplateSelect = (templateId: string) => {
-    setSelectedTemplate(templateId);
+    setSelectedColor(normalized);
+    setCustomColor(normalized);
+    setIsCustomColorSelected(useCustomColor);
+    localStorage.setItem("selectedColor", normalized);
   };
 
-  const handleGenerateWebsite = () => {
-    if (!selectedTemplate || !resumeData) return;
-    
-    // Just navigate to preview - don't save yet
-    localStorage.setItem('selectedTemplate', selectedTemplate);
-    localStorage.setItem('selectedColor', selectedColor);
-    localStorage.setItem('selectedMode', displayMode);
-    router.push('/preview');
+  const handleSelectTemplate = (templateId: string) => {
+    if (!resumeData) return;
+
+    setSelectedTemplate(templateId);
+    localStorage.setItem("selectedTemplate", templateId);
+    localStorage.setItem("selectedColor", selectedColor);
+    localStorage.setItem("selectedMode", displayMode);
+    localStorage.removeItem("templateConfig");
+    router.push("/customize");
   };
 
   if (info.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-emerald-600 mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading templates...</p>
+          <Loader2 className="mx-auto mb-4 h-12 w-12 animate-spin text-[var(--color-primary)]" />
+          <p className="text-muted-foreground">Loading template gallery...</p>
         </div>
       </div>
     );
   }
 
   if (!info.user) {
-    router.push('/signin');
+    router.push("/signin?next=/templates");
     return null;
   }
 
   if (!resumeData) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Card className="max-w-md">
-          <CardHeader>
-            <CardTitle>No Resume Data Found</CardTitle>
-            <CardDescription>Please upload your resume first.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button onClick={() => router.push('/upload')} className="w-full">
-              Upload Resume
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="text-center">
+          <p className="mb-4 text-muted-foreground">No resume data found. Upload a resume first.</p>
+          <Button onClick={() => router.push("/upload")}>Upload Resume</Button>
+        </div>
       </div>
     );
   }
 
-  // color options for picker - nature-inspired palette
-  const colorOptions = [
-    { id: 'forest', value: '#10B981', label: 'Forest Green' },
-    { id: 'moss', value: '#4D7C0F', label: 'Moss' },
-    { id: 'sage', value: '#84CC16', label: 'Sage' },
-    { id: 'teal', value: '#0F766E', label: 'Ocean Teal' },
-    { id: 'bark', value: '#92400E', label: 'Bark Brown' },
-    { id: 'sky', value: '#0EA5E9', label: 'Sky Blue' },
-  ];
-
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen bg-gradient-to-b from-[var(--color-background)] via-[var(--color-background)] to-[var(--color-card)]/35">
       <Header currentPage="templates" />
 
-      {/* Main Content */}
       <main className="py-8">
-        <div className="container-base max-w-7xl">
-          {/* Page Header */}
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold tracking-tight mb-2 flex items-center gap-3">
-              <TreePine className="w-8 h-8 text-emerald-600" />
-              Choose Your Template
-            </h2>
-            <p className="text-muted-foreground">
-              Select a design that lets your career story flourish
-            </p>
-
-            {/* Color picker and display mode */}
-            <div className="flex flex-wrap items-center gap-6 mt-6">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium">Color:</span>
-                <div className="flex items-center gap-2">
-                  {colorOptions.map((c) => (
-                    <button
-                      key={c.id}
-                      aria-label={`Choose ${c.label}`}
-                      title={c.label}
-                      onClick={() => {
-                        setSelectedColor(c.value);
-                        localStorage.setItem('selectedColor', c.value);
-                      }}
-                      className={`w-8 h-8 rounded-full border-2 transition-all ${
-                        selectedColor === c.value ? 'ring-2 ring-offset-2 ring-emerald-500 scale-110' : 'border-muted hover:scale-105'
-                      }`}
-                      style={{ backgroundColor: c.value }}
-                    />
-                  ))}
-                </div>
+        <div className="container-base max-w-7xl space-y-6">
+          <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]/65 p-5 shadow-sm backdrop-blur-sm">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="flex items-center gap-3 text-3xl font-bold tracking-tight">
+                  <TreePine className="h-8 w-8 text-[var(--color-primary)]" />
+                  Premium Template Gallery
+                </h2>
+                <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                  Browse live, scrollable previews. Each card is a real rendered template using normalized mock data.
+                </p>
               </div>
-              
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium">Display:</span>
-                <div className="inline-flex rounded-lg border bg-background p-1">
-                  {(['light','dark'] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      onClick={() => {
-                        setDisplayMode(mode);
-                        localStorage.setItem('selectedMode', mode);
-                      }}
-                      className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
-                        displayMode === mode ? 'bg-emerald-600 text-white' : 'hover:bg-emerald-50'
-                      }`}
-                    >
-                      {mode[0].toUpperCase() + mode.slice(1)}
-                    </button>
-                  ))}
-                </div>
+              <Badge className="bg-[var(--color-primary)]/12 text-foreground">
+                <Sparkles className="mr-1 h-3.5 w-3.5" />
+                {galleryTemplates.length} Premium Templates
+              </Badge>
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-[var(--color-border)] pt-4">
+              <div className="flex items-center gap-2">
+                <Palette className="h-4 w-4 text-[var(--color-primary)]" />
+                <span className="text-sm font-medium">Accent</span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {presetColorOptions.map((color) => (
+                  <button
+                    key={color.id}
+                    type="button"
+                    aria-label={`Choose ${color.label}`}
+                    title={color.label}
+                    onClick={() => setColorSelection(color.value, false)}
+                    className={`h-8 w-8 rounded-full border-2 transition ${
+                      !isCustomColorSelected && selectedColor === color.value.toUpperCase()
+                        ? "scale-110 ring-2 ring-[var(--color-primary)] ring-offset-2 ring-offset-[var(--color-background)]"
+                        : "border-[var(--color-border)] hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                  />
+                ))}
+
+                <label className="sr-only" htmlFor="custom-accent-input">
+                  Custom accent color
+                </label>
+                <input
+                  id="custom-accent-input"
+                  type="color"
+                  value={normalizeHexColor(customColor) ?? "#2563EB"}
+                  onChange={(event) => setColorSelection(event.target.value, true)}
+                  className="h-8 w-8 cursor-pointer rounded border border-[var(--color-border)] bg-transparent p-0"
+                  style={{ color: getContrastTextColor(customColor) }}
+                />
+              </div>
+
+              <div className="ml-auto flex items-center gap-2 rounded-lg border border-[var(--color-border)] p-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDisplayMode("light");
+                    localStorage.setItem("selectedMode", "light");
+                  }}
+                  className={`inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm transition ${
+                    displayMode === "light"
+                      ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
+                      : "text-muted-foreground hover:bg-[var(--color-accent)]"
+                  }`}
+                >
+                  <Sun className="h-3.5 w-3.5" />
+                  Light
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDisplayMode("dark");
+                    localStorage.setItem("selectedMode", "dark");
+                  }}
+                  className={`inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm transition ${
+                    displayMode === "dark"
+                      ? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)]"
+                      : "text-muted-foreground hover:bg-[var(--color-accent)]"
+                  }`}
+                >
+                  <MoonStar className="h-3.5 w-3.5" />
+                  Dark
+                </button>
               </div>
             </div>
-          </div>
+          </section>
 
-          {/* Templates Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Template Selection - Left */}
-            <div className="lg:col-span-1 space-y-6">
-              <div className="space-y-4">
-                {templates.map((template) => (
-                  <Card
+          <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]/65 p-3 shadow-sm backdrop-blur-sm">
+            <div className="max-h-[72vh] overflow-y-auto p-2 sm:p-3">
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
+                {galleryTemplates.map((template) => (
+                  <TemplateGalleryCard
                     key={template.id}
-                    className={`cursor-pointer transition-all border ${
-                      selectedTemplate === template.id
-                        ? 'ring-2 ring-emerald-500 border-emerald-200 shadow-xl bg-emerald-50/50'
-                        : 'border-emerald-100 bg-white/70 backdrop-blur-sm shadow-md hover:shadow-xl'
-                    }`}
-                    style={selectedTemplate === template.id ? {
-                      boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
-                    } : {
-                      boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
-                    }}
-                    onClick={() => handleTemplateSelect(template.id)}
-                  >
-                    <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="flex items-center gap-2">
-                            {template.name}
-                            {selectedTemplate === template.id && (
-                              <Check className="w-5 h-5 text-emerald-600" />
-                            )}
-                          </CardTitle>
-                          <CardDescription>{template.description}</CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <Badge variant="secondary">{template.category}</Badge>
-                    </CardContent>
-                  </Card>
+                    template={template}
+                    selectedColor={selectedColor}
+                    displayMode={displayMode}
+                    active={selectedTemplate === template.id}
+                    onSelect={handleSelectTemplate}
+                  />
                 ))}
               </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-3">
-                <Button
-                  onClick={handleGenerateWebsite}
-                  disabled={!selectedTemplate}
-                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
-                  size="lg"
-                >
-                  {selectedTemplate ? (
-                    <>
-                      <Sprout className="w-4 h-4 mr-2" />
-                      Grow My Portfolio
-                      <ArrowRight className="w-4 h-4 ml-2" />
-                    </>
-                  ) : (
-                    'Select a Template First'
-                  )}
-                </Button>
-                
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                      or
-                    </span>
-                  </div>
-                </div>
-
-                <Button
-                  onClick={() => router.push('/customize')}
-                  variant="outline"
-                  className="w-full gap-2 border-emerald-200 hover:bg-emerald-50"
-                  size="lg"
-                >
-                  <Sparkles className="w-4 h-4 text-emerald-600" />
-                  Cultivate from Scratch
-                </Button>
-              </div>
             </div>
-
-            {/* Preview - Right */}
-            <div className="lg:col-span-2">
-              {selectedTemplate ? (
-                <TemplatePreview templateId={selectedTemplate} resumeData={resumeData} selectedColor={selectedColor} displayMode={displayMode} />
-              ) : (
-                <Card className="border-2 border-dashed">
-                  <CardContent className="flex flex-col items-center justify-center py-24">
-                    <Eye className="w-16 h-16 text-muted-foreground mb-4" />
-                    <h3 className="text-xl font-semibold mb-2">Select a Template</h3>
-                    <p className="text-muted-foreground text-center">
-                      Click on a template card to see a preview
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </div>
+          </section>
         </div>
       </main>
     </div>

@@ -1,0 +1,469 @@
+.root {
+  --ed-fg: #1f150d;
+  --ed-muted: color-mix(in srgb, var(--ed-fg) 52%, transparent);
+  --ed-border: color-mix(in srgb, var(--ed-fg) 14%, transparent);
+  --ed-surface: color-mix(in srgb, var(--ed-bg) 92%, #ffffff 8%);
+  background: radial-gradient(circle at top left, color-mix(in srgb, var(--ed-accent) 10%, transparent), transparent 42%), var(--ed-bg);
+  color: var(--ed-fg);
+  min-height: 100vh;
+  font-family: "Newsreader", "Iowan Old Style", "Palatino Linotype", serif;
+}
+
+.darkMode {
+  --ed-fg: #f8f3eb;
+  --ed-muted: color-mix(in srgb, var(--ed-fg) 64%, transparent);
+  --ed-border: color-mix(in srgb, var(--ed-fg) 20%, transparent);
+  --ed-surface: color-mix(in srgb, var(--ed-bg) 95%, #ffffff 5%);
+}
+
+.layout {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.rail {
+  position: sticky;
+  top: 0;
+  z-index: 8;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--ed-border);
+  padding: 1rem;
+  display: grid;
+  gap: 0.65rem;
+  background: color-mix(in srgb, var(--ed-bg) 92%, #ffffff 8%);
+}
+
+.railTop {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.monogram {
+  margin: 0;
+  color: var(--ed-accent);
+  font-size: 0.72rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+}
+
+.railTop h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.railTop p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--ed-muted);
+}
+
+.mobileToggle {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--ed-border);
+  border-radius: 0.45rem;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+}
+
+.mobileToggle:focus-visible,
+.navLink:focus-visible,
+.primaryButton:focus-visible,
+.ghostButton:focus-visible,
+.inlineLink:focus-visible,
+.contactItem:focus-visible {
+  outline: 2px solid var(--ed-accent);
+  outline-offset: 2px;
+}
+
+.railNav {
+  display: none;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.railNavOpen {
+  display: flex;
+}
+
+.navLink {
+  border: 1px solid var(--ed-border);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  padding: 0.38rem 0.68rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+}
+
+.navLink:hover {
+  border-color: color-mix(in srgb, var(--ed-accent) 55%, var(--ed-border));
+}
+
+.navLinkActive {
+  border-color: color-mix(in srgb, var(--ed-accent) 55%, var(--ed-border));
+  color: var(--ed-accent);
+}
+
+.railFooter {
+  display: none;
+}
+
+.mainContent {
+  width: min(100%, 920px);
+  margin: 0 auto;
+  padding: clamp(1.1rem, 3vw, 2.8rem) clamp(1rem, 3vw, 2.2rem) 4rem;
+  display: grid;
+  gap: 1.1rem;
+}
+
+.hero,
+.section {
+  border-top: 1px solid var(--ed-border);
+  padding-top: 1rem;
+}
+
+.hero {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: var(--ed-accent);
+  font-size: 0.72rem;
+  font-family: "Satoshi", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: clamp(2.2rem, 7vw, 4rem);
+  line-height: 0.98;
+  letter-spacing: -0.02em;
+}
+
+.hero h2 {
+  margin: 0;
+  font-size: clamp(1.06rem, 2vw, 1.3rem);
+  color: var(--ed-muted);
+  font-weight: 500;
+}
+
+.heroSummary {
+  margin: 0;
+  line-height: 1.76;
+  font-size: 1.02rem;
+  max-width: 62ch;
+}
+
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.primaryButton,
+.ghostButton {
+  border-radius: 999px;
+  padding: 0.55rem 0.95rem;
+  font-size: 0.74rem;
+  letter-spacing: 0.07em;
+  font-family: "Satoshi", "Avenir Next", "Segoe UI", sans-serif;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.primaryButton {
+  border: 1px solid color-mix(in srgb, var(--ed-accent) 60%, transparent);
+  background: color-mix(in srgb, var(--ed-accent) 11%, transparent);
+  color: inherit;
+}
+
+.ghostButton {
+  border: 1px solid var(--ed-border);
+  background: transparent;
+  color: inherit;
+}
+
+.sectionHeader {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 0.8rem;
+}
+
+.sectionHeader h2 {
+  margin: 0;
+  font-size: clamp(1.28rem, 2vw, 1.8rem);
+}
+
+.sectionHeader p {
+  margin: 0;
+  color: var(--ed-muted);
+  line-height: 1.66;
+  max-width: 62ch;
+}
+
+.twoColumn {
+  display: grid;
+  gap: 1rem;
+}
+
+.card {
+  border: 1px solid var(--ed-border);
+  border-radius: 0.35rem;
+  padding: 1rem;
+  background: var(--ed-surface);
+}
+
+.card h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.03rem;
+}
+
+.card p {
+  margin: 0;
+  line-height: 1.72;
+}
+
+.educationLine {
+  margin-top: 0.75rem;
+  border-top: 1px solid var(--ed-border);
+  padding-top: 0.75rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.educationLine h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.educationLine p {
+  color: var(--ed-muted);
+}
+
+.statsGrid {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+}
+
+.statCard {
+  border: 1px dashed var(--ed-border);
+  border-radius: 0.35rem;
+  padding: 0.75rem;
+}
+
+.statCard p {
+  margin: 0;
+  color: var(--ed-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.statCard h3 {
+  margin: 0.3rem 0 0;
+  font-size: 1.02rem;
+}
+
+.stackList,
+.skillGrid,
+.testimonialGrid,
+.timeline {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.itemRow {
+  border-bottom: 1px solid var(--ed-border);
+  padding-bottom: 0.8rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.itemRow:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.itemRow h3,
+.timelineHeading h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+}
+
+.itemRow p,
+.timelineCard p {
+  margin: 0;
+  color: var(--ed-muted);
+  line-height: 1.68;
+}
+
+.itemRow ul,
+.timelineCard ul {
+  margin: 0.6rem 0 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.itemMeta,
+.linkRow,
+.metaRow,
+.tagRow,
+.contactRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.tag {
+  border: 1px solid var(--ed-border);
+  border-radius: 999px;
+  padding: 0.18rem 0.5rem;
+  font-size: 0.72rem;
+  color: var(--ed-muted);
+  font-family: "Satoshi", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.inlineLink,
+.contactItem {
+  text-decoration: none;
+  color: inherit;
+  border: 1px solid var(--ed-border);
+  border-radius: 999px;
+  padding: 0.27rem 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  font-family: "Satoshi", "Avenir Next", "Segoe UI", sans-serif;
+}
+
+.inlineLink:hover,
+.contactItem:hover {
+  border-color: color-mix(in srgb, var(--ed-accent) 58%, var(--ed-border));
+}
+
+.timeline {
+  border-left: 1px solid var(--ed-border);
+  padding-left: 0.9rem;
+}
+
+.timelineCard {
+  border: 1px solid var(--ed-border);
+  border-radius: 0.35rem;
+  padding: 0.85rem;
+  background: var(--ed-surface);
+}
+
+.timelineHeading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.metaRow {
+  justify-content: space-between;
+  color: var(--ed-muted);
+  font-size: 0.75rem;
+}
+
+.quoteIcon {
+  color: var(--ed-accent);
+}
+
+.note {
+  color: var(--ed-muted);
+  font-size: 0.78rem;
+}
+
+.contactCard {
+  border: 1px solid var(--ed-border);
+  border-radius: 0.4rem;
+  padding: 0.95rem;
+  display: grid;
+  gap: 0.7rem;
+  background: var(--ed-surface);
+}
+
+.hero[data-reveal],
+.section[data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 380ms ease, transform 380ms ease;
+}
+
+.hero[data-reveal][data-visible="true"],
+.section[data-reveal][data-visible="true"] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (min-width: 940px) {
+  .layout {
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+  }
+
+  .rail {
+    border-bottom: none;
+    border-right: 1px solid var(--ed-border);
+    min-height: 100vh;
+    align-content: start;
+    padding: clamp(1.2rem, 2.4vw, 2rem);
+    gap: 1rem;
+  }
+
+  .mobileToggle {
+    display: none;
+  }
+
+  .railNav,
+  .railNavOpen {
+    display: grid;
+    gap: 0.35rem;
+  }
+
+  .navLink {
+    text-align: left;
+    border-radius: 0.4rem;
+    padding: 0.45rem 0.6rem;
+  }
+
+  .navLinkActive {
+    background: color-mix(in srgb, var(--ed-accent) 10%, transparent);
+  }
+
+  .railFooter {
+    display: grid;
+    gap: 0.25rem;
+    margin-top: auto;
+    font-size: 0.72rem;
+    color: var(--ed-muted);
+    font-family: "Satoshi", "Avenir Next", "Segoe UI", sans-serif;
+  }
+
+  .twoColumn {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  }
+
+  .skillGrid,
+  .testimonialGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .itemRow {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+  }
+}

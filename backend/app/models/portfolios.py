@@ -31,3 +31,11 @@ class Portfolio(PortfolioBase):
         from_attributes = True
 
 
+class TemplateConfigUpsert(BaseModel):
+    template_config: Dict[str, Any]
+
+
+class TemplateConfigResult(BaseModel):
+    portfolio_id: str
+    template_config: Dict[str, Any]
+
