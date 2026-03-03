@@ -20,6 +20,8 @@ import {
   Save,
   X,
   ArrowLeft,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import {
   SectionType,
@@ -27,6 +29,7 @@ import {
   createSectionConfig,
   deserializeTemplateConfig,
   getAddableSectionTypes,
+  hasRenderableSectionContent,
   normalizeTemplateConfig,
   reorderSections,
   sectionTitle,
@@ -127,6 +130,38 @@ const DARK_BG = '#111111';
 
 const modeBackground = (mode: 'light' | 'dark'): string => (mode === 'light' ? LIGHT_BG : DARK_BG);
 
+const normalizeHex = (value: string | undefined, fallback = '#8B5CF6'): string => {
+  if (!value) return fallback;
+  const trimmed = value.trim();
+
+  if (/^#[0-9a-fA-F]{6}$/.test(trimmed)) return trimmed;
+  if (/^#[0-9a-fA-F]{3}$/.test(trimmed)) {
+    const [, r, g, b] = trimmed;
+    return `#${r}${r}${g}${g}${b}${b}`;
+  }
+
+  return fallback;
+};
+
+const accentColorFromGradient = (gradient?: string): string => {
+  if (!gradient) return '#8B5CF6';
+  const stops = gradient.match(/#[0-9a-fA-F]{3,6}/g);
+  return normalizeHex(stops?.[stops.length - 1], '#8B5CF6');
+};
+
+const buildAccentGradient = (primaryColor: string, accentColor: string): string =>
+  `linear-gradient(120deg, ${normalizeHex(primaryColor, '#2563EB')} 0%, ${normalizeHex(accentColor, '#8B5CF6')} 100%)`;
+
+const TEMPLATE_RENDERED_SECTIONS: Partial<Record<string, SectionType[]>> = {
+  '2': [SectionType.Hero, SectionType.About, SectionType.Projects, SectionType.Experience, SectionType.Contact],
+};
+
+const sectionRenderedByTemplate = (templateId: string, type: SectionType): boolean => {
+  const allowed = TEMPLATE_RENDERED_SECTIONS[templateId];
+  if (!allowed) return true;
+  return allowed.includes(type);
+};
+
 const parseCommaList = (value: string): string[] =>
   value
     .split(',')
@@ -153,6 +188,8 @@ export default function CustomizePage() {
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [draggedSectionId, setDraggedSectionId] = useState<string | null>(null);
   const [showAddDrawer, setShowAddDrawer] = useState(false);
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -252,7 +289,43 @@ export default function CustomizePage() {
     return getAddableSectionTypes(config);
   }, [config]);
 
+  const visibleSidebarSections = useMemo(() => {
+    if (!config) return [];
+    return config.sections.filter(
+      (section) =>
+        section.enabled &&
+        sectionRenderedByTemplate(selectedTemplate, section.type) &&
+        hasRenderableSectionContent(section)
+    );
+  }, [config, selectedTemplate]);
+
+  const hiddenRestorableSections = useMemo(() => {
+    if (!config) return [];
+    return config.sections.filter(
+      (section) =>
+        !section.enabled &&
+        sectionRenderedByTemplate(selectedTemplate, section.type) &&
+        hasRenderableSectionContent(section)
+    );
+  }, [config, selectedTemplate]);
+
+  const accentGradientColor = useMemo(
+    () => accentColorFromGradient(config?.theme.accentGradient),
+    [config?.theme.accentGradient]
+  );
+
   const SelectedTemplate = templateComponentMap[selectedTemplate];
+
+  useEffect(() => {
+    if (!visibleSidebarSections.length) {
+      setSelectedSectionId(null);
+      return;
+    }
+
+    if (!selectedSectionId || !visibleSidebarSections.some((section) => section.id === selectedSectionId)) {
+      setSelectedSectionId(visibleSidebarSections[0].id);
+    }
+  }, [visibleSidebarSections, selectedSectionId]);
 
   const setSection = (
     sectionId: string,
@@ -1948,7 +2021,7 @@ export default function CustomizePage() {
             />
             <Input
               value={content.address}
-              placeholder="Address"
+              placeholder="Add Location"
               onChange={(event) =>
                 setConfig((prev) =>
                   prev
@@ -2042,7 +2115,13 @@ export default function CustomizePage() {
 
       <main className="h-[calc(100vh-80px)] overflow-hidden">
         <div className="h-full flex flex-col lg:flex-row">
-          <aside className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r bg-background flex flex-col">
+          <aside
+            className={`relative w-full border-b bg-background flex flex-col overflow-hidden transition-[width,opacity,border-color] duration-300 ease-in-out lg:border-b-0 lg:border-r ${
+              leftSidebarCollapsed
+                ? 'lg:w-0 lg:min-w-0 lg:opacity-0 lg:pointer-events-none lg:border-r-transparent'
+                : 'lg:w-80 lg:opacity-100'
+            }`}
+          >
             <div className="p-4 border-b space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
@@ -2060,6 +2139,21 @@ export default function CustomizePage() {
                   onChange={(event) =>
                     setTheme({
                       primaryColor: event.target.value,
+                      accentGradient: buildAccentGradient(event.target.value, accentGradientColor),
+                    })
+                  }
+                  className="h-10 p-1"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Accent Gradient</Label>
+                <Input
+                  type="color"
+                  value={accentGradientColor}
+                  onChange={(event) =>
+                    setTheme({
+                      accentGradient: buildAccentGradient(config.theme.primaryColor, event.target.value),
                     })
                   }
                   className="h-10 p-1"
@@ -2091,19 +2185,6 @@ export default function CustomizePage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Accent Gradient (Optional)</Label>
-                <Input
-                  value={config.theme.accentGradient || ''}
-                  placeholder="linear-gradient(...)"
-                  onChange={(event) =>
-                    setTheme({
-                      accentGradient: event.target.value || undefined,
-                    })
-                  }
-                />
-              </div>
-
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => setShowAddDrawer(true)} className="flex-1 gap-1">
                   <Plus className="w-4 h-4" />
@@ -2113,7 +2194,7 @@ export default function CustomizePage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {config.sections.map((section) => (
+              {visibleSidebarSections.map((section) => (
                 <div
                   id={`section-row-${section.id}`}
                   key={section.id}
@@ -2133,30 +2214,32 @@ export default function CustomizePage() {
                       : 'hover:bg-muted/50'
                   } ${draggedSectionId === section.id ? 'opacity-60' : ''}`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSectionId(section.id)}
-                    className="w-full text-left"
-                  >
-                    <div className="flex items-center gap-2">
-                      <GripVertical className="w-4 h-4 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{sectionTitle(section)}</p>
-                        <p className="text-xs text-muted-foreground truncate">Nav: {section.navLabel || sectionTitle(section)}</p>
-                      </div>
-                      <label className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          checked={section.enabled}
-                          onChange={(event) => {
-                            event.stopPropagation();
-                            handleToggleSection(section.id, event.target.checked);
-                          }}
-                        />
-                        Visible
-                      </label>
-                    </div>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <GripVertical className="w-4 h-4 text-muted-foreground" />
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSectionId(section.id)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <p className="text-sm font-medium truncate">{sectionTitle(section)}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Nav: {section.navLabel || sectionTitle(section)}
+                      </p>
+                    </button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleToggleSection(section.id, false);
+                      }}
+                      title="Hide section"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -2173,13 +2256,67 @@ export default function CustomizePage() {
             </div>
           </aside>
 
-          <section className="flex-1 overflow-hidden bg-muted/30">
+          <section className="relative flex-1 overflow-hidden bg-muted/30 transition-all duration-300 ease-in-out">
+            <button
+              type="button"
+              onClick={() => setLeftSidebarCollapsed((value) => !value)}
+              className="absolute left-5 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-center rounded-full border bg-background/90 p-2 shadow-sm backdrop-blur-sm transition-colors hover:bg-muted lg:inline-flex"
+              aria-label={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
+              title={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
+            >
+              {leftSidebarCollapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRightSidebarCollapsed((value) => !value)}
+              className="absolute right-5 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-center rounded-full border bg-background/90 p-2 shadow-sm backdrop-blur-sm transition-colors hover:bg-muted lg:inline-flex"
+              aria-label={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
+              title={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
+            >
+              {rightSidebarCollapsed ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
+            </button>
+
             <div className="h-full overflow-y-auto p-4 lg:p-6">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <Button variant="ghost" size="sm" className="gap-2" onClick={() => router.push('/templates')}>
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to Templates
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="ghost" size="sm" className="gap-2" onClick={() => router.push('/templates')}>
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Templates
+                  </Button>
+                  <div className="hidden items-center gap-1 lg:flex">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setLeftSidebarCollapsed((value) => !value)}
+                      title={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
+                      aria-label={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
+                    >
+                      {leftSidebarCollapsed ? (
+                        <ChevronsRight className="h-4 w-4" />
+                      ) : (
+                        <ChevronsLeft className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setRightSidebarCollapsed((value) => !value)}
+                      title={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
+                      aria-label={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
+                    >
+                      {rightSidebarCollapsed ? (
+                        <ChevronsLeft className="h-4 w-4" />
+                      ) : (
+                        <ChevronsRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
                 <div className="text-sm text-muted-foreground">
                   Live preview updates as you edit
                 </div>
@@ -2216,12 +2353,22 @@ export default function CustomizePage() {
             </div>
           </section>
 
-          <aside className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l bg-background overflow-y-auto">
+          <aside
+            className={`relative w-full border-t bg-background overflow-hidden flex flex-col transition-[width,opacity,border-color] duration-300 ease-in-out lg:border-t-0 lg:border-l ${
+              rightSidebarCollapsed
+                ? 'lg:w-0 lg:min-w-0 lg:opacity-0 lg:pointer-events-none lg:border-l-transparent'
+                : 'lg:w-96 lg:opacity-100'
+            }`}
+          >
             <div className="p-4 border-b">
-              <h3 className="text-lg font-semibold">Content</h3>
-              <p className="text-sm text-muted-foreground">Edit the selected section content.</p>
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-lg font-semibold">Content</h3>
+                  <p className="text-sm text-muted-foreground">Edit the selected section content.</p>
+                </div>
+              </div>
             </div>
-            <div className="p-4">
+            <div className="flex-1 overflow-y-auto p-4">
               {selectedSection ? (
                 <div className="space-y-4">
                   <div>
@@ -2266,6 +2413,29 @@ export default function CustomizePage() {
             </div>
 
             <div className="space-y-2">
+              {hiddenRestorableSections.length ? (
+                <div className="rounded-md border border-dashed p-3">
+                  <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Hidden Sections</p>
+                  <div className="space-y-2">
+                    {hiddenRestorableSections.map((section) => (
+                      <button
+                        key={`restore-${section.id}`}
+                        type="button"
+                        onClick={() => {
+                          handleToggleSection(section.id, true);
+                          setSelectedSectionId(section.id);
+                          setShowAddDrawer(false);
+                        }}
+                        className="w-full rounded-md border p-2 text-left transition-colors hover:bg-muted/60"
+                      >
+                        <p className="text-sm font-medium">Restore {sectionTitle(section)}</p>
+                        <p className="text-xs text-muted-foreground">Re-enable this section in the sidebar and preview.</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               {addableSections.length ? (
                 addableSections.map((entry) => (
                   <button
@@ -2276,13 +2446,23 @@ export default function CustomizePage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium">{entry.label}</p>
-                      {entry.allowMultiple ? (
-                        <Badge variant="secondary">Multiple</Badge>
-                      ) : (
-                        <Badge variant="outline">Single</Badge>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {!sectionRenderedByTemplate(selectedTemplate, entry.type) ? (
+                          <Badge variant="outline">Saved only</Badge>
+                        ) : null}
+                        {entry.allowMultiple ? (
+                          <Badge variant="secondary">Multiple</Badge>
+                        ) : (
+                          <Badge variant="outline">Single</Badge>
+                        )}
+                      </div>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">{entry.description}</p>
+                    {!sectionRenderedByTemplate(selectedTemplate, entry.type) ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        This section is stored in your config/resume data but not rendered by this template.
+                      </p>
+                    ) : null}
                   </button>
                 ))
               ) : (

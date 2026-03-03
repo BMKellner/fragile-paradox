@@ -23,7 +23,9 @@
     "next": "15.5.9",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "tailwind-merge": "^3.4.0"
+    "react-tsparticles": "^2.12.2",
+    "tailwind-merge": "^3.4.0",
+    "tsparticles": "^2.12.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

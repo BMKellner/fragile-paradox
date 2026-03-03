@@ -1,30 +1,131 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import Link from "next/link";
-import { Menu, X, ArrowUpRight, Quote, Linkedin, Mail, MapPin, Phone } from "lucide-react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { Inter, Sora } from "next/font/google";
+import { Linkedin, Mail, MapPin, Phone } from "lucide-react";
+import { motion } from "framer-motion";
 import styles from "./ElegantSophisticated.module.css";
 import {
   SectionType,
-  sectionTitle,
   type AboutSectionContent,
-  type BlogSectionContent,
-  type CertificationsSectionContent,
   type ContactSectionContent,
-  type EducationSectionContent,
   type ExperienceSectionContent,
   type HeroSectionContent,
-  type ProjectsSectionContent,
-  type SkillsSectionContent,
-  type TestimonialsSectionContent,
 } from "@/lib/template-config";
-import { enabledSections, resolveTemplateConfigFromProps } from "@/components/PortfolioTemplates/shared/templateConfigAdapter";
-import { getInitials, isLightColor, sanitizeHexColor, type TemplateProps } from "@/components/PortfolioTemplates/shared/portfolioData";
-import { HeroSection } from "./sections/HeroSection";
+import {
+  enabledSections,
+  firstSectionOfType,
+  resolveTemplateConfigFromProps,
+} from "@/components/PortfolioTemplates/shared/templateConfigAdapter";
+import {
+  getInitials,
+  isLightColor,
+  sanitizeHexColor,
+  type TemplateProps,
+} from "@/components/PortfolioTemplates/shared/portfolioData";
+import { Navbar, type NavItem } from "./components/navbar";
+import { Section } from "./components/section";
+import { Card, Pill } from "./components/cards";
+import { ExperienceTimeline } from "./components/experience-timeline";
+import { ContactForm } from "./components/contact-form";
+import { Footer } from "./components/footer";
+import {
+  pageLoadVariants,
+  revealItemVariants,
+  staggerContainerVariants,
+} from "./components/motion";
+import { ProjectsSection } from "./sections/projects-section";
 
-const navLabel = (type: SectionType, fallback: string): string => {
-  if (type === SectionType.Hero) return "Home";
-  return fallback;
+const displayFont = Sora({
+  variable: "--es-font-display",
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+});
+
+const bodyFont = Inter({
+  variable: "--es-font-body",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+const DEFAULT_HERO: HeroSectionContent = {
+  title: "Portfolio",
+  eyebrow: "Portfolio",
+  fullName: "Your Name",
+  careerName: "Professional Specialist",
+  summary:
+    "I help teams turn complex goals into clear outcomes through strategy, execution, and thoughtful collaboration.",
+  primaryCtaLabel: "Email",
+  secondaryCtaLabel: "Location",
+};
+
+const DEFAULT_ABOUT: AboutSectionContent = {
+  title: "About",
+  subtitle: "A brief profile that works across design, marketing, healthcare, operations, and business roles.",
+  summary:
+    "I focus on practical systems that improve service quality, communication, and measurable outcomes. My work balances strategic thinking with reliable day-to-day delivery.",
+  educationLabel: "Professional Background",
+  educationDetails: "Add degrees, certifications, or domain training details here.",
+  stats: [
+    { label: "Years in Practice", value: "8+" },
+    { label: "Initiatives Delivered", value: "35+" },
+    { label: "Cross-Functional Teams", value: "14" },
+  ],
+};
+
+const DEFAULT_EXPERIENCE: ExperienceSectionContent = {
+  title: "Experience",
+  subtitle: "Recent roles and highlights presented in a concise timeline.",
+  items: [
+    {
+      company: "Organization Name",
+      employedDates: "2022 - Present",
+      bullets: [
+        "Led high-impact programs spanning operations, client experience, and internal process improvement.",
+      ],
+      tags: ["Leadership", "Delivery"],
+    },
+  ],
+};
+
+const DEFAULT_CONTACT: ContactSectionContent = {
+  title: "Contact",
+  subtitle: "Reach out for consulting, full-time opportunities, or strategic collaborations.",
+  email: "hello@example.com",
+  phone: "",
+  address: "Remote",
+  linkedin: "",
+  ctaLabel: "Send me an email",
+};
+
+const hexToRgbTriplet = (hexColor: string): string => {
+  const normalized = sanitizeHexColor(hexColor, "#0a0d16").replace("#", "");
+  const red = Number.parseInt(normalized.slice(0, 2), 16);
+  const green = Number.parseInt(normalized.slice(2, 4), 16);
+  const blue = Number.parseInt(normalized.slice(4, 6), 16);
+  return `${red} ${green} ${blue}`;
+};
+
+const normalizeExternalUrl = (value: string): string => {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) return trimmed;
+  return `https://${trimmed}`;
+};
+
+const navLabelForType = (type: SectionType): string => {
+  switch (type) {
+    case SectionType.About:
+      return "About";
+    case SectionType.Projects:
+      return "Projects";
+    case SectionType.Experience:
+      return "Experience";
+    case SectionType.Contact:
+      return "Contact";
+    default:
+      return "Section";
+  }
 };
 
 export default function ElegantSophisticatedPortfolio({
@@ -37,10 +138,7 @@ export default function ElegantSophisticatedPortfolio({
   backgroundColor,
   templateConfig,
 }: TemplateProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [emailCopied, setEmailCopied] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>("hero-1");
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [activeSection, setActiveSection] = useState("hero-1");
 
   const resolvedConfig = useMemo(
     () =>
@@ -67,532 +165,281 @@ export default function ElegantSophisticatedPortfolio({
     ]
   );
 
-  const sections = useMemo(() => enabledSections(resolvedConfig), [resolvedConfig]);
+  const allEnabledSections = useMemo(() => enabledSections(resolvedConfig), [resolvedConfig]);
+  const heroSection = firstSectionOfType(resolvedConfig, SectionType.Hero);
+  const primaryContactSection = firstSectionOfType(resolvedConfig, SectionType.Contact);
+  const heroContent = heroSection?.content ?? DEFAULT_HERO;
+  const primaryContactContent = primaryContactSection?.content ?? DEFAULT_CONTACT;
+  const heroId = heroSection?.id ?? "hero-1";
 
-  const navTabs = useMemo(
+  const orderedContentSections = useMemo(
     () =>
-      sections.map((section) => ({
+      allEnabledSections.filter(
+        (section) =>
+          section.type === SectionType.About ||
+          section.type === SectionType.Projects ||
+          section.type === SectionType.Experience ||
+          section.type === SectionType.Contact
+      ),
+    [allEnabledSections]
+  );
+
+  const navItems = useMemo<NavItem[]>(
+    () => [
+      { id: heroId, label: heroSection?.navLabel?.trim() || "Home" },
+      ...orderedContentSections.map((section) => ({
         id: section.id,
-        label: section.navLabel || navLabel(section.type, sectionTitle(section)),
+        label: section.navLabel?.trim() || navLabelForType(section.type),
       })),
-    [sections]
+    ],
+    [heroId, heroSection?.navLabel, orderedContentSections]
   );
 
   useEffect(() => {
-    if (navTabs.length && !navTabs.some((tab) => tab.id === activeSection)) {
-      setActiveSection(navTabs[0].id);
-    }
-  }, [navTabs, activeSection]);
+    setActiveSection(heroId);
+  }, [heroId]);
 
   useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    const revealElements = Array.from(root.querySelectorAll<HTMLElement>("[data-reveal]"));
-    const revealObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const target = entry.target as HTMLElement;
-            target.dataset.visible = "true";
-          }
-        });
-      },
-      { threshold: 0.15, rootMargin: "0px 0px -10% 0px" }
-    );
-
-    revealElements.forEach((element) => revealObserver.observe(element));
-
-    const sectionElements = navTabs
-      .map((tab) => root.querySelector<HTMLElement>(`#${tab.id}`))
+    const sectionElements = navItems
+      .map((item) => document.getElementById(item.id))
       .filter((element): element is HTMLElement => Boolean(element));
 
-    const activeObserver = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+    if (!sectionElements.length) return;
 
-        const id = visible[0]?.target.id;
-        if (id) setActiveSection(id);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleSections = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((entryA, entryB) => entryB.intersectionRatio - entryA.intersectionRatio);
+
+        const newActiveId = visibleSections[0]?.target.id;
+        if (newActiveId) setActiveSection(newActiveId);
       },
-      { threshold: [0.2, 0.45], rootMargin: "-35% 0px -45% 0px" }
+      {
+        threshold: [0.22, 0.45, 0.7],
+        rootMargin: "-34% 0px -48% 0px",
+      }
     );
 
-    sectionElements.forEach((section) => activeObserver.observe(section));
+    sectionElements.forEach((section) => observer.observe(section));
 
-    return () => {
-      revealObserver.disconnect();
-      activeObserver.disconnect();
-    };
-  }, [navTabs]);
-
-  const accent = sanitizeHexColor(resolvedConfig.theme.primaryColor, "#d4af37");
-  const bg = sanitizeHexColor(resolvedConfig.theme.backgroundColor, "#111111");
-  const lightMode = isLightColor(bg, 175);
-
-  const rootStyle = {
-    "--es-accent": accent,
-    "--es-bg": bg,
-  } as CSSProperties;
+    return () => observer.disconnect();
+  }, [navItems]);
 
   const navigateTo = (id: string) => {
     setActiveSection(id);
-    setMenuOpen(false);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const heroSection = sections.find((section) => section.type === SectionType.Hero);
-  const heroContent =
-    (heroSection?.content as HeroSectionContent | undefined) ??
-    ({
-      title: "Portfolio",
-      eyebrow: "Portfolio",
-      fullName: "Your Name",
-      careerName: "Engineering Professional",
-      summary: "",
-      primaryCtaLabel: "Send Message",
-      secondaryCtaLabel: "Copy Email",
-    } satisfies HeroSectionContent);
+  const accent = sanitizeHexColor(resolvedConfig.theme.primaryColor, "#d3b36b");
+  const baseBackground = sanitizeHexColor(resolvedConfig.theme.backgroundColor, "#0a0d16");
+  const lightMode = isLightColor(baseBackground, 168);
 
-  const contactSection = sections.find((section) => section.type === SectionType.Contact);
-  const contactContent =
-    (contactSection?.content as ContactSectionContent | undefined) ??
-    ({
-      title: "Contact",
-      subtitle: "",
-      email: "",
-      phone: "",
-      address: "",
-      linkedin: "",
-      ctaLabel: "Send me an email",
-    } satisfies ContactSectionContent);
+  const rootStyle = {
+    "--es-accent": accent,
+    "--es-bg": baseBackground,
+    "--es-bg-rgb": hexToRgbTriplet(baseBackground),
+  } as CSSProperties;
 
-  const copyEmail = async () => {
-    if (!contactContent.email) return;
-
-    try {
-      await navigator.clipboard.writeText(contactContent.email);
-      setEmailCopied(true);
-      window.setTimeout(() => setEmailCopied(false), 1500);
-    } catch {
-      setEmailCopied(false);
-    }
-  };
-
-  const renderSection = (section: (typeof sections)[number]) => {
-    switch (section.type) {
-      case SectionType.Hero: {
-        const content = section.content as HeroSectionContent;
-        return (
-          <HeroSection
-            key={section.id}
-            sectionId={section.id}
-            title={content.eyebrow || "Portfolio"}
-            primaryCtaLabel={content.primaryCtaLabel || "Send Message"}
-            initials={getInitials(content.fullName || "Your Name")}
-            fullName={content.fullName || "Your Name"}
-            careerName={content.careerName || "Engineering Professional"}
-            summary={content.summary || ""}
-            email={contactContent.email}
-            onCopyEmail={copyEmail}
-            emailCopied={emailCopied}
-          />
-        );
-      }
-      case SectionType.About: {
-        const content = section.content as AboutSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.aboutGrid}>
-              <article className={styles.panel}>
-                <p>{content.summary}</p>
-                {(content.educationLabel || content.educationDetails) && (
-                  <div className={styles.educationBox}>
-                    <h3>{content.educationLabel || "Education"}</h3>
-                    <p>{content.educationDetails}</p>
-                  </div>
-                )}
-              </article>
-
-              <div className={styles.statsColumn}>
-                {content.stats.length ? (
-                  content.stats.map((stat) => (
-                    <article key={stat.label} className={styles.statCard}>
-                      <p>{stat.label}</p>
-                      <h3>{stat.value}</h3>
-                    </article>
-                  ))
-                ) : (
-                  <article className={styles.panel}>
-                    <p>Add stats to populate this section.</p>
-                  </article>
-                )}
-              </div>
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Projects: {
-        const content = section.content as ProjectsSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.projectGrid}>
-              {content.items.length ? (
-                content.items.map((project, index) => (
-                  <article key={`${project.title}-${index}`} className={`${styles.projectCard} ${index === 0 ? styles.projectFeatured : ""}`}>
-                    <div className={styles.projectHeader}>
-                      <h3>{project.title}</h3>
-                      <div className={styles.projectLinks}>
-                        {project.links.demo ? (
-                          <Link href={project.links.demo} target="_blank" rel="noreferrer" className={styles.inlineLink}>
-                            Demo <ArrowUpRight size={14} />
-                          </Link>
-                        ) : null}
-                        {project.links.code ? (
-                          <Link href={project.links.code} target="_blank" rel="noreferrer" className={styles.inlineLink}>
-                            Code <ArrowUpRight size={14} />
-                          </Link>
-                        ) : null}
-                      </div>
-                    </div>
-
-                    <p>{project.description}</p>
-
-                    <ul>
-                      {(project.highlights.length ? project.highlights : ["Add a project highlight"]).map((highlight) => (
-                        <li key={`${project.title}-${highlight}`}>{highlight}</li>
-                      ))}
-                    </ul>
-
-                    <div className={styles.tagRow}>
-                      {project.tags.map((tag) => (
-                        <span key={`${project.title}-${tag}`} className={styles.tag}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <article className={styles.panel}>
-                  <p>No projects listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Skills: {
-        const content = section.content as SkillsSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.skillsGrid}>
-              {content.categories.length ? (
-                content.categories.map((group) => (
-                  <article key={group.title} className={styles.skillCard}>
-                    <h3>{group.title}</h3>
-                    <div className={styles.tagRow}>
-                      {group.skills.map((skill) => (
-                        <span key={`${group.title}-${skill}`} className={styles.tag}>
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <article className={styles.panel}>
-                  <p>No skills listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Experience: {
-        const content = section.content as ExperienceSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.timeline}>
-              {content.items.length ? (
-                content.items.map((item, index) => (
-                  <article key={`${item.company}-${index}`} className={styles.expCard}>
-                    <div className={styles.expHeader}>
-                      <h3>{item.company}</h3>
-                      <p>{item.employedDates || "Current"}</p>
-                    </div>
-
-                    <ul>
-                      {item.bullets.map((bullet) => (
-                        <li key={`${item.company}-${bullet}`}>{bullet}</li>
-                      ))}
-                    </ul>
-
-                    <div className={styles.tagRow}>
-                      {item.tags.map((tag) => (
-                        <span key={`${item.company}-${tag}`} className={styles.tag}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <article className={styles.panel}>
-                  <p>No experience listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Education: {
-        const content = section.content as EducationSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.projectGrid}>
-              {content.entries.length ? (
-                content.entries.map((entry, index) => (
-                  <article key={`${entry.school}-${index}`} className={styles.projectCard}>
-                    <div className={styles.projectHeader}>
-                      <h3>{entry.school || "School"}</h3>
-                      {entry.expectedGrad ? <p>{entry.expectedGrad}</p> : null}
-                    </div>
-                    <p>
-                      {[...entry.majors, ...entry.minors.map((minor) => `Minor: ${minor}`)]
-                        .filter(Boolean)
-                        .join(" | ")}
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <article className={styles.panel}>
-                  <p>No education listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Certifications: {
-        const content = section.content as CertificationsSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.projectGrid}>
-              {content.entries.length ? (
-                content.entries.map((entry, index) => (
-                  <article key={`${entry.name}-${index}`} className={styles.projectCard}>
-                    <div className={styles.projectHeader}>
-                      <h3>{entry.name || "Certification"}</h3>
-                      {entry.year ? <p>{entry.year}</p> : null}
-                    </div>
-                    <p>{entry.issuer || "Issuer"}</p>
-                  </article>
-                ))
-              ) : (
-                <article className={styles.panel}>
-                  <p>No certifications listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Blog: {
-        const content = section.content as BlogSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <article className={styles.blogCard}>
-              <div className={styles.metaLine}>
-                <span>{content.date}</span>
-                <span>{content.readingTime}</span>
-              </div>
-              <h3>{content.postTitle}</h3>
-              <p>{content.excerpt}</p>
-              <div className={styles.tagRow}>
-                {content.tags.map((tag) => (
-                  <span key={`blog-${tag}`} className={styles.tag}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </article>
-          </section>
-        );
-      }
-      case SectionType.Testimonials: {
-        const content = section.content as TestimonialsSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.testimonialGrid}>
-              {content.items.length ? (
-                content.items.map((testimonial) => (
-                  <article key={`${testimonial.author}-${testimonial.company}`} className={styles.testimonialCard}>
-                    <Quote size={22} className={styles.quoteIcon} />
-                    <p>{testimonial.quote}</p>
-                    <h3>{testimonial.author}</h3>
-                    <p className={styles.metaLine}>
-                      {testimonial.role} - <span>{testimonial.company}</span>
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <article className={styles.panel}>
-                  <p>No testimonials listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Contact: {
-        const content = section.content as ContactSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <article className={styles.contactCard}>
-              <div className={styles.contactRow}>
-                {content.email ? (
-                  <a href={`mailto:${content.email}`} className={styles.contactItem}>
-                    <Mail size={15} />
-                    {content.email}
-                  </a>
-                ) : null}
-                {content.phone ? (
-                  <a href={`tel:${content.phone}`} className={styles.contactItem}>
-                    <Phone size={15} />
-                    {content.phone}
-                  </a>
-                ) : null}
-                {content.address ? (
-                  <div className={styles.contactItem}>
-                    <MapPin size={15} />
-                    {content.address}
-                  </div>
-                ) : null}
-                {content.linkedin ? (
-                  <Link href={content.linkedin} target="_blank" rel="noreferrer" className={styles.contactItem}>
-                    <Linkedin size={15} />
-                    LinkedIn
-                  </Link>
-                ) : null}
-              </div>
-
-              <a href={`mailto:${content.email || "hello@example.com"}`} className={styles.primaryButton} aria-label="Send me an email">
-                {content.ctaLabel || "Send me an email"}
-              </a>
-            </article>
-          </section>
-        );
-      }
-      default:
-        return null;
-    }
-  };
+  const profileName = heroContent.fullName || "Your Name";
+  const profileTitle = heroContent.careerName || "Professional Specialist";
+  const locationValue = primaryContactContent.address?.trim() || "Remote / Open to opportunities";
+  const contactEmail = primaryContactContent.email?.trim() || "hello@example.com";
+  const mapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(locationValue)}`;
 
   return (
-    <div className={`${styles.root} ${lightMode ? styles.lightMode : ""}`} style={rootStyle} ref={rootRef}>
-      <div className={styles.ornaments} aria-hidden="true">
-        <div className={styles.lineA} />
-        <div className={styles.lineB} />
-      </div>
+    <div
+      className={`${styles.root} ${lightMode ? styles.lightMode : ""} ${displayFont.variable} ${bodyFont.variable}`}
+      style={rootStyle}
+    >
+      <a href="#es-main-content" className={styles.skipLink}>
+        Skip to content
+      </a>
 
-      <div className={styles.shell}>
-        <header className={styles.navShell}>
-          <div className={styles.navInner}>
-            <p className={styles.brand}>{getInitials(heroContent.fullName)} Signature</p>
+      <div className={styles.mainShell}>
+        <Navbar
+          brand={`${getInitials(profileName) || "YN"} Portfolio`}
+          items={navItems}
+          activeId={activeSection}
+          onNavigate={navigateTo}
+        />
 
-            <nav className={styles.navMenu} aria-label="Sections">
-              {navTabs.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => navigateTo(tab.id)}
-                  className={`${styles.navLink} ${
-                    activeSection === tab.id ? styles.navLinkActive : ""
-                  }`}
+        <motion.main id="es-main-content" variants={pageLoadVariants} initial="hidden" animate="visible">
+          <section id={heroId} className={styles.hero} aria-labelledby={`${heroId}-title`}>
+            <motion.div className={styles.heroInner} variants={staggerContainerVariants} initial="hidden" animate="visible">
+              <motion.p className={styles.heroEyebrow} variants={revealItemVariants}>
+                {heroContent.eyebrow || "Portfolio"}
+              </motion.p>
+
+              <motion.h1 id={`${heroId}-title`} className={styles.heroName} variants={revealItemVariants}>
+                {profileName}
+              </motion.h1>
+
+              <motion.p className={styles.heroHeadline} variants={revealItemVariants}>
+                {profileTitle}
+              </motion.p>
+
+              <motion.p className={styles.heroSummary} variants={revealItemVariants}>
+                {heroContent.summary || DEFAULT_HERO.summary}
+              </motion.p>
+
+              <motion.div className={styles.heroActions} variants={revealItemVariants}>
+                <a
+                  href={mapLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={styles.buttonGhost}
+                  aria-label={`Open map for ${locationValue}`}
                 >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
+                  <MapPin size={16} />
+                  {locationValue}
+                </a>
+              </motion.div>
+            </motion.div>
+          </section>
 
-            <button
-              type="button"
-              className={styles.mobileToggle}
-              onClick={() => setMenuOpen((value) => !value)}
-              aria-label={menuOpen ? "Close navigation" : "Open navigation"}
-            >
-              {menuOpen ? <X size={18} /> : <Menu size={18} />}
-            </button>
-          </div>
+          {orderedContentSections.map((section) => {
+            switch (section.type) {
+              case SectionType.About: {
+                const aboutContent = section.content;
+                const aboutStats = aboutContent.stats.length ? aboutContent.stats : DEFAULT_ABOUT.stats;
 
-          <div className={`${styles.mobileMenu} ${menuOpen ? styles.mobileMenuOpen : ""}`}>
-            {navTabs.map((tab) => (
-              <button key={`mobile-${tab.id}`} type="button" onClick={() => navigateTo(tab.id)}>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </header>
+                return (
+                  <Section
+                    key={section.id}
+                    id={section.id}
+                    title={aboutContent.title || "About"}
+                    subtitle={aboutContent.subtitle || DEFAULT_ABOUT.subtitle}
+                    bodyClassName={styles.aboutGrid}
+                  >
+                    <Card className={styles.aboutLead}>
+                      <p className={styles.bodyText}>{aboutContent.summary || DEFAULT_ABOUT.summary}</p>
+                    </Card>
 
-        {sections.map((section) => renderSection(section))}
+                    <Card className={styles.aboutSupport}>
+                      <h3 className={styles.subheading}>{aboutContent.educationLabel || "Background"}</h3>
+                      <p className={styles.mutedText}>
+                        {aboutContent.educationDetails ||
+                          "Add domain background, credentials, or relevant training details here."}
+                      </p>
 
-        <footer className={styles.footer}>(c) {new Date().getFullYear()} {heroContent.fullName}. Crafted with care and intention.</footer>
+                      <div className={styles.pillRow}>
+                        {aboutStats.map((stat) => (
+                          <Pill key={stat.label}>{`${stat.label}: ${stat.value}`}</Pill>
+                        ))}
+                      </div>
+                    </Card>
+                  </Section>
+                );
+              }
+              case SectionType.Projects: {
+                const projectsContent = section.content;
+
+                return (
+                  <Section
+                    key={section.id}
+                    id={section.id}
+                    title={projectsContent.title || "Projects"}
+                    subtitle={projectsContent.subtitle || "Selected work and outcomes from recent projects."}
+                  >
+                    <ProjectsSection projects={projectsContent.items} />
+                  </Section>
+                );
+              }
+              case SectionType.Experience: {
+                const experienceContent = section.content;
+
+                return (
+                  <Section
+                    key={section.id}
+                    id={section.id}
+                    title={experienceContent.title || "Experience"}
+                    subtitle={experienceContent.subtitle || DEFAULT_EXPERIENCE.subtitle}
+                  >
+                    <ExperienceTimeline items={experienceContent.items} />
+                  </Section>
+                );
+              }
+              case SectionType.Contact: {
+                const contactContent = section.content;
+                const sectionLocation = contactContent.address?.trim() || locationValue;
+                const sectionEmail = contactContent.email?.trim() || contactEmail;
+                const sectionPhone = contactContent.phone?.trim();
+                const sectionLinkedin = normalizeExternalUrl(contactContent.linkedin ?? "");
+                const sectionMapLink = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(sectionLocation)}`;
+
+                return (
+                  <Section
+                    key={section.id}
+                    id={section.id}
+                    title={contactContent.title || "Contact"}
+                    subtitle={contactContent.subtitle || DEFAULT_CONTACT.subtitle}
+                    bodyClassName={styles.contactGrid}
+                  >
+                    <Card>
+                      <h3 className={styles.subheading}>Direct contact</h3>
+
+                      <ul className={styles.infoList}>
+                        <li className={styles.infoItem}>
+                          <Mail size={16} />
+                          <div>
+                            <span className={styles.infoLabel}>Email</span>
+                            <a href={`mailto:${sectionEmail}`} className={styles.infoValue}>
+                              {sectionEmail}
+                            </a>
+                          </div>
+                        </li>
+
+                        <li className={styles.infoItem}>
+                          <MapPin size={16} />
+                          <div>
+                            <span className={styles.infoLabel}>Location</span>
+                            <a href={sectionMapLink} target="_blank" rel="noreferrer" className={styles.infoValue}>
+                              {sectionLocation}
+                            </a>
+                          </div>
+                        </li>
+
+                        {sectionPhone ? (
+                          <li className={styles.infoItem}>
+                            <Phone size={16} />
+                            <div>
+                              <span className={styles.infoLabel}>Phone</span>
+                              <a href={`tel:${sectionPhone}`} className={styles.infoValue}>
+                                {sectionPhone}
+                              </a>
+                            </div>
+                          </li>
+                        ) : null}
+
+                        {sectionLinkedin ? (
+                          <li className={styles.infoItem}>
+                            <Linkedin size={16} />
+                            <div>
+                              <span className={styles.infoLabel}>LinkedIn</span>
+                              <a href={sectionLinkedin} target="_blank" rel="noreferrer" className={styles.infoValue}>
+                                Visit profile
+                              </a>
+                            </div>
+                          </li>
+                        ) : null}
+                      </ul>
+                    </Card>
+
+                    <ContactForm
+                      recipientEmail={sectionEmail}
+                      ctaLabel={contactContent.ctaLabel || "Send me an email"}
+                    />
+                  </Section>
+                );
+              }
+              default:
+                return null;
+            }
+          })}
+
+          <Footer fullName={profileName} />
+        </motion.main>
       </div>
     </div>
   );

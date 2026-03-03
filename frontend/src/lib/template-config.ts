@@ -294,10 +294,13 @@ const DEFAULT_SECTION_ORDER: SectionType[] = [
   SectionType.Projects,
   SectionType.Skills,
   SectionType.Experience,
-  SectionType.Blog,
-  SectionType.Testimonials,
   SectionType.Contact,
 ];
+
+const DEPRECATED_SECTION_TYPES = new Set<SectionType>([
+  SectionType.Blog,
+  SectionType.Testimonials,
+]);
 
 const TITLE_BY_TYPE: Record<SectionType, string> = {
   [SectionType.Hero]: "Hero",
@@ -420,18 +423,6 @@ export const SECTION_LIBRARY: SectionLibraryEntry[] = [
     label: "Certifications",
     description: "Certifications and credentials.",
     allowMultiple: true,
-  },
-  {
-    type: SectionType.Blog,
-    label: "Blog",
-    description: "Featured writing preview card.",
-    allowMultiple: false,
-  },
-  {
-    type: SectionType.Testimonials,
-    label: "Testimonials",
-    description: "Client or teammate endorsements.",
-    allowMultiple: false,
   },
   {
     type: SectionType.Contact,
@@ -763,44 +754,47 @@ const buildDefaultSections = (templateId: TemplateId, resumeData?: ParsedResume)
   const variants = VARIANT_BY_TEMPLATE[builtInId] ?? {};
   const content = buildContentFromResume(resumeData);
 
-  return [
-    createSection({
-      id: fallbackSectionId(SectionType.Hero, 0),
-      type: SectionType.Hero,
-      variant: variants[SectionType.Hero],
-      content: content.hero,
-    }),
+  const sections: SectionConfig[] = [
     createSection({
       id: fallbackSectionId(SectionType.About, 0),
       type: SectionType.About,
       variant: variants[SectionType.About],
       content: content.about,
     }),
-    createSection({
-      id: fallbackSectionId(SectionType.Projects, 0),
-      type: SectionType.Projects,
-      variant: variants[SectionType.Projects],
-      content: content.projects,
-    }),
-    createSection({
-      id: fallbackSectionId(SectionType.Skills, 0),
-      type: SectionType.Skills,
-      variant: variants[SectionType.Skills],
-      content: content.skills,
-    }),
-    createSection({
-      id: fallbackSectionId(SectionType.Experience, 0),
-      type: SectionType.Experience,
-      variant: variants[SectionType.Experience],
-      content: content.experience,
-    }),
+  ];
+
+  if (content.experience.items.length) {
+    sections.push(
+      createSection({
+        id: fallbackSectionId(SectionType.Experience, 0),
+        type: SectionType.Experience,
+        variant: variants[SectionType.Experience],
+        content: content.experience,
+      })
+    );
+  }
+
+  if (content.projects.items.length) {
+    sections.push(
+      createSection({
+        id: fallbackSectionId(SectionType.Projects, 0),
+        type: SectionType.Projects,
+        variant: variants[SectionType.Projects],
+        content: content.projects,
+      })
+    );
+  }
+
+  sections.push(
     createSection({
       id: fallbackSectionId(SectionType.Contact, 0),
       type: SectionType.Contact,
       variant: variants[SectionType.Contact],
       content: content.contact,
-    }),
-  ];
+    })
+  );
+
+  return sections;
 };
 
 export function createDefaultTemplateConfig(params: {
@@ -847,6 +841,8 @@ export function createSectionConfig(params: {
 }
 
 export function canAddSectionType(config: TemplateConfig, type: SectionType): boolean {
+  if (DEPRECATED_SECTION_TYPES.has(type)) return false;
+
   const entry = SECTION_LIBRARY.find((candidate) => candidate.type === type);
   if (!entry) return false;
   if (entry.allowMultiple) return true;
@@ -858,7 +854,22 @@ export function getAddableSectionTypes(config: TemplateConfig): SectionLibraryEn
 }
 
 export function getEnabledSections(config: TemplateConfig): SectionConfig[] {
-  return config.sections.filter((section) => section.enabled);
+  return config.sections.filter(
+    (section) => section.enabled && hasRenderableSectionContent(section)
+  );
+}
+
+export function hasRenderableSectionContent(section: SectionConfig): boolean {
+  if (DEPRECATED_SECTION_TYPES.has(section.type)) return false;
+
+  switch (section.type) {
+    case SectionType.Projects:
+      return (section.content as ProjectsSectionContent).items.length > 0;
+    case SectionType.Experience:
+      return (section.content as ExperienceSectionContent).items.length > 0;
+    default:
+      return true;
+  }
 }
 
 export function getNavSections(config: TemplateConfig): Array<{ id: string; label: string }> {
@@ -1139,7 +1150,10 @@ export function normalizeTemplateConfig(params: {
   };
 
   const sections = (Array.isArray(params.config.sections) ? params.config.sections : defaultConfig.sections)
-    .filter((section): section is SectionConfig => Boolean(section && section.type && section.id))
+    .filter(
+      (section): section is SectionConfig =>
+        Boolean(section && section.type && section.id) && !DEPRECATED_SECTION_TYPES.has(section.type)
+    )
     .map((section, index) => {
       const normalizedSection: SectionConfig = {
         ...section,
