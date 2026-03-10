@@ -1,12 +1,13 @@
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from supabase_auth import User
 
 from app.core.supabase_client import get_supabase_client
 
 
 security = HTTPBearer()
 
-def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
     supabase = get_supabase_client()
     token = credentials.credentials
     try:
