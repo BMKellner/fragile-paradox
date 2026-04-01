@@ -71,7 +71,11 @@ export function ContactSection({
   ].filter((link): link is SocialLink => Boolean(link.href));
 
   return (
-    <section id="contact" className="snap-start scroll-mt-24 px-4 pb-14 pt-24 sm:px-6 lg:px-8">
+    <section
+      id="contact"
+      data-customize-section-type="contact"
+      className="snap-start scroll-mt-24 px-4 pb-14 pt-24 sm:px-6 lg:px-8"
+    >
       <div className="mx-auto max-w-6xl">
         <div className={`${styles.surface} grid overflow-hidden rounded-[2rem] md:grid-cols-2`}>
           <div className="p-8 sm:p-10 lg:p-12">

@@ -8,6 +8,7 @@ import { sectionRevealVariants, staggerContainerVariants } from "./motion";
 
 type SectionProps = {
   id: string;
+  sectionType?: string;
   title: string;
   subtitle?: string;
   className?: string;
@@ -17,6 +18,7 @@ type SectionProps = {
 
 export function Section({
   id,
+  sectionType,
   title,
   subtitle,
   className,
@@ -35,6 +37,7 @@ export function Section({
   return (
     <motion.section
       id={id}
+      data-customize-section-type={sectionType}
       ref={ref}
       className={cn(styles.section, className)}
       aria-labelledby={headingId}

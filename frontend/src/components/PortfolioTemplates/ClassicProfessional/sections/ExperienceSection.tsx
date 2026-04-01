@@ -12,7 +12,11 @@ type ExperienceSectionProps = {
 
 export function ExperienceSection({ title, subtitle, entries }: ExperienceSectionProps) {
   return (
-    <section id="experience" className="snap-start scroll-mt-24 px-4 py-24 sm:px-6 lg:px-8">
+    <section
+      id="experience"
+      data-customize-section-type="experience"
+      className="snap-start scroll-mt-24 px-4 py-24 sm:px-6 lg:px-8"
+    >
       <div className="mx-auto max-w-6xl">
         <header className="mb-14 text-center">
           <p className="text-sm italic text-[var(--terris-muted)]">

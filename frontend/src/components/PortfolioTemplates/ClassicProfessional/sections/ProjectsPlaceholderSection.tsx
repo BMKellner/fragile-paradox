@@ -13,7 +13,11 @@ type ProjectsPlaceholderSectionProps = {
 
 export function ProjectsPlaceholderSection({ title, subtitle, items }: ProjectsPlaceholderSectionProps) {
   return (
-    <section id="projects" className="snap-start scroll-mt-24 px-4 py-24 sm:px-6 lg:px-8">
+    <section
+      id="projects"
+      data-customize-section-type="projects"
+      className="snap-start scroll-mt-24 px-4 py-24 sm:px-6 lg:px-8"
+    >
       <div className="mx-auto max-w-6xl">
         <header className="mb-10 text-center">
           <h2 className="text-4xl font-black tracking-tight text-[var(--terris-foreground)] sm:text-5xl">{title}</h2>

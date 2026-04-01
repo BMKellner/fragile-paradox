@@ -158,6 +158,16 @@ h6 {
   background-clip: text;
 }
 
+.word-glow-cycle {
+  display: inline-block;
+  filter: drop-shadow(0 0 0 color-mix(in oklch, var(--color-primary) 0%, transparent));
+  animation: wordGlowCycle 4.6s ease-in-out infinite;
+}
+
+.word-glow-delay {
+  animation-delay: 2.3s;
+}
+
 .soft-surface {
   position: relative;
 }
@@ -220,6 +230,10 @@ h6 {
   animation-delay: 320ms;
 }
 
+.template-card-enter {
+  animation: templateCardEnter 260ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
 .subtle-lift {
   transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
 }
@@ -256,6 +270,17 @@ h6 {
   }
 }
 
+@keyframes templateCardEnter {
+  from {
+    opacity: 0.68;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes orbFloat {
   0% {
     transform: translateY(0) scale(1);
@@ -265,6 +290,29 @@ h6 {
   }
   100% {
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes wordGlowCycle {
+  0%,
+  62%,
+  100% {
+    filter: drop-shadow(0 0 0 color-mix(in oklch, var(--color-primary) 0%, transparent));
+  }
+  20%,
+  36% {
+    filter: drop-shadow(0 0 12px color-mix(in oklch, var(--color-primary) 78%, transparent));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .word-glow-cycle {
+    animation: none;
+    filter: none;
+  }
+
+  .template-card-enter {
+    animation: none;
   }
 }
 

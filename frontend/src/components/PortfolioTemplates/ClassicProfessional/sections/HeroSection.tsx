@@ -47,6 +47,7 @@ export function HeroSection({ fullName, careerName, summary, scrollTargetId }: H
   return (
     <section
       id="hero"
+      data-customize-section-type="hero"
       className="relative flex min-h-screen snap-start items-center justify-center overflow-hidden px-6 pb-20 pt-28"
     >
       <ParticleBackground id="classic-professional-hero-particles" className="pointer-events-none absolute inset-0" />

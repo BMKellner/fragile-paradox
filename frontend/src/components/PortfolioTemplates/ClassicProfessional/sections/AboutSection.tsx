@@ -55,7 +55,11 @@ function RadialStatCard({ stat }: { stat: RadialStat }) {
 
 export function AboutSection({ title, subtitle, facts, stats }: AboutSectionProps) {
   return (
-    <section id="about" className="snap-start scroll-mt-24 px-4 py-24 sm:px-6 lg:px-8">
+    <section
+      id="about"
+      data-customize-section-type="about"
+      className="snap-start scroll-mt-24 px-4 py-24 sm:px-6 lg:px-8"
+    >
       <div className={`${styles.surface} mx-auto max-w-6xl rounded-[2rem] p-6 sm:p-10 lg:p-12`}>
         <header className="mb-8 text-center">
           <h2 className="text-4xl font-black tracking-tight text-[var(--terris-foreground)] sm:text-5xl">

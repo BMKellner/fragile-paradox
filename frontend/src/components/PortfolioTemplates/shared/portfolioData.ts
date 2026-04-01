@@ -92,6 +92,19 @@ const tokenize = (value: string): string[] =>
 
 const unique = (items: string[]): string[] => Array.from(new Set(items.filter(Boolean)));
 
+const matchesSkillInText = (text: string, skill: string): boolean => {
+  const textTokens = new Set(tokenize(text));
+  const skillTokens = tokenize(skill);
+
+  if (!textTokens.size || !skillTokens.length) return false;
+
+  if (skillTokens.length === 1 && skillTokens[0].length <= 2) {
+    return textTokens.has(skillTokens[0]);
+  }
+
+  return skillTokens.every((token) => textTokens.has(token));
+};
+
 export const sanitizeHexColor = (value?: string, fallback = "#2563eb"): string => {
   if (!value) return fallback;
   const normalized = value.trim();
@@ -145,6 +158,7 @@ export const normalizeOverview = (overview?: OverviewData): OverviewData => ({
   resume_summary:
     overview?.resume_summary ??
     "I build product-focused software with strong foundations in architecture, usability, and performance.",
+  hero_summary: overview?.hero_summary?.trim() || "",
 });
 
 export const normalizeProjects = (
@@ -153,42 +167,36 @@ export const normalizeProjects = (
 ): NormalizedProject[] => {
   const safeSkills = unique(skills);
 
-  return (projects ?? []).map((project, index) => {
-    const current =
-      typeof project === "string"
-        ? { title: project, description: "" }
-        : {
-            title: project?.title ?? "Project",
-            description: project?.description ?? "",
-          };
+  return (projects ?? []).reduce<NormalizedProject[]>((acc, project) => {
+      const current =
+        typeof project === "string"
+          ? { title: project, description: "" }
+          : {
+              title: project?.title ?? "",
+              description: project?.description ?? "",
+            };
 
-    const description = current.description.trim();
-    const highlights = splitText(description).slice(0, 3);
-    const links = description.match(urlRegex) ?? [];
+      const title = current.title.trim();
+      const description = current.description.trim();
+      if (!title && !description) return acc;
 
-    const fallbackHighlights = [
-      "Delivered a robust production implementation",
-      "Improved usability and performance",
-      "Maintained high engineering quality",
-    ];
+      const highlights = splitText(description).slice(0, 3);
+      const links = description.match(urlRegex) ?? [];
+      const tags = safeSkills.filter((skill) => matchesSkillInText(description, skill));
 
-    const tags = safeSkills.length
-      ? safeSkills.slice(index % safeSkills.length, (index % safeSkills.length) + 4)
-      : ["Web", "Design", "Performance"];
+      acc.push({
+        title,
+        description,
+        highlights,
+        tags,
+        links: {
+          demo: links[0],
+          code: links.find((link) => /github\.com/i.test(link)) ?? links[1],
+        },
+      });
 
-    return {
-      title: current.title,
-      description:
-        description ||
-        "A focused solution designed for reliability, usability, and clear business impact.",
-      highlights: highlights.length ? highlights : fallbackHighlights,
-      tags: unique(tags),
-      links: {
-        demo: links[0],
-        code: links[1],
-      },
-    };
-  });
+      return acc;
+    }, []);
 };
 
 export const normalizeExperience = (
@@ -197,47 +205,42 @@ export const normalizeExperience = (
 ): NormalizedExperience[] => {
   const safeSkills = unique(skills);
 
-  return (experience ?? []).map((entry, index) => {
-    const current =
-      typeof entry === "string"
-        ? {
-            company: entry,
-            employed_dates: "",
-            description: "",
-          }
-        : {
-            company: entry?.company ?? "Company",
-            employed_dates: entry?.employed_dates ?? "",
-            description: entry?.description ?? "",
-          };
+  return (experience ?? []).reduce<NormalizedExperience[]>((acc, entry) => {
+      const current =
+        typeof entry === "string"
+          ? {
+              company: entry,
+              employed_dates: "",
+              description: "",
+            }
+          : {
+              company: entry?.company ?? "",
+              employed_dates: entry?.employed_dates ?? "",
+              description: entry?.description ?? "",
+            };
 
-    const bullets = splitText(current.description).slice(0, 4);
-    const fallbackBullets = [
-      "Led implementation across critical product areas.",
-      "Collaborated closely with cross-functional stakeholders.",
-      "Improved quality through testing and maintainable architecture.",
-    ];
+      const company = current.company.trim();
+      const description = current.description.trim();
+      const employedDates = current.employed_dates.trim();
+      if (!company && !description && !employedDates) return acc;
 
-    const asText = current.description.toLowerCase();
-    const matchingTags = safeSkills.filter((skill) => asText.includes(skill.toLowerCase())).slice(0, 4);
+      const bullets = splitText(description).slice(0, 4);
+      const tags = safeSkills.filter((skill) => matchesSkillInText(description, skill));
 
-    const tags = matchingTags.length
-      ? matchingTags
-      : safeSkills.length
-        ? safeSkills.slice(index % safeSkills.length, (index % safeSkills.length) + 3)
-        : ["Engineering", "Product", "Delivery"];
+      acc.push({
+        company,
+        employedDates,
+        bullets,
+        tags,
+      });
 
-    return {
-      company: current.company,
-      employedDates: current.employed_dates,
-      bullets: bullets.length ? bullets : fallbackBullets,
-      tags,
-    };
-  });
+      return acc;
+    }, []);
 };
 
 export const categorizeSkills = (skills: string[]): SkillCategory[] => {
   const source = unique(skills);
+  if (!source.length) return [];
 
   const buckets: Record<string, string[]> = {
     Languages: [],
@@ -307,30 +310,18 @@ export const categorizeSkills = (skills: string[]): SkillCategory[] => {
     buckets["Tools & Platforms"].push(skill);
   });
 
-  const fallback = source.length ? source : ["Communication", "Problem Solving", "Mentoring", "Delivery"];
+  const categories: SkillCategory[] = [
+    { title: "Languages", skills: buckets.Languages },
+    { title: "Frameworks & Libraries", skills: buckets["Frameworks & Libraries"] },
+    { title: "Databases", skills: buckets.Databases },
+    { title: "Tools & Platforms", skills: buckets["Tools & Platforms"] },
+  ].filter((category) => category.skills.length > 0);
 
-  return [
-    {
-      title: "Languages",
-      skills: buckets.Languages.length ? buckets.Languages : fallback.slice(0, 2),
-    },
-    {
-      title: "Frameworks & Libraries",
-      skills: buckets["Frameworks & Libraries"].length
-        ? buckets["Frameworks & Libraries"]
-        : fallback.slice(2, 4),
-    },
-    {
-      title: "Databases",
-      skills: buckets.Databases.length ? buckets.Databases : fallback.slice(4, 6),
-    },
-    {
-      title: "Tools & Platforms",
-      skills: buckets["Tools & Platforms"].length
-        ? buckets["Tools & Platforms"]
-        : fallback.slice(6, 8),
-    },
-  ];
+  if (!categories.length) {
+    return [{ title: "Skills", skills: source }];
+  }
+
+  return categories;
 };
 
 export const buildStats = (
@@ -344,13 +335,13 @@ export const buildStats = (
     .map((year) => Number.parseInt(year, 10))
     .filter((year) => Number.isFinite(year));
 
-  const span = years.length ? Math.max(1, Math.max(...years) - Math.min(...years) + 1) : Math.max(2, experience.length);
+  const span = years.length ? Math.max(1, Math.max(...years) - Math.min(...years) + 1) : experience.length;
 
   return [
-    { label: "Experience", value: `${span}+ Years` },
-    { label: "Projects", value: `${projects.length || 1}+` },
+    { label: "Experience", value: span > 0 ? `${span}+ Years` : "0" },
+    { label: "Projects", value: `${projects.length}` },
     { label: "Role", value: overview.career_name || "Engineer" },
-    { label: "Skills", value: `${Math.max(3, skills.length)} Core` },
+    { label: "Skills", value: `${skills.length}` },
   ];
 };
 
