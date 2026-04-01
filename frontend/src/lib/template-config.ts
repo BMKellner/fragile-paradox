@@ -49,7 +49,6 @@ export interface TemplateThemeConfig {
   mode: ThemeMode;
   primaryColor: string;
   backgroundColor: string;
-  accentGradient?: string;
 }
 
 export type SectionStat = {
@@ -221,83 +220,84 @@ const TEMPLATE_THEME_DEFAULTS: Record<BuiltInTemplateId, TemplateThemeConfig> = 
     mode: "dark",
     primaryColor: "#ef4444",
     backgroundColor: "#0a0a0a",
-    accentGradient: "linear-gradient(120deg, #ef4444 0%, #f97316 100%)",
   },
   "2": {
     palette: "classic-professional",
     mode: "light",
     primaryColor: "#1d4ed8",
     backgroundColor: "#f8fafc",
-    accentGradient: "linear-gradient(120deg, #1d4ed8 0%, #3b82f6 100%)",
   },
   "3": {
     palette: "creative-bold",
     mode: "dark",
     primaryColor: "#ef4444",
     backgroundColor: "#111111",
-    accentGradient: "linear-gradient(120deg, #ef4444 0%, #ec4899 100%)",
   },
   "4": {
     palette: "elegant-sophisticated",
     mode: "dark",
     primaryColor: "#d4af37",
     backgroundColor: "#111111",
-    accentGradient: "linear-gradient(120deg, #d4af37 0%, #f59e0b 100%)",
   },
   "5": {
     palette: "side-rail-pro",
     mode: "light",
     primaryColor: "#0f766e",
     backgroundColor: "#f8fafc",
-    accentGradient: "linear-gradient(120deg, #0f766e 0%, #14b8a6 100%)",
   },
   "6": {
     palette: "editorial-story",
     mode: "light",
     primaryColor: "#7c2d12",
     backgroundColor: "#fdfbf7",
-    accentGradient: "linear-gradient(120deg, #7c2d12 0%, #b45309 100%)",
   },
   "7": {
     palette: "ide-clean",
     mode: "dark",
     primaryColor: "#22d3ee",
     backgroundColor: "#0b1221",
-    accentGradient: "linear-gradient(120deg, #22d3ee 0%, #3b82f6 100%)",
   },
   "8": {
-    palette: "timeline-narrative",
+    palette: "debug-template",
     mode: "light",
     primaryColor: "#f59e0b",
     backgroundColor: "#fffdf7",
-    accentGradient: "linear-gradient(120deg, #f59e0b 0%, #f97316 100%)",
   },
   "9": {
     palette: "bold-brand",
     mode: "dark",
     primaryColor: "#ff4d6d",
     backgroundColor: "#0b0b14",
-    accentGradient: "linear-gradient(120deg, #ff4d6d 0%, #ff9e2c 100%)",
   },
   "10": {
     palette: "minimal-creator-hub",
     mode: "light",
     primaryColor: "#16a34a",
     backgroundColor: "#f7faf7",
-    accentGradient: "linear-gradient(120deg, #16a34a 0%, #84cc16 100%)",
   },
 };
 
 const DEFAULT_SECTION_ORDER: SectionType[] = [
   SectionType.Hero,
   SectionType.About,
-  SectionType.Projects,
-  SectionType.Skills,
   SectionType.Experience,
-  SectionType.Blog,
-  SectionType.Testimonials,
+  SectionType.Skills,
+  SectionType.Projects,
   SectionType.Contact,
 ];
+
+const CORE_REQUIRED_SECTION_TYPES: SectionType[] = [
+  SectionType.Hero,
+  SectionType.About,
+  SectionType.Experience,
+  SectionType.Skills,
+  SectionType.Contact,
+];
+
+const DEPRECATED_SECTION_TYPES = new Set<SectionType>([
+  SectionType.Blog,
+  SectionType.Testimonials,
+]);
 
 const TITLE_BY_TYPE: Record<SectionType, string> = {
   [SectionType.Hero]: "Hero",
@@ -422,18 +422,6 @@ export const SECTION_LIBRARY: SectionLibraryEntry[] = [
     allowMultiple: true,
   },
   {
-    type: SectionType.Blog,
-    label: "Blog",
-    description: "Featured writing preview card.",
-    allowMultiple: false,
-  },
-  {
-    type: SectionType.Testimonials,
-    label: "Testimonials",
-    description: "Client or teammate endorsements.",
-    allowMultiple: false,
-  },
-  {
     type: SectionType.Contact,
     label: "Contact",
     description: "Contact links and CTA.",
@@ -539,6 +527,78 @@ const asNonEmptyString = (value: unknown, fallback: string): string => {
   return trimmed.length ? trimmed : fallback;
 };
 
+const normalizeTextLine = (value: string): string => value.replace(/\s+/g, " ").trim();
+
+const toComparableText = (value: string): string =>
+  normalizeTextLine(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "");
+
+const pickConciseDescription = (value: string): string => {
+  const compact = normalizeTextLine(value);
+  if (!compact) return "";
+
+  const sentenceMatch = compact.match(/^.+?[.!?](?=\s|$)/);
+  if (sentenceMatch) return sentenceMatch[0].trim();
+
+  return compact;
+};
+
+const truncateWords = (value: string, maxWords: number): string => {
+  const words = value.split(/\s+/).filter(Boolean);
+  if (words.length <= maxWords) return value;
+  return `${words.slice(0, maxWords).join(" ").replace(/[.,;:!?]+$/, "")}...`;
+};
+
+const resolveHeroSummary = (params: {
+  seededHeroSummary?: string;
+  overviewHeroSummary?: string;
+  overviewResumeSummary?: string;
+}): string => {
+  const directCandidate = normalizeTextLine(params.seededHeroSummary || params.overviewHeroSummary || "");
+  if (directCandidate) {
+    return truncateWords(pickConciseDescription(directCandidate) || directCandidate, 22);
+  }
+
+  const resumeSummary = normalizeTextLine(params.overviewResumeSummary || "");
+  if (!resumeSummary) return "";
+
+  return truncateWords(pickConciseDescription(resumeSummary) || resumeSummary, 22);
+};
+
+const sanitizeProjectNarrative = (project: ProjectItem): ProjectItem => {
+  const rawDescription = normalizeTextLine(project.description || "");
+  const rawHighlights = (project.highlights ?? []).map((highlight) => normalizeTextLine(highlight)).filter(Boolean);
+  const description = pickConciseDescription(rawDescription || rawHighlights[0] || "");
+  const descriptionComparable = toComparableText(description);
+
+  const highlights: string[] = [];
+  const seen = new Set<string>();
+
+  for (const highlight of rawHighlights) {
+    const comparable = toComparableText(highlight);
+    if (!comparable || seen.has(comparable)) continue;
+
+    const overlapsDescription =
+      descriptionComparable &&
+      (comparable === descriptionComparable ||
+        comparable.includes(descriptionComparable) ||
+        descriptionComparable.includes(comparable));
+
+    if (overlapsDescription) continue;
+
+    seen.add(comparable);
+    highlights.push(highlight);
+    if (highlights.length >= 3) break;
+  }
+
+  return {
+    ...project,
+    description,
+    highlights,
+  };
+};
+
 export function createEmptySectionContent(type: SectionType): SectionContentByType[SectionType] {
   switch (type) {
     case SectionType.Hero:
@@ -546,7 +606,7 @@ export function createEmptySectionContent(type: SectionType): SectionContentByTy
         title: TITLE_BY_TYPE[type],
         eyebrow: "Portfolio",
         fullName: "Your Name",
-        careerName: "Your Role",
+        careerName: "",
         summary: "Write a concise value statement about your work and impact.",
         primaryCtaLabel: "Explore Projects",
         secondaryCtaLabel: "Copy Email",
@@ -567,39 +627,19 @@ export function createEmptySectionContent(type: SectionType): SectionContentByTy
       return {
         title: TITLE_BY_TYPE[type],
         subtitle: SUBTITLE_BY_TYPE[type],
-        items: [
-          {
-            title: "Featured Project",
-            description: "Describe your project and measurable outcomes.",
-            highlights: ["Shipped successfully"],
-            tags: ["Web"],
-            links: {},
-          },
-        ],
+        items: [],
       };
     case SectionType.Skills:
       return {
         title: TITLE_BY_TYPE[type],
         subtitle: SUBTITLE_BY_TYPE[type],
-        categories: [
-          {
-            title: "Core Skills",
-            skills: ["Communication", "Execution"],
-          },
-        ],
+        categories: [],
       };
     case SectionType.Experience:
       return {
         title: TITLE_BY_TYPE[type],
         subtitle: SUBTITLE_BY_TYPE[type],
-        items: [
-          {
-            company: "Company",
-            employedDates: "2024 - Present",
-            bullets: ["Describe your impact and responsibilities."],
-            tags: ["Engineering"],
-          },
-        ],
+        items: [],
       };
     case SectionType.Education:
       return {
@@ -669,12 +709,44 @@ export function createEmptySectionContent(type: SectionType): SectionContentByTy
 }
 
 const buildContentFromResume = (resumeData?: ParsedResume) => {
+  const normalizedSeed = resumeData?.__normalized_seed;
+  const seededSections = normalizedSeed?.sections;
   const personal = normalizePersonalInfo(resumeData?.personal_information);
   const overview = normalizeOverview(resumeData?.overview);
+  const heroSummary = resolveHeroSummary({
+    seededHeroSummary: seededSections?.hero?.summary,
+    overviewHeroSummary: overview.hero_summary,
+    overviewResumeSummary: overview.resume_summary,
+  });
   const skillList = (resumeData?.skills ?? []).filter(Boolean);
-  const projectsList = normalizeProjects(resumeData?.projects, skillList);
-  const experienceList = normalizeExperience(resumeData?.experience, skillList);
-  const skillGroups = categorizeSkills(skillList);
+  const projectsSource =
+    seededSections?.projects?.items?.map((project) => ({
+      title: project.title,
+      description: project.description,
+      highlights: project.highlights,
+      tags: project.tags,
+      links: {
+        demo: project.links.demo || undefined,
+        code: project.links.code || undefined,
+      },
+    })) ?? normalizeProjects(resumeData?.projects, skillList);
+  const projectsList = projectsSource.map((project) => sanitizeProjectNarrative(project));
+  const experienceList =
+    seededSections?.experience?.items?.map((item) => ({
+      company: item.company,
+      employedDates: item.employedDates,
+      bullets: item.bullets,
+      tags: [],
+    })) ??
+    normalizeExperience(resumeData?.experience, skillList).map((item) => ({
+      ...item,
+      tags: [],
+    }));
+  const skillGroups =
+    seededSections?.skills?.categories?.map((category) => ({
+      title: category.title,
+      skills: category.skills,
+    })) ?? categorizeSkills(skillList);
   const stats = buildStats(projectsList, experienceList, skillList, overview);
   const blog = buildBlogPreview(projectsList, overview);
   const testimonials = buildTestimonials(personal.full_name, overview.career_name);
@@ -692,18 +764,18 @@ const buildContentFromResume = (resumeData?: ParsedResume) => {
     hero: {
       title: TITLE_BY_TYPE[SectionType.Hero],
       eyebrow: "Portfolio",
-      fullName: personal.full_name,
-      careerName: overview.career_name,
-      summary: overview.resume_summary,
+      fullName: seededSections?.hero?.fullName || personal.full_name,
+      careerName: seededSections?.hero?.careerName || overview.career_name,
+      summary: heroSummary,
       primaryCtaLabel: "Explore Projects",
       secondaryCtaLabel: personal.contact_info.email ? "Copy Email" : "Send Email",
     } satisfies HeroSectionContent,
     about: {
       title: TITLE_BY_TYPE[SectionType.About],
       subtitle: SUBTITLE_BY_TYPE[SectionType.About],
-      summary: overview.resume_summary,
-      educationLabel: primaryEducation.school || "Education",
-      educationDetails,
+      summary: seededSections?.about?.summary || overview.resume_summary,
+      educationLabel: seededSections?.about?.educationLabel || primaryEducation.school || "Education",
+      educationDetails: seededSections?.about?.educationDetails ?? educationDetails,
       stats,
     } satisfies AboutSectionContent,
     projects: {
@@ -749,10 +821,10 @@ const buildContentFromResume = (resumeData?: ParsedResume) => {
     contact: {
       title: TITLE_BY_TYPE[SectionType.Contact],
       subtitle: SUBTITLE_BY_TYPE[SectionType.Contact],
-      email: personal.contact_info.email,
-      phone: personal.contact_info.phone,
-      address: personal.contact_info.address,
-      linkedin: personal.contact_info.linkedin,
+      email: seededSections?.contact?.email || personal.contact_info.email,
+      phone: seededSections?.contact?.phone || personal.contact_info.phone,
+      address: seededSections?.contact?.address || personal.contact_info.address,
+      linkedin: seededSections?.contact?.linkedin || personal.contact_info.linkedin,
       ctaLabel: "Send me an email",
     } satisfies ContactSectionContent,
   };
@@ -762,8 +834,13 @@ const buildDefaultSections = (templateId: TemplateId, resumeData?: ParsedResume)
   const builtInId = String(templateId) as BuiltInTemplateId;
   const variants = VARIANT_BY_TEMPLATE[builtInId] ?? {};
   const content = buildContentFromResume(resumeData);
+  const seededProjectsPresence = resumeData?.__normalized_seed?.section_presence?.projects;
+  const shouldIncludeProjects =
+    typeof seededProjectsPresence === "boolean"
+      ? seededProjectsPresence
+      : content.projects.items.length > 0;
 
-  return [
+  const sections: SectionConfig[] = [
     createSection({
       id: fallbackSectionId(SectionType.Hero, 0),
       type: SectionType.Hero,
@@ -777,10 +854,10 @@ const buildDefaultSections = (templateId: TemplateId, resumeData?: ParsedResume)
       content: content.about,
     }),
     createSection({
-      id: fallbackSectionId(SectionType.Projects, 0),
-      type: SectionType.Projects,
-      variant: variants[SectionType.Projects],
-      content: content.projects,
+      id: fallbackSectionId(SectionType.Experience, 0),
+      type: SectionType.Experience,
+      variant: variants[SectionType.Experience],
+      content: content.experience,
     }),
     createSection({
       id: fallbackSectionId(SectionType.Skills, 0),
@@ -788,19 +865,29 @@ const buildDefaultSections = (templateId: TemplateId, resumeData?: ParsedResume)
       variant: variants[SectionType.Skills],
       content: content.skills,
     }),
-    createSection({
-      id: fallbackSectionId(SectionType.Experience, 0),
-      type: SectionType.Experience,
-      variant: variants[SectionType.Experience],
-      content: content.experience,
-    }),
+  ];
+
+  if (shouldIncludeProjects) {
+    sections.push(
+      createSection({
+        id: fallbackSectionId(SectionType.Projects, 0),
+        type: SectionType.Projects,
+        variant: variants[SectionType.Projects],
+        content: content.projects,
+      })
+    );
+  }
+
+  sections.push(
     createSection({
       id: fallbackSectionId(SectionType.Contact, 0),
       type: SectionType.Contact,
       variant: variants[SectionType.Contact],
       content: content.contact,
-    }),
-  ];
+    })
+  );
+
+  return sections;
 };
 
 export function createDefaultTemplateConfig(params: {
@@ -819,7 +906,6 @@ export function createDefaultTemplateConfig(params: {
         ? params.themeOverride.mode
         : baseTheme.mode,
     palette: params.themeOverride?.palette ?? baseTheme.palette,
-    accentGradient: params.themeOverride?.accentGradient ?? baseTheme.accentGradient,
   };
 
   return {
@@ -833,20 +919,57 @@ export function createSectionConfig(params: {
   templateId: TemplateId;
   type: SectionType;
   existingSections: SectionConfig[];
+  resumeData?: ParsedResume;
 }): SectionConfig {
   const countForType = params.existingSections.filter((section) => section.type === params.type).length;
   const builtInId = String(params.templateId) as BuiltInTemplateId;
   const variant = VARIANT_BY_TEMPLATE[builtInId]?.[params.type];
 
+  const starterProject: ProjectItem = {
+    title: "New Project",
+    description: "Describe the project.",
+    highlights: ["Key result"],
+    tags: [],
+    links: {},
+  };
+
+  const seed = buildContentFromResume(params.resumeData);
+  let content = createEmptySectionContent(params.type) as SectionContentByType[typeof params.type];
+
+  switch (params.type) {
+    case SectionType.Projects: {
+      const isFirstProjectsSection = countForType === 0;
+      const projects =
+        isFirstProjectsSection && seed.projects.items.length > 0
+          ? seed.projects.items
+          : [starterProject];
+      content = {
+        ...seed.projects,
+        items: projects,
+      } as SectionContentByType[typeof params.type];
+      break;
+    }
+    case SectionType.Education:
+      content =
+        seed.education.entries.length > 0
+          ? (seed.education as SectionContentByType[typeof params.type])
+          : content;
+      break;
+    default:
+      break;
+  }
+
   return createSection({
     id: fallbackSectionId(params.type, countForType),
     type: params.type,
     variant,
-    content: createEmptySectionContent(params.type) as SectionContentByType[typeof params.type],
+    content,
   });
 }
 
 export function canAddSectionType(config: TemplateConfig, type: SectionType): boolean {
+  if (DEPRECATED_SECTION_TYPES.has(type)) return false;
+
   const entry = SECTION_LIBRARY.find((candidate) => candidate.type === type);
   if (!entry) return false;
   if (entry.allowMultiple) return true;
@@ -858,7 +981,20 @@ export function getAddableSectionTypes(config: TemplateConfig): SectionLibraryEn
 }
 
 export function getEnabledSections(config: TemplateConfig): SectionConfig[] {
-  return config.sections.filter((section) => section.enabled);
+  return config.sections.filter(
+    (section) => section.enabled && hasRenderableSectionContent(section)
+  );
+}
+
+export function hasRenderableSectionContent(section: SectionConfig): boolean {
+  if (DEPRECATED_SECTION_TYPES.has(section.type)) return false;
+
+  switch (section.type) {
+    case SectionType.Projects:
+      return (section.content as ProjectsSectionContent).items.length > 0;
+    default:
+      return true;
+  }
 }
 
 export function getNavSections(config: TemplateConfig): Array<{ id: string; label: string }> {
@@ -1003,7 +1139,7 @@ const normalizeSectionContent = (section: SectionConfig): SectionConfig => {
         company: asNonEmptyString(item?.company, "Company"),
         employedDates: typeof item?.employedDates === "string" ? item.employedDates : "",
         bullets: coerceArray(item?.bullets, ["Impact bullet"]).map((bullet) => asNonEmptyString(bullet, "Impact bullet")),
-        tags: coerceArray(item?.tags, []).map((tag) => asNonEmptyString(tag, "")),
+        tags: [],
       }));
 
       return {
@@ -1111,6 +1247,40 @@ const normalizeSectionContent = (section: SectionConfig): SectionConfig => {
   }
 };
 
+const appendMissingCoreSections = (
+  sections: SectionConfig[],
+  fallbackSections: SectionConfig[]
+): SectionConfig[] => {
+  const nextSections = [...sections];
+  const sectionIds = new Set(nextSections.map((section) => section.id));
+
+  CORE_REQUIRED_SECTION_TYPES.forEach((type) => {
+    if (nextSections.some((section) => section.type === type)) {
+      return;
+    }
+
+    const fallback =
+      fallbackSections.find((section) => section.type === type) ??
+      createSection({
+        id: fallbackSectionId(type, nextSections.length),
+        type,
+        content: createEmptySectionContent(type) as SectionContentByType[typeof type],
+      });
+
+    let nextId = fallback.id;
+    let attempt = 1;
+    while (sectionIds.has(nextId)) {
+      nextId = `${fallback.id}-restored-${attempt}`;
+      attempt += 1;
+    }
+
+    sectionIds.add(nextId);
+    nextSections.push({ ...fallback, id: nextId });
+  });
+
+  return nextSections;
+};
+
 export function normalizeTemplateConfig(params: {
   templateId: TemplateId;
   resumeData?: ParsedResume;
@@ -1135,11 +1305,13 @@ export function normalizeTemplateConfig(params: {
         ? params.config.theme.mode
         : defaultConfig.theme.mode,
     palette: params.config.theme?.palette || defaultConfig.theme.palette,
-    accentGradient: params.config.theme?.accentGradient || defaultConfig.theme.accentGradient,
   };
 
   const sections = (Array.isArray(params.config.sections) ? params.config.sections : defaultConfig.sections)
-    .filter((section): section is SectionConfig => Boolean(section && section.type && section.id))
+    .filter(
+      (section): section is SectionConfig =>
+        Boolean(section && section.type && section.id) && !DEPRECATED_SECTION_TYPES.has(section.type)
+    )
     .map((section, index) => {
       const normalizedSection: SectionConfig = {
         ...section,
@@ -1153,11 +1325,12 @@ export function normalizeTemplateConfig(params: {
 
       return normalizeSectionContent(normalizedSection);
     });
+  const sectionsWithCoreDefaults = appendMissingCoreSections(sections, defaultConfig.sections);
 
   return {
     templateId: params.templateId,
     theme,
-    sections: sections.length ? sections : defaultConfig.sections,
+    sections: sectionsWithCoreDefaults.length ? sectionsWithCoreDefaults : defaultConfig.sections,
   };
 }
 

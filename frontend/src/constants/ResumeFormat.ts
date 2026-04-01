@@ -24,6 +24,7 @@ export interface PersonalInformation {
 export interface OverviewData {
 	career_name: string;
 	resume_summary: string;
+	hero_summary?: string;
 }
 
 export interface Project {
@@ -37,6 +38,88 @@ export interface Experience {
 	employed_dates: string;
 }
 
+export interface NormalizedSectionPresence {
+	hero: boolean;
+	about: boolean;
+	experience: boolean;
+	skills: boolean;
+	projects: boolean;
+	contact: boolean;
+	education: boolean;
+	certifications: boolean;
+}
+
+export interface NormalizedHeroSection {
+	fullName: string;
+	careerName: string;
+	summary: string;
+}
+
+export interface NormalizedAboutSection {
+	summary: string;
+	educationLabel: string;
+	educationDetails: string;
+}
+
+export interface NormalizedExperienceItem {
+	company: string;
+	employedDates: string;
+	bullets: string[];
+	tags: string[];
+}
+
+export interface NormalizedExperienceSection {
+	items: NormalizedExperienceItem[];
+}
+
+export interface NormalizedSkillCategory {
+	title: string;
+	skills: string[];
+}
+
+export interface NormalizedSkillsSection {
+	categories: NormalizedSkillCategory[];
+}
+
+export interface NormalizedProjectLinks {
+	demo: string;
+	code: string;
+}
+
+export interface NormalizedProjectItem {
+	title: string;
+	description: string;
+	highlights: string[];
+	tags: string[];
+	links: NormalizedProjectLinks;
+}
+
+export interface NormalizedProjectsSection {
+	items: NormalizedProjectItem[];
+}
+
+export interface NormalizedContactSection {
+	email: string;
+	phone: string;
+	address: string;
+	linkedin: string;
+}
+
+export interface NormalizedTemplateSections {
+	hero: NormalizedHeroSection;
+	about: NormalizedAboutSection;
+	experience: NormalizedExperienceSection;
+	skills: NormalizedSkillsSection;
+	projects: NormalizedProjectsSection;
+	contact: NormalizedContactSection;
+}
+
+export interface NormalizedTemplateSeed {
+	schema_version: 1;
+	section_presence: NormalizedSectionPresence;
+	sections: NormalizedTemplateSections;
+}
+
 export interface ParsedResume {
 	// URL or identifier for the uploaded/processed resume PDF
 	resume_pdf: string;
@@ -46,5 +129,6 @@ export interface ParsedResume {
 	overview: OverviewData;
 	projects: Project[];
 	skills: string[];
-	experience: Experience[]
+	experience: Experience[];
+	__normalized_seed?: NormalizedTemplateSeed;
 }

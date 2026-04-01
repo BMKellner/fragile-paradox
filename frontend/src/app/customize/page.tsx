@@ -1,7 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
-import dynamic from 'next/dynamic';
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { useUser } from '@/hooks/use-user';
@@ -20,6 +19,8 @@ import {
   Save,
   X,
   ArrowLeft,
+  ChevronsLeft,
+  ChevronsRight,
 } from 'lucide-react';
 import {
   SectionType,
@@ -27,6 +28,7 @@ import {
   createSectionConfig,
   deserializeTemplateConfig,
   getAddableSectionTypes,
+  hasRenderableSectionContent,
   normalizeTemplateConfig,
   reorderSections,
   sectionTitle,
@@ -48,84 +50,22 @@ import {
 } from '@/lib/template-config';
 import { fetchTemplateConfig, saveTemplateConfig } from '@/lib/template-config-api';
 import { PortfolioDataWithCustomTemplate } from '@/lib/custom-template';
-
-type TemplateComponentProps = {
-  personalInformation?: ParsedResume['personal_information'];
-  overviewData?: ParsedResume['overview'];
-  projects?: ParsedResume['projects'];
-  experience?: ParsedResume['experience'];
-  skills?: ParsedResume['skills'];
-  mainColor: string;
-  backgroundColor: string;
-  templateConfig?: TemplateConfig;
-};
-
-const templateLoadFallback = () => (
-  <div className="rounded-lg border border-dashed border-[var(--color-border)] p-6 text-sm text-muted-foreground">
-    Loading template preview...
-  </div>
-);
-
-const templateComponentMap: Record<string, ComponentType<TemplateComponentProps>> = {
-  '1': dynamic<TemplateComponentProps>(() => import('@/components/PortfolioTemplates/ModernMinimalist'), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  '2': dynamic<TemplateComponentProps>(() => import('@/components/PortfolioTemplates/ClassicProfessional'), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  '3': dynamic<TemplateComponentProps>(() => import('@/components/PortfolioTemplates/CreativeBold'), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  '4': dynamic<TemplateComponentProps>(() => import('@/components/PortfolioTemplates/ElegantSophisticated'), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  '5': dynamic<TemplateComponentProps>(() => import('@/components/PortfolioTemplates/SideRailPro'), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  '6': dynamic<TemplateComponentProps>(() => import('@/components/PortfolioTemplates/EditorialStory'), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  '7': dynamic<TemplateComponentProps>(() => import('@/components/PortfolioTemplates/IDEClean'), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  '8': dynamic<TemplateComponentProps>(() => import('@/components/PortfolioTemplates/TimelineNarrative'), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  '9': dynamic<TemplateComponentProps>(() => import('@/components/PortfolioTemplates/BoldBrand'), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  '10': dynamic<TemplateComponentProps>(() => import('@/components/PortfolioTemplates/MinimalCreatorHub'), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-};
-
-const templateNames: Record<string, string> = {
-  '1': 'Modern Minimal',
-  '2': 'Classic Professional',
-  '3': 'Creative Bold',
-  '4': 'Elegant Sophisticated',
-  '5': 'SideRail Pro',
-  '6': 'Editorial Story',
-  '7': 'IDE Clean',
-  '8': 'Timeline Narrative',
-  '9': 'Bold Brand',
-  '10': 'Minimal Creator Hub',
-};
+import { templateComponentMap, templateNames } from '@/lib/template-map';
 
 const LIGHT_BG = '#F8FAFC';
 const DARK_BG = '#111111';
 
 const modeBackground = (mode: 'light' | 'dark'): string => (mode === 'light' ? LIGHT_BG : DARK_BG);
+
+const TEMPLATE_RENDERED_SECTIONS: Partial<Record<string, SectionType[]>> = {
+  '2': [SectionType.Hero, SectionType.About, SectionType.Projects, SectionType.Experience, SectionType.Contact],
+};
+
+const sectionRenderedByTemplate = (templateId: string, type: SectionType): boolean => {
+  const allowed = TEMPLATE_RENDERED_SECTIONS[templateId];
+  if (!allowed) return true;
+  return allowed.includes(type);
+};
 
 const parseCommaList = (value: string): string[] =>
   value
@@ -139,20 +79,70 @@ const parseLineList = (value: string): string[] =>
     .map((item) => item.trim())
     .filter(Boolean);
 
+const PREVIEW_SECTION_SELECTOR = '[data-customize-section-id], [data-customize-section-type], section[id]';
+const SECTION_TYPE_LOOKUP = new Set<SectionType>(Object.values(SectionType));
+
+const parseSectionType = (candidate: string | undefined): SectionType | null => {
+  const normalized = candidate?.trim().toLowerCase();
+  if (!normalized) return null;
+
+  if (SECTION_TYPE_LOOKUP.has(normalized as SectionType)) {
+    return normalized as SectionType;
+  }
+
+  const withoutSuffix = normalized.split(/[-_]/)[0];
+  if (SECTION_TYPE_LOOKUP.has(withoutSuffix as SectionType)) {
+    return withoutSuffix as SectionType;
+  }
+
+  const withoutTrailingDigits = normalized.replace(/[\d\-_]+$/, '');
+  if (SECTION_TYPE_LOOKUP.has(withoutTrailingDigits as SectionType)) {
+    return withoutTrailingDigits as SectionType;
+  }
+
+  return null;
+};
+
+const sectionMatchFromPreviewTarget = (
+  target: EventTarget | null
+): {
+  sectionId: string | null;
+  sectionType: SectionType | null;
+} | null => {
+  if (!(target instanceof HTMLElement)) return null;
+
+  const section = target.closest<HTMLElement>(PREVIEW_SECTION_SELECTOR);
+  if (!section) return null;
+
+  const sectionId = section.dataset.customizeSectionId?.trim() || section.id?.trim() || null;
+  const sectionType = parseSectionType(section.dataset.customizeSectionType || sectionId || undefined);
+
+  if (!sectionId && !sectionType) return null;
+
+  return {
+    sectionId,
+    sectionType,
+  };
+};
+
 export default function CustomizePage() {
   const router = useRouter();
   const info = useUser();
   const session = useMemo(() => createClient(), []);
+  const editorPanelRef = useRef<HTMLDivElement | null>(null);
 
   const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('1');
   const [config, setConfig] = useState<TemplateConfig | null>(null);
+  const [previewConfig, setPreviewConfig] = useState<TemplateConfig | null>(null);
   const [selectedSectionId, setSelectedSectionId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [draggedSectionId, setDraggedSectionId] = useState<string | null>(null);
   const [showAddDrawer, setShowAddDrawer] = useState(false);
+  const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
+  const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     let isCancelled = false;
@@ -223,6 +213,7 @@ export default function CustomizePage() {
 
       if (isCancelled) return;
       setConfig(nextConfig);
+      setPreviewConfig(nextConfig);
       setSelectedSectionId(nextConfig.sections[0]?.id ?? null);
       localStorage.setItem('templateConfig', serializeTemplateConfig(nextConfig));
       setIsLoading(false);
@@ -252,7 +243,56 @@ export default function CustomizePage() {
     return getAddableSectionTypes(config);
   }, [config]);
 
+  const visibleSidebarSections = useMemo(() => {
+    if (!config) return [];
+    return config.sections.filter(
+      (section) =>
+        section.enabled &&
+        sectionRenderedByTemplate(selectedTemplate, section.type) &&
+        hasRenderableSectionContent(section)
+    );
+  }, [config, selectedTemplate]);
+
+  const hiddenRestorableSections = useMemo(() => {
+    if (!config) return [];
+    return config.sections.filter(
+      (section) =>
+        !section.enabled &&
+        sectionRenderedByTemplate(selectedTemplate, section.type) &&
+        hasRenderableSectionContent(section)
+    );
+  }, [config, selectedTemplate]);
+
   const SelectedTemplate = templateComponentMap[selectedTemplate];
+  const serializedConfig = useMemo(
+    () => (config ? serializeTemplateConfig(config) : ''),
+    [config]
+  );
+  const serializedPreviewConfig = useMemo(
+    () => (previewConfig ? serializeTemplateConfig(previewConfig) : ''),
+    [previewConfig]
+  );
+  const hasPendingPreviewChanges = Boolean(
+    config &&
+      previewConfig &&
+      serializedConfig !== serializedPreviewConfig
+  );
+
+  const applyPreviewChanges = () => {
+    if (!config) return;
+    setPreviewConfig(config);
+  };
+
+  useEffect(() => {
+    if (!visibleSidebarSections.length) {
+      setSelectedSectionId(null);
+      return;
+    }
+
+    if (!selectedSectionId || !visibleSidebarSections.some((section) => section.id === selectedSectionId)) {
+      setSelectedSectionId(visibleSidebarSections[0].id);
+    }
+  }, [visibleSidebarSections, selectedSectionId]);
 
   const setSection = (
     sectionId: string,
@@ -302,6 +342,7 @@ export default function CustomizePage() {
         templateId: selectedTemplate,
         type,
         existingSections: previous.sections,
+        resumeData: resumeData ?? undefined,
       });
 
       const next = {
@@ -338,6 +379,58 @@ export default function CustomizePage() {
       };
     });
     setDraggedSectionId(null);
+  };
+
+  const focusActiveEditorField = () => {
+    window.setTimeout(() => {
+      const editorPanel = editorPanelRef.current;
+      if (!editorPanel) return;
+
+      const firstField =
+        editorPanel.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+          'input[type="text"]:not([disabled]), textarea:not([disabled])'
+        ) ??
+        editorPanel.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+          'input:not([type="hidden"]):not([disabled]), textarea:not([disabled])'
+        );
+
+      firstField?.focus();
+    }, 0);
+  };
+
+  const handlePreviewClick = (event: MouseEvent<HTMLDivElement>) => {
+    const previewMatch = sectionMatchFromPreviewTarget(event.target);
+    if (!previewMatch) return;
+
+    const previewSectionId = previewMatch.sectionId?.toLowerCase();
+    const targetSection =
+      (previewMatch.sectionId
+        ? visibleSidebarSections.find((section) => section.id === previewMatch.sectionId) ||
+          visibleSidebarSections.find((section) => previewSectionId !== undefined && section.id.toLowerCase() === previewSectionId)
+        : undefined) ??
+      (previewMatch.sectionType
+        ? visibleSidebarSections.find((section) => section.type === previewMatch.sectionType)
+        : undefined);
+
+    if (!targetSection) return;
+
+    const clickTarget = event.target as HTMLElement;
+    if (clickTarget.closest('a, button')) {
+      event.preventDefault();
+    }
+
+    setSelectedSectionId(targetSection.id);
+    setLeftSidebarCollapsed(false);
+    setRightSidebarCollapsed(false);
+
+    window.setTimeout(() => {
+      document.getElementById(`section-row-${targetSection.id}`)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+      });
+    }, 0);
+
+    focusActiveEditorField();
   };
 
   const openPreview = () => {
@@ -1948,7 +2041,7 @@ export default function CustomizePage() {
             />
             <Input
               value={content.address}
-              placeholder="Address"
+              placeholder="Add Location"
               onChange={(event) =>
                 setConfig((prev) =>
                   prev
@@ -2042,7 +2135,13 @@ export default function CustomizePage() {
 
       <main className="h-[calc(100vh-80px)] overflow-hidden">
         <div className="h-full flex flex-col lg:flex-row">
-          <aside className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r bg-background flex flex-col">
+          <aside
+            className={`relative w-full border-b bg-background flex flex-col overflow-hidden transition-[width,opacity,border-color] duration-300 ease-in-out lg:border-b-0 lg:border-r ${
+              leftSidebarCollapsed
+                ? 'lg:w-0 lg:min-w-0 lg:opacity-0 lg:pointer-events-none lg:border-r-transparent'
+                : 'lg:w-80 lg:opacity-100'
+            }`}
+          >
             <div className="p-4 border-b space-y-3">
               <div className="flex items-center justify-between gap-2">
                 <div>
@@ -2091,19 +2190,6 @@ export default function CustomizePage() {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Accent Gradient (Optional)</Label>
-                <Input
-                  value={config.theme.accentGradient || ''}
-                  placeholder="linear-gradient(...)"
-                  onChange={(event) =>
-                    setTheme({
-                      accentGradient: event.target.value || undefined,
-                    })
-                  }
-                />
-              </div>
-
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => setShowAddDrawer(true)} className="flex-1 gap-1">
                   <Plus className="w-4 h-4" />
@@ -2113,7 +2199,7 @@ export default function CustomizePage() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {config.sections.map((section) => (
+              {visibleSidebarSections.map((section) => (
                 <div
                   id={`section-row-${section.id}`}
                   key={section.id}
@@ -2133,30 +2219,32 @@ export default function CustomizePage() {
                       : 'hover:bg-muted/50'
                   } ${draggedSectionId === section.id ? 'opacity-60' : ''}`}
                 >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSectionId(section.id)}
-                    className="w-full text-left"
-                  >
-                    <div className="flex items-center gap-2">
-                      <GripVertical className="w-4 h-4 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{sectionTitle(section)}</p>
-                        <p className="text-xs text-muted-foreground truncate">Nav: {section.navLabel || sectionTitle(section)}</p>
-                      </div>
-                      <label className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          checked={section.enabled}
-                          onChange={(event) => {
-                            event.stopPropagation();
-                            handleToggleSection(section.id, event.target.checked);
-                          }}
-                        />
-                        Visible
-                      </label>
-                    </div>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <GripVertical className="w-4 h-4 text-muted-foreground" />
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSectionId(section.id)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <p className="text-sm font-medium truncate">{sectionTitle(section)}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        Nav: {section.navLabel || sectionTitle(section)}
+                      </p>
+                    </button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleToggleSection(section.id, false);
+                      }}
+                      title="Hide section"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -2173,15 +2261,82 @@ export default function CustomizePage() {
             </div>
           </aside>
 
-          <section className="flex-1 overflow-hidden bg-muted/30">
+          <section className="relative flex-1 overflow-hidden bg-muted/30 transition-all duration-300 ease-in-out">
+            <button
+              type="button"
+              onClick={() => setLeftSidebarCollapsed((value) => !value)}
+              className="absolute left-5 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-center rounded-full border bg-background/90 p-2 shadow-sm backdrop-blur-sm transition-colors hover:bg-muted lg:inline-flex"
+              aria-label={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
+              title={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
+            >
+              {leftSidebarCollapsed ? <ChevronsRight className="h-4 w-4" /> : <ChevronsLeft className="h-4 w-4" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRightSidebarCollapsed((value) => !value)}
+              className="absolute right-5 top-1/2 z-20 hidden -translate-y-1/2 items-center justify-center rounded-full border bg-background/90 p-2 shadow-sm backdrop-blur-sm transition-colors hover:bg-muted lg:inline-flex"
+              aria-label={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
+              title={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
+            >
+              {rightSidebarCollapsed ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
+            </button>
+
             <div className="h-full overflow-y-auto p-4 lg:p-6">
               <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <Button variant="ghost" size="sm" className="gap-2" onClick={() => router.push('/templates')}>
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to Templates
-                </Button>
-                <div className="text-sm text-muted-foreground">
-                  Live preview updates as you edit
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button variant="ghost" size="sm" className="gap-2" onClick={() => router.push('/templates')}>
+                    <ArrowLeft className="w-4 h-4" />
+                    Back to Templates
+                  </Button>
+                  <div className="hidden items-center gap-1 lg:flex">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setLeftSidebarCollapsed((value) => !value)}
+                      title={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
+                      aria-label={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
+                    >
+                      {leftSidebarCollapsed ? (
+                        <ChevronsRight className="h-4 w-4" />
+                      ) : (
+                        <ChevronsLeft className="h-4 w-4" />
+                      )}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      onClick={() => setRightSidebarCollapsed((value) => !value)}
+                      title={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
+                      aria-label={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
+                    >
+                      {rightSidebarCollapsed ? (
+                        <ChevronsLeft className="h-4 w-4" />
+                      ) : (
+                        <ChevronsRight className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-sm text-muted-foreground">
+                    Preview updates when you apply changes
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={hasPendingPreviewChanges ? 'default' : 'outline'}
+                    className="gap-2"
+                    onClick={applyPreviewChanges}
+                    disabled={!hasPendingPreviewChanges}
+                  >
+                    <Save className="w-4 h-4" />
+                    Apply changes
+                  </Button>
                 </div>
               </div>
 
@@ -2197,7 +2352,10 @@ export default function CustomizePage() {
                 </div>
               ) : null}
 
-              <div className="rounded-lg border bg-background shadow-sm overflow-hidden">
+              <div
+                className="rounded-lg border bg-background shadow-sm overflow-hidden"
+                onClickCapture={handlePreviewClick}
+              >
                 {SelectedTemplate ? (
                   <SelectedTemplate
                     personalInformation={resumeData.personal_information}
@@ -2205,9 +2363,9 @@ export default function CustomizePage() {
                     projects={resumeData.projects}
                     experience={resumeData.experience}
                     skills={resumeData.skills}
-                    mainColor={config.theme.primaryColor}
-                    backgroundColor={config.theme.backgroundColor}
-                    templateConfig={config}
+                    mainColor={(previewConfig ?? config).theme.primaryColor}
+                    backgroundColor={(previewConfig ?? config).theme.backgroundColor}
+                    templateConfig={previewConfig ?? config}
                   />
                 ) : (
                   <div className="p-6 text-sm text-muted-foreground">Template not found.</div>
@@ -2216,12 +2374,25 @@ export default function CustomizePage() {
             </div>
           </section>
 
-          <aside className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l bg-background overflow-y-auto">
+          <aside
+            className={`relative w-full border-t bg-background overflow-hidden flex flex-col transition-[width,opacity,border-color] duration-300 ease-in-out lg:border-t-0 lg:border-l ${
+              rightSidebarCollapsed
+                ? 'lg:w-0 lg:min-w-0 lg:opacity-0 lg:pointer-events-none lg:border-l-transparent'
+                : 'lg:w-96 lg:opacity-100'
+            }`}
+          >
             <div className="p-4 border-b">
-              <h3 className="text-lg font-semibold">Content</h3>
-              <p className="text-sm text-muted-foreground">Edit the selected section content.</p>
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-lg font-semibold">Content</h3>
+                  <p className="text-sm text-muted-foreground">Edit the selected section content.</p>
+                </div>
+              </div>
             </div>
-            <div className="p-4">
+            <div
+              ref={editorPanelRef}
+              className="flex-1 overflow-y-auto p-4 [&_label]:mb-1.5 [&_label]:block [&_input]:mt-1.5 [&_textarea]:mt-1.5"
+            >
               {selectedSection ? (
                 <div className="space-y-4">
                   <div>
@@ -2266,6 +2437,29 @@ export default function CustomizePage() {
             </div>
 
             <div className="space-y-2">
+              {hiddenRestorableSections.length ? (
+                <div className="rounded-md border border-dashed p-3">
+                  <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">Hidden Sections</p>
+                  <div className="space-y-2">
+                    {hiddenRestorableSections.map((section) => (
+                      <button
+                        key={`restore-${section.id}`}
+                        type="button"
+                        onClick={() => {
+                          handleToggleSection(section.id, true);
+                          setSelectedSectionId(section.id);
+                          setShowAddDrawer(false);
+                        }}
+                        className="w-full rounded-md border p-2 text-left transition-colors hover:bg-muted/60"
+                      >
+                        <p className="text-sm font-medium">Restore {sectionTitle(section)}</p>
+                        <p className="text-xs text-muted-foreground">Re-enable this section in the sidebar and preview.</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               {addableSections.length ? (
                 addableSections.map((entry) => (
                   <button
@@ -2276,13 +2470,23 @@ export default function CustomizePage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <p className="font-medium">{entry.label}</p>
-                      {entry.allowMultiple ? (
-                        <Badge variant="secondary">Multiple</Badge>
-                      ) : (
-                        <Badge variant="outline">Single</Badge>
-                      )}
+                      <div className="flex items-center gap-1">
+                        {!sectionRenderedByTemplate(selectedTemplate, entry.type) ? (
+                          <Badge variant="outline">Saved only</Badge>
+                        ) : null}
+                        {entry.allowMultiple ? (
+                          <Badge variant="secondary">Multiple</Badge>
+                        ) : (
+                          <Badge variant="outline">Single</Badge>
+                        )}
+                      </div>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">{entry.description}</p>
+                    {!sectionRenderedByTemplate(selectedTemplate, entry.type) ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        This section is stored in your config/resume data but not rendered by this template.
+                      </p>
+                    ) : null}
                   </button>
                 ))
               ) : (

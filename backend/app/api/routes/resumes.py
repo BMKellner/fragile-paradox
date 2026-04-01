@@ -7,6 +7,7 @@ from starlette.status import HTTP_201_CREATED
 from app.api.deps import verify_token
 from app.core.supabase_client import get_supabase_client
 from app.core.text_extract import extract_text_from_upload
+from app.core.resume_normalizer import build_normalized_template_seed
 from app.core.resume_parser import parse_resume_with_openai
 from app.models.resumes import ResumeSchema, Resume
 
@@ -132,6 +133,7 @@ async def upload_resume(
 
         # Parse resume with OpenAI
         parsed_resume: ResumeSchema = parse_resume_with_openai(text)
+        parsed_resume.normalized_seed = build_normalized_template_seed(parsed_resume)
 
         # Upload file to Supabase Storage
         supabase.storage.from_("users").upload(
@@ -153,7 +155,7 @@ async def upload_resume(
             data=parsed_resume,
                 )
 
-        payload = resume_entry.model_dump()
+        payload = resume_entry.model_dump(by_alias=True)
 
         result = supabase.table("resumes").insert(payload).execute()
         if not result.data or len(result.data) == 0:
