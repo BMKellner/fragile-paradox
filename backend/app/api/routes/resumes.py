@@ -31,6 +31,29 @@ async def list_resumes(user=Depends(verify_token), limit: int = 50, offset: int 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Supabase error: {str(e)}")
 
+# @router.get("/{resume_id}/resumeData")
+# async def get_resume_data(resume_id: str, user=Depends(verify_token)):
+#     """List the skills extracted from a specific resume. """
+#     """Stored in the data column of the resumes table in Supabase."""
+#     try:
+#         supabase = get_supabase_client()
+#         response = supabase.table("resumes")\
+#             .select("data")\
+#             .eq("id", resume_id)\
+#             .eq("user_id", user.id)\
+#             .execute()
+
+#         if not response.data or len(response.data) == 0:
+#             raise HTTPException(status_code=404, detail="Resume not found")
+
+#         resume_data = response.data[0].get("data")
+#         if not resume_data:
+#             raise HTTPException(status_code=404, detail="No data found for this resume")
+
+#         return resume_data
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Supabase error: {str(e)}")
+
 @router.get("/{resume_id}")
 async def get_resume(resume_id: str, user=Depends(verify_token)):
     """Get a specific resume by ID for the authenticated user."""

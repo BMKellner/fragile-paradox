@@ -105,3 +105,30 @@ def get_profile_picture(user=Depends(verify_token)):
             status_code=500,
             detail="Failed to retrieve profile picture"
         )
+
+@router.get("/similar-users")
+def get_similar_users(user=Depends(verify_token)):
+    try:
+        access_token = user.access_token
+        supabase = get_supabase_client(access_token)
+
+        result = supabase.rpc(
+            "get_my_similar_users",
+            {"p_limit": 10}
+        ).execute()
+
+        if getattr(result, "error", None):
+            raise HTTPException(status_code=400, detail=str(result.error))
+
+        return {
+            "success": True,
+            "data": result.data
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch similar users: {str(e)}"
+        )
