@@ -2,6 +2,7 @@ from fastapi import APIRouter, UploadFile, File, Depends, Response, HTTPExceptio
 
 from app.api.deps import get_access_token, verify_token
 from app.core.supabase_client import get_supabase_client, get_user_supabase_client
+from app.services.refresh_similarity import refresh_user_similarity
 from app.models.users import UserUpdate
 
 
@@ -105,7 +106,7 @@ def get_profile_picture(user=Depends(verify_token)):
             status_code=500,
             detail="Failed to retrieve profile picture"
         )
-
+    
 @router.get("/similar-users")
 def get_similar_users(
     _user=Depends(verify_token),
@@ -114,13 +115,7 @@ def get_similar_users(
     try:
         supabase = get_user_supabase_client(access_token)
 
-        refresh_result = supabase.rpc(
-            "refresh_my_similarity_on_login",
-            {"p_limit": 10}
-        ).execute()
-
-        if getattr(refresh_result, "error", None):
-            raise HTTPException(status_code=400, detail=str(refresh_result.error))
+        refresh_user_similarity(str(_user.id), candidate_limit=500, result_limit=10)
 
         result = supabase.rpc(
             "get_my_similar_users",
