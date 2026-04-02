@@ -7,6 +7,9 @@ from app.core.supabase_client import get_supabase_client
 
 security = HTTPBearer()
 
+def get_access_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    return credentials.credentials
+
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> User:
     supabase = get_supabase_client()
     token = credentials.credentials

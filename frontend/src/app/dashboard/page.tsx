@@ -58,6 +58,8 @@ export default function DashboardPage() {
     const fetchData = async () => {
       if (!info.user) return;
 
+      console.log(info.session?.access_token);
+
       try {
         const supabaseSession = await session.auth.getSession();
         const token = supabaseSession.data.session?.access_token;
