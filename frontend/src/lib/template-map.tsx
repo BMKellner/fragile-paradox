@@ -5,6 +5,7 @@ import type { ComponentType } from "react";
 
 import type { ParsedResume } from "@/constants/ResumeFormat";
 import type { TemplateConfig } from "@/lib/template-config";
+import type { CanvasEditorBindings } from "@/components/PortfolioTemplates/shared/editor/types";
 
 export type TemplateComponentProps = {
   personalInformation?: ParsedResume["personal_information"];
@@ -15,6 +16,7 @@ export type TemplateComponentProps = {
   mainColor: string;
   backgroundColor: string;
   templateConfig?: TemplateConfig;
+  canvasEditor?: CanvasEditorBindings;
 };
 
 export type TemplateMeta = {

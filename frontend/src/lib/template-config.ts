@@ -49,6 +49,7 @@ export interface TemplateThemeConfig {
   mode: ThemeMode;
   primaryColor: string;
   backgroundColor: string;
+  accentGradient?: string;
 }
 
 export type SectionStat = {
