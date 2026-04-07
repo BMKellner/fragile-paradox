@@ -9,7 +9,15 @@ type HeroSectionProps = {
   fullName: string;
   careerName: string;
   summary: string;
-  scrollTargetId: string;
+  scrollTargetId?: string;
+  sectionId?: string;
+  title?: string;
+  subtitle?: string;
+  primaryCtaLabel?: string;
+  email?: string;
+  location?: string;
+  onCopyEmail?: () => Promise<void>;
+  emailCopied?: boolean;
 };
 
 function CatGlyph() {
