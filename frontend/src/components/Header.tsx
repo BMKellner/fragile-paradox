@@ -7,11 +7,11 @@ import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Leaf, User, LayoutDashboard } from "lucide-react";
+import { Leaf, User, LayoutDashboard, Users } from "lucide-react";
 
 interface HeaderProps {
   showNav?: boolean;
-  currentPage?: 'home' | 'dashboard' | 'profile' | 'upload' | 'templates' | 'preview' | 'customize';
+  currentPage?: 'home' | 'dashboard' | 'profile' | 'upload' | 'templates' | 'preview' | 'customize' | 'networking';
 }
 
 const profileImageCache = new Map<string, string>();
@@ -116,6 +116,7 @@ export default function Header({ showNav = true, currentPage }: HeaderProps) {
 
   const dashboardPath = info.user ? '/dashboard' : '/signin?next=/dashboard';
   const profilePath = info.user ? '/profile' : '/signin?next=/profile';
+  const networkingPath = info.user ? '/networking' : '/signin?next=/networking';
 
   return (
     <header className="header-base sticky top-0 z-50">
@@ -154,6 +155,16 @@ export default function Header({ showNav = true, currentPage }: HeaderProps) {
                   <Link href={profilePath}>
                     <User className="w-4 h-4" />
                     Profile
+                  </Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className={`gap-2 ${currentPage === 'networking' ? 'bg-[var(--color-primary)]/15 text-[var(--color-foreground)]' : ''}`}
+                >
+                  <Link href={networkingPath}>
+                    <Users className="w-4 h-4" />
+                    Networking
                   </Link>
                 </Button>
               </nav>

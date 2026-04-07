@@ -20,6 +20,7 @@ import {
 } from "@/lib/template-config";
 import { enabledSections, resolveTemplateConfigFromProps } from "@/components/PortfolioTemplates/shared/templateConfigAdapter";
 import { getInitials, isLightColor, sanitizeHexColor, type TemplateProps } from "@/components/PortfolioTemplates/shared/portfolioData";
+import { SectionFrame } from "@/components/PortfolioTemplates/shared/editor/SectionFrame";
 
 const navLabel = (type: SectionType, fallback: string): string => {
   if (type === SectionType.Hero) return "Home";
@@ -35,6 +36,7 @@ export default function TimelineNarrativePortfolio({
   mainColor,
   backgroundColor,
   templateConfig,
+  canvasEditor,
 }: TemplateProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
@@ -700,7 +702,29 @@ export default function TimelineNarrativePortfolio({
           </div>
         </aside>
 
-        <main className={styles.mainContent}>{sections.map((section) => renderSection(section))}</main>
+        <main className={styles.mainContent}>
+          {sections.map((section) => {
+            const rendered = renderSection(section);
+            if (!rendered) return null;
+            return (
+              <SectionFrame
+                key={section.id}
+                sectionId={section.id}
+                sectionLabel={sectionTitle(section)}
+                selected={canvasEditor?.selectedSectionId === section.id}
+                enabled={Boolean(canvasEditor?.enabled)}
+                height={canvasEditor?.getSectionHeight?.(section.id)}
+                onSelect={(sectionId) => canvasEditor?.onSelectSection(sectionId)}
+                onReorder={(draggedSectionId, targetSectionId) =>
+                  canvasEditor?.onReorderSections(draggedSectionId, targetSectionId)
+                }
+                onResize={(sid, h) => canvasEditor?.onResizeSection?.(sid, h)}
+              >
+                {rendered}
+              </SectionFrame>
+            );
+          })}
+        </main>
       </div>
     </div>
   );

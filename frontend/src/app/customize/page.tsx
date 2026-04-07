@@ -1,12 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ComponentType } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { useUser } from '@/hooks/use-user';
 import { ParsedResume } from '@/constants/ResumeFormat';
-import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -20,6 +19,14 @@ import {
   Save,
   X,
   ArrowLeft,
+  Sun,
+  Moon,
+  Palette,
+  Layers,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightClose,
+  PanelRightOpen,
 } from 'lucide-react';
 import {
   SectionType,
@@ -48,6 +55,15 @@ import {
 } from '@/lib/template-config';
 import { fetchTemplateConfig, saveTemplateConfig } from '@/lib/template-config-api';
 import { PortfolioDataWithCustomTemplate } from '@/lib/custom-template';
+import {
+  DEFAULT_EDITOR_CANVAS,
+  deserializeEditorCanvas,
+  normalizeEditorCanvas,
+  serializeEditorCanvas,
+  type EditorCanvasStateV1,
+} from '@/lib/editor-canvas';
+import { getSectionEditableFields, updateSectionField } from '@/components/PortfolioTemplates/shared/editor/fieldRegistry';
+import type { CanvasEditorBindings } from '@/components/PortfolioTemplates/shared/editor/types';
 
 type TemplateComponentProps = {
   personalInformation?: ParsedResume['personal_information'];
@@ -58,6 +74,7 @@ type TemplateComponentProps = {
   mainColor: string;
   backgroundColor: string;
   templateConfig?: TemplateConfig;
+  canvasEditor?: CanvasEditorBindings;
 };
 
 const templateLoadFallback = () => (
@@ -126,6 +143,7 @@ const LIGHT_BG = '#F8FAFC';
 const DARK_BG = '#111111';
 
 const modeBackground = (mode: 'light' | 'dark'): string => (mode === 'light' ? LIGHT_BG : DARK_BG);
+const CANVAS_EDITOR_ENABLED = process.env.NEXT_PUBLIC_CANVAS_EDITOR !== 'false';
 
 const parseCommaList = (value: string): string[] =>
   value
@@ -153,7 +171,9 @@ export default function CustomizePage() {
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [draggedSectionId, setDraggedSectionId] = useState<string | null>(null);
   const [showAddDrawer, setShowAddDrawer] = useState(false);
-
+  const [isLeftSidebarCollapsed, setIsLeftSidebarCollapsed] = useState(false);
+  const [isRightSidebarCollapsed, setIsRightSidebarCollapsed] = useState(false);
+  const [editorCanvas, setEditorCanvas] = useState<EditorCanvasStateV1>(DEFAULT_EDITOR_CANVAS);
   useEffect(() => {
     let isCancelled = false;
 
@@ -163,6 +183,7 @@ export default function CustomizePage() {
       const storedColor = localStorage.getItem('selectedColor') || '#2563EB';
       const storedMode = (localStorage.getItem('selectedMode') as 'light' | 'dark' | null) || 'light';
       const localTemplateConfig = deserializeTemplateConfig(localStorage.getItem('templateConfig'));
+      const localCanvas = deserializeEditorCanvas(localStorage.getItem('editorCanvas'));
 
       if (!storedResume) {
         router.push('/upload');
@@ -223,8 +244,14 @@ export default function CustomizePage() {
 
       if (isCancelled) return;
       setConfig(nextConfig);
-      setSelectedSectionId(nextConfig.sections[0]?.id ?? null);
+      const nextCanvas = normalizeEditorCanvas(
+        localCanvas ?? ((parsedResume as PortfolioDataWithCustomTemplate).__editor_canvas ?? null),
+        nextConfig.sections.map((section) => section.id)
+      );
+      setEditorCanvas(nextCanvas);
+      setSelectedSectionId(nextCanvas.selectedSectionId);
       localStorage.setItem('templateConfig', serializeTemplateConfig(nextConfig));
+      localStorage.setItem('editorCanvas', serializeEditorCanvas(nextCanvas));
       setIsLoading(false);
     };
 
@@ -242,6 +269,23 @@ export default function CustomizePage() {
     localStorage.setItem('selectedMode', config.theme.mode);
   }, [config]);
 
+  useEffect(() => {
+    if (!config) return;
+    setEditorCanvas((previous) =>
+      normalizeEditorCanvas(
+        {
+          ...previous,
+          selectedSectionId,
+        },
+        config.sections.map((section) => section.id)
+      )
+    );
+  }, [config, selectedSectionId]);
+
+  useEffect(() => {
+    localStorage.setItem('editorCanvas', serializeEditorCanvas(editorCanvas));
+  }, [editorCanvas]);
+
   const selectedSection = useMemo(
     () => config?.sections.find((section) => section.id === selectedSectionId) ?? null,
     [config, selectedSectionId]
@@ -253,6 +297,52 @@ export default function CustomizePage() {
   }, [config]);
 
   const SelectedTemplate = templateComponentMap[selectedTemplate];
+
+  const handleCanvasFieldUpdate = (sectionId: string, fieldPath: string, value: string) => {
+    setConfig((previous) => {
+      if (!previous) return previous;
+      return updateSectionField(previous, sectionId, fieldPath, value);
+    });
+  };
+
+  const handleCanvasReorder = (draggedSectionId: string, targetSectionId: string) => {
+    setConfig((previous) => {
+      if (!previous) return previous;
+      return {
+        ...previous,
+        sections: reorderSections(previous.sections, draggedSectionId, targetSectionId),
+      };
+    });
+  };
+
+  const handleCanvasResize = useCallback((sectionId: string, height: number) => {
+    setEditorCanvas((previous) => {
+      const updated = previous.sectionLayouts.map((layout) =>
+        layout.sectionId === sectionId ? { ...layout, height } : layout
+      );
+      if (!updated.some((l) => l.sectionId === sectionId)) {
+        updated.push({ sectionId, order: updated.length, height });
+      }
+      return { ...previous, sectionLayouts: updated };
+    });
+  }, []);
+
+  const canvasEditorBindings: CanvasEditorBindings | undefined = useMemo(() => {
+    if (!CANVAS_EDITOR_ENABLED) return undefined;
+    return {
+      enabled: true,
+      selectedSectionId: selectedSectionId ?? null,
+      onSelectSection: (sectionId) => {
+        setSelectedSectionId(sectionId);
+      },
+      onReorderSections: handleCanvasReorder,
+      onUpdateField: handleCanvasFieldUpdate,
+      getEditableFields: getSectionEditableFields,
+      onResizeSection: handleCanvasResize,
+      getSectionHeight: (sectionId) =>
+        editorCanvas.sectionLayouts.find((l) => l.sectionId === sectionId)?.height,
+    };
+  }, [selectedSectionId, editorCanvas, handleCanvasResize]);
 
   const setSection = (
     sectionId: string,
@@ -348,6 +438,7 @@ export default function CustomizePage() {
     localStorage.setItem('selectedColor', config.theme.primaryColor);
     localStorage.setItem('selectedMode', config.theme.mode);
     localStorage.setItem('templateConfig', serializeTemplateConfig(config));
+    localStorage.setItem('editorCanvas', serializeEditorCanvas(editorCanvas));
 
     router.push('/preview');
   };
@@ -394,6 +485,7 @@ export default function CustomizePage() {
         data: {
           ...(resumeData as PortfolioDataWithCustomTemplate),
           __template_config: config,
+          __editor_canvas: editorCanvas,
         },
       };
 
@@ -441,6 +533,7 @@ export default function CustomizePage() {
 
       localStorage.setItem('currentPortfolioId', resolvedPortfolioId);
       localStorage.setItem('templateConfig', serializeTemplateConfig(config));
+      localStorage.setItem('editorCanvas', serializeEditorCanvas(editorCanvas));
       setSaveMessage({ type: 'success', message: 'Template configuration saved.' });
       window.setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
@@ -2025,7 +2118,6 @@ export default function CustomizePage() {
   if (!resumeData || !config) {
     return (
       <div className="min-h-screen">
-        <Header currentPage="customize" />
         <div className="container-base py-8">
           <p className="text-muted-foreground">Missing resume or template data.</p>
           <Button className="mt-4" onClick={() => router.push('/templates')}>
@@ -2037,166 +2129,177 @@ export default function CustomizePage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <Header currentPage="customize" />
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* ── Figma-style top bar ── */}
+      <header className="h-11 flex items-center justify-between px-3 border-b bg-background shrink-0 z-30">
+        {/* Left: back + template name */}
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={() => router.push('/templates')}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded hover:bg-muted/60"
+            aria-label="Back to templates"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Templates</span>
+          </button>
+          <span className="text-muted-foreground/40 select-none hidden sm:inline">/</span>
+          <span className="text-xs font-medium truncate hidden sm:inline">
+            {templateNames[selectedTemplate] || `Template ${selectedTemplate}`}
+          </span>
+        </div>
 
-      <main className="h-[calc(100vh-80px)] overflow-hidden">
-        <div className="h-full flex flex-col lg:flex-row">
-          <aside className="w-full lg:w-80 border-b lg:border-b-0 lg:border-r bg-background flex flex-col">
-            <div className="p-4 border-b space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Template Editor</p>
-                  <h2 className="text-lg font-semibold">Sections</h2>
+        {/* Centre: theme controls */}
+        <div className="flex items-center gap-1">
+          {/* Color swatch */}
+          <label
+            className="relative inline-flex items-center gap-1.5 px-2 py-1 rounded hover:bg-muted/60 cursor-pointer text-xs text-muted-foreground"
+            title="Primary color"
+          >
+            <span
+              className="w-3.5 h-3.5 rounded-full border border-border shrink-0"
+              style={{ background: config.theme.primaryColor }}
+            />
+            <Palette className="w-3.5 h-3.5" />
+            <input
+              type="color"
+              value={config.theme.primaryColor}
+              onChange={(event) => setTheme({ primaryColor: event.target.value })}
+              className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+            />
+          </label>
+
+          {/* Light / dark toggle */}
+          <button
+            type="button"
+            title={config.theme.mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            onClick={() => setTheme({ mode: config.theme.mode === 'dark' ? 'light' : 'dark', backgroundColor: modeBackground(config.theme.mode === 'dark' ? 'light' : 'dark') })}
+            className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-muted/60 text-muted-foreground"
+          >
+            {config.theme.mode === 'dark' ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+          </button>
+
+          <div className="w-px h-4 bg-border mx-1" />
+
+          {/* Save / preview */}
+          <button
+            type="button"
+            onClick={openPreview}
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-muted-foreground hover:bg-muted/60 transition-colors"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Preview</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={isSaving}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium bg-[var(--color-primary)] text-[var(--color-primary-foreground)] hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            <span className="hidden sm:inline">{isSaving ? 'Saving…' : 'Save'}</span>
+          </button>
+        </div>
+
+        {/* Right: sidebar toggles */}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setIsLeftSidebarCollapsed((p) => !p)}
+            className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-muted/60 text-muted-foreground"
+            aria-label="Toggle layers panel"
+            title="Layers"
+          >
+            {isLeftSidebarCollapsed ? <PanelLeftOpen className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsRightSidebarCollapsed((p) => !p)}
+            className="inline-flex items-center justify-center w-7 h-7 rounded hover:bg-muted/60 text-muted-foreground"
+            aria-label="Toggle properties panel"
+            title="Properties"
+          >
+            {isRightSidebarCollapsed ? <PanelRightOpen className="w-4 h-4" /> : <PanelRightClose className="w-4 h-4" />}
+          </button>
+        </div>
+      </header>
+
+      {saveMessage ? (
+        <div
+          className={`px-4 py-1.5 text-xs text-center shrink-0 ${
+            saveMessage.type === 'success'
+              ? 'bg-green-50 text-green-700 border-b border-green-200'
+              : 'bg-red-50 text-red-700 border-b border-red-200'
+          }`}
+        >
+          {saveMessage.message}
+        </div>
+      ) : null}
+
+      <main className="flex-1 overflow-hidden">
+        <div className="h-full flex">
+          {/* ── Left: Layers panel ── */}
+          {!isLeftSidebarCollapsed ? (
+            <aside className="w-56 shrink-0 border-r bg-background flex flex-col overflow-hidden">
+              {/* Panel header */}
+              <div className="flex items-center justify-between px-3 py-2 border-b">
+                <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-widest">
+                  <Layers className="w-3 h-3" />
+                  Layers
                 </div>
-                <Badge variant="secondary">{templateNames[selectedTemplate] || `Template ${selectedTemplate}`}</Badge>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Primary Color</Label>
-                <Input
-                  type="color"
-                  value={config.theme.primaryColor}
-                  onChange={(event) =>
-                    setTheme({
-                      primaryColor: event.target.value,
-                    })
-                  }
-                  className="h-10 p-1"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Display Mode</Label>
-                <div className="inline-flex rounded-md border p-1">
-                  {(['light', 'dark'] as const).map((mode) => (
-                    <button
-                      key={mode}
-                      type="button"
-                      onClick={() =>
-                        setTheme({
-                          mode,
-                          backgroundColor: modeBackground(mode),
-                        })
-                      }
-                      className={`px-3 py-1 text-sm rounded ${
-                        config.theme.mode === mode
-                          ? 'bg-[var(--color-primary)] text-[var(--color-primary-foreground)]'
-                          : 'text-muted-foreground'
-                      }`}
-                    >
-                      {mode[0].toUpperCase() + mode.slice(1)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Accent Gradient (Optional)</Label>
-                <Input
-                  value={config.theme.accentGradient || ''}
-                  placeholder="linear-gradient(...)"
-                  onChange={(event) =>
-                    setTheme({
-                      accentGradient: event.target.value || undefined,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button size="sm" onClick={() => setShowAddDrawer(true)} className="flex-1 gap-1">
-                  <Plus className="w-4 h-4" />
-                  Add Section
-                </Button>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-3 space-y-2">
-              {config.sections.map((section) => (
-                <div
-                  id={`section-row-${section.id}`}
-                  key={section.id}
-                  draggable
-                  onDragStart={() => handleDragStart(section.id)}
-                  onDragOver={(event) => {
-                    event.preventDefault();
-                  }}
-                  onDrop={(event) => {
-                    event.preventDefault();
-                    handleDrop(section.id);
-                  }}
-                  onDragEnd={() => setDraggedSectionId(null)}
-                  className={`rounded-md border p-2 transition-colors ${
-                    selectedSectionId === section.id
-                      ? 'border-[var(--color-primary)] bg-[var(--color-primary)]/10'
-                      : 'hover:bg-muted/50'
-                  } ${draggedSectionId === section.id ? 'opacity-60' : ''}`}
+                <button
+                  type="button"
+                  onClick={() => setShowAddDrawer(true)}
+                  className="inline-flex items-center justify-center w-5 h-5 rounded hover:bg-muted/60 text-muted-foreground"
+                  title="Add section"
                 >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSectionId(section.id)}
-                    className="w-full text-left"
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Section list */}
+              <div className="flex-1 overflow-y-auto py-1">
+                {config.sections.map((section) => (
+                  <div
+                    id={`section-row-${section.id}`}
+                    key={section.id}
+                    draggable
+                    onDragStart={() => handleDragStart(section.id)}
+                    onDragOver={(event) => event.preventDefault()}
+                    onDrop={(event) => { event.preventDefault(); handleDrop(section.id); }}
+                    onDragEnd={() => setDraggedSectionId(null)}
+                    className={`group flex items-center gap-1.5 px-2 py-1.5 mx-1 rounded cursor-pointer select-none text-xs transition-colors ${
+                      selectedSectionId === section.id
+                        ? 'bg-[var(--color-primary)]/12 text-[var(--color-primary)]'
+                        : 'text-foreground hover:bg-muted/50'
+                    } ${draggedSectionId === section.id ? 'opacity-40' : ''}`}
+                    onClick={() => {
+                      setSelectedSectionId(section.id);
+                    }}
                   >
-                    <div className="flex items-center gap-2">
-                      <GripVertical className="w-4 h-4 text-muted-foreground" />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{sectionTitle(section)}</p>
-                        <p className="text-xs text-muted-foreground truncate">Nav: {section.navLabel || sectionTitle(section)}</p>
-                      </div>
-                      <label className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          checked={section.enabled}
-                          onChange={(event) => {
-                            event.stopPropagation();
-                            handleToggleSection(section.id, event.target.checked);
-                          }}
-                        />
-                        Visible
-                      </label>
-                    </div>
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <GripVertical className="w-3 h-3 text-muted-foreground/50 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <span className="flex-1 truncate font-medium">{sectionTitle(section)}</span>
+                    <button
+                      type="button"
+                      title={section.enabled ? 'Hide section' : 'Show section'}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        handleToggleSection(section.id, !section.enabled);
+                      }}
+                      className={`shrink-0 w-4 h-4 rounded transition-opacity ${section.enabled ? 'opacity-0 group-hover:opacity-60' : 'opacity-30'} hover:!opacity-100`}
+                      aria-label={section.enabled ? 'Hide' : 'Show'}
+                    >
+                      <Eye className="w-3 h-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </aside>
+          ) : null}
 
-            <div className="p-3 border-t space-y-2">
-              <Button variant="outline" size="sm" className="w-full gap-2" onClick={openPreview}>
-                <Eye className="w-4 h-4" />
-                Open Preview
-              </Button>
-              <Button size="sm" className="w-full gap-2" onClick={handleSave} disabled={isSaving}>
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                Save
-              </Button>
-            </div>
-          </aside>
-
+          {/* ── Canvas ── */}
           <section className="flex-1 overflow-hidden bg-muted/30">
             <div className="h-full overflow-y-auto p-4 lg:p-6">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <Button variant="ghost" size="sm" className="gap-2" onClick={() => router.push('/templates')}>
-                  <ArrowLeft className="w-4 h-4" />
-                  Back to Templates
-                </Button>
-                <div className="text-sm text-muted-foreground">
-                  Live preview updates as you edit
-                </div>
-              </div>
-
-              {saveMessage ? (
-                <div
-                  className={`mb-4 rounded-md border px-3 py-2 text-sm ${
-                    saveMessage.type === 'success'
-                      ? 'border-green-200 bg-green-50 text-green-700'
-                      : 'border-red-200 bg-red-50 text-red-700'
-                  }`}
-                >
-                  {saveMessage.message}
-                </div>
-              ) : null}
-
               <div className="rounded-lg border bg-background shadow-sm overflow-hidden">
                 {SelectedTemplate ? (
                   <SelectedTemplate
@@ -2208,6 +2311,7 @@ export default function CustomizePage() {
                     mainColor={config.theme.primaryColor}
                     backgroundColor={config.theme.backgroundColor}
                     templateConfig={config}
+                    canvasEditor={canvasEditorBindings}
                   />
                 ) : (
                   <div className="p-6 text-sm text-muted-foreground">Template not found.</div>
@@ -2216,39 +2320,64 @@ export default function CustomizePage() {
             </div>
           </section>
 
-          <aside className="w-full lg:w-96 border-t lg:border-t-0 lg:border-l bg-background overflow-y-auto">
-            <div className="p-4 border-b">
-              <h3 className="text-lg font-semibold">Content</h3>
-              <p className="text-sm text-muted-foreground">Edit the selected section content.</p>
-            </div>
-            <div className="p-4">
-              {selectedSection ? (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Selected</p>
-                    <p className="font-medium">{sectionTitle(selectedSection)}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{selectedSection.type}</p>
+          {/* ── Right: Properties panel ── */}
+          {!isRightSidebarCollapsed ? (
+            <aside className="w-64 shrink-0 border-l bg-background flex flex-col overflow-hidden">
+              {/* Panel header */}
+              <div className="px-3 py-2 border-b">
+                {selectedSection ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+                      {sectionTitle(selectedSection)}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground/50 capitalize">{selectedSection.type}</span>
                   </div>
-                  <div>
-                    <Label>Navbar Label</Label>
-                    <Input
-                      value={selectedSection.navLabel || ''}
-                      placeholder="Navbar text"
-                      onChange={(event) =>
-                        setSection(selectedSection.id, (current) => ({
-                          ...current,
-                          navLabel: event.target.value,
-                        }))
-                      }
-                    />
+                ) : (
+                  <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">Properties</span>
+                )}
+              </div>
+
+              {/* Fields */}
+              <div className="flex-1 overflow-y-auto [&_label]:text-[10px] [&_label]:uppercase [&_label]:tracking-wider [&_label]:text-muted-foreground [&_label]:mb-0.5 [&_input]:h-7 [&_input]:text-xs [&_textarea]:text-xs [&_.space-y-3]:space-y-2">
+                {selectedSection ? (
+                  <div className="p-3 space-y-2">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Nav Label</label>
+                      <Input
+                        className="h-7 text-xs"
+                        value={selectedSection.navLabel || ''}
+                        placeholder="Navbar text"
+                        onChange={(event) =>
+                          setSection(selectedSection.id, (current) => ({
+                            ...current,
+                            navLabel: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    {renderContentEditor(selectedSection)}
                   </div>
-                  {renderContentEditor(selectedSection)}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Select a section from the left panel.</p>
-              )}
-            </div>
-          </aside>
+                ) : (
+                  <p className="p-3 text-xs text-muted-foreground">Select a section to edit properties.</p>
+                )}
+              </div>
+
+              {/* Theme footer */}
+              <div className="border-t p-3 space-y-2">
+                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Accent Gradient</label>
+                <Input
+                  className="h-7 text-xs"
+                  value={config.theme.accentGradient || ''}
+                  placeholder="linear-gradient(...)"
+                  onChange={(event) =>
+                    setTheme({
+                      accentGradient: event.target.value || undefined,
+                    })
+                  }
+                />
+              </div>
+            </aside>
+          ) : null}
         </div>
       </main>
 

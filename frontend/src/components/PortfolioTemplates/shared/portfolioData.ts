@@ -5,6 +5,7 @@ import type {
   Project,
 } from "@/constants/ResumeFormat";
 import type { TemplateConfig } from "@/lib/template-config";
+import type { CanvasEditorBindings } from "@/components/PortfolioTemplates/shared/editor/types";
 
 export type TemplateProps = {
   personalInformation?: PersonalInformation;
@@ -15,6 +16,7 @@ export type TemplateProps = {
   mainColor?: string;
   backgroundColor?: string;
   templateConfig?: TemplateConfig;
+  canvasEditor?: CanvasEditorBindings;
 };
 
 export type SectionId =

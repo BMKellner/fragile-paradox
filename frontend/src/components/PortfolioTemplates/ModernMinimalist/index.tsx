@@ -27,6 +27,7 @@ import { ExperienceSection } from "./sections/ExperienceSection";
 import { BlogSection } from "./sections/BlogSection";
 import { TestimonialsSection } from "./sections/TestimonialsSection";
 import { ContactSection } from "./sections/ContactSection";
+import { SectionFrame } from "@/components/PortfolioTemplates/shared/editor/SectionFrame";
 
 const navLabel = (type: SectionType, fallback: string): string => {
   if (type === SectionType.Hero) return "Home";
@@ -43,6 +44,7 @@ export default function ModernMinimalistPortfolio({
   mainColor,
   backgroundColor,
   templateConfig,
+  canvasEditor,
 }: ModernMinimalistProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [emailCopied, setEmailCopied] = useState(false);
@@ -468,7 +470,27 @@ export default function ModernMinimalistPortfolio({
       </header>
 
       <main className={styles.mainContent}>
-        {sections.map((section) => renderSection(section))}
+        {sections.map((section) => {
+          const rendered = renderSection(section);
+          if (!rendered) return null;
+          return (
+            <SectionFrame
+              key={section.id}
+              sectionId={section.id}
+              sectionLabel={sectionTitle(section)}
+              selected={canvasEditor?.selectedSectionId === section.id}
+              enabled={Boolean(canvasEditor?.enabled)}
+              height={canvasEditor?.getSectionHeight?.(section.id)}
+              onSelect={(sectionId) => canvasEditor?.onSelectSection(sectionId)}
+              onReorder={(draggedSectionId, targetSectionId) =>
+                canvasEditor?.onReorderSections(draggedSectionId, targetSectionId)
+              }
+              onResize={(sid, h) => canvasEditor?.onResizeSection?.(sid, h)}
+            >
+              {rendered}
+            </SectionFrame>
+          );
+        })}
 
         <footer className={styles.footer}>
           <p>
