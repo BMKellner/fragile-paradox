@@ -2529,6 +2529,7 @@ export default function CustomizePage() {
                   }
                 />
               </div>
+            </div>
             </aside>
         </div>
       </main>
