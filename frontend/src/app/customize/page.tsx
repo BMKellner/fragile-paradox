@@ -2216,6 +2216,7 @@ export default function CustomizePage() {
             {templateNames[selectedTemplate] || `Template ${selectedTemplate}`}
           </span>
         </div>
+      </header>
 
       <main className="h-[calc(100vh-80px)] overflow-hidden">
         <div className="h-full flex flex-col lg:flex-row">
@@ -2529,7 +2530,6 @@ export default function CustomizePage() {
                 />
               </div>
             </aside>
-          ) : null}
         </div>
       </main>
 
