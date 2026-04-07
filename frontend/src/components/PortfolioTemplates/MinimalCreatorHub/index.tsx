@@ -151,7 +151,6 @@ export default function MinimalCreatorHubTemplate({
   mainColor,
   backgroundColor,
   templateConfig,
-  canvasEditor,
 }: TemplateProps) {
   const [activeSectionId, setActiveSectionId] = useState("");
 

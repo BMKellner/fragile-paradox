@@ -57,6 +57,11 @@ import {
   normalizeEditorCanvas,
   type EditorCanvasStateV1,
 } from '@/lib/editor-canvas';
+import { type CanvasEditorBindings } from '@/components/PortfolioTemplates/shared/editor/types';
+import {
+  getSectionEditableFields,
+  updateSectionField,
+} from '@/components/PortfolioTemplates/shared/editor/fieldRegistry';
 
 const LIGHT_BG = '#F8FAFC';
 const DARK_BG = '#111111';

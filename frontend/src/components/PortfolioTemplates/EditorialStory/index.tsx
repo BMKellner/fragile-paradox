@@ -155,7 +155,6 @@ export default function EditorialStoryTemplate({
   mainColor,
   backgroundColor,
   templateConfig,
-  canvasEditor,
 }: TemplateProps) {
   const prefersReducedMotion = useReducedMotion();
   const [activeSectionId, setActiveSectionId] = useState("");
