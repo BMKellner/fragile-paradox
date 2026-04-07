@@ -51,6 +51,7 @@ import { fetchTemplateConfig, saveTemplateConfig } from '@/lib/template-config-a
 import { PortfolioDataWithCustomTemplate } from '@/lib/custom-template';
 import { templateComponentMap, templateNames } from '@/lib/template-map';
 import {
+  DEFAULT_EDITOR_CANVAS,
   deserializeEditorCanvas,
   serializeEditorCanvas,
   normalizeEditorCanvas,
@@ -149,6 +150,7 @@ export default function CustomizePage() {
   const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
+  const [editorCanvas, setEditorCanvas] = useState<EditorCanvasStateV1>(DEFAULT_EDITOR_CANVAS);
 
   useEffect(() => {
     let isCancelled = false;
@@ -221,7 +223,9 @@ export default function CustomizePage() {
       if (isCancelled) return;
       setConfig(nextConfig);
       setPreviewConfig(nextConfig);
-      setSelectedSectionId(nextConfig.sections[0]?.id ?? null);
+      const nextCanvas = normalizeEditorCanvas(localCanvas, nextConfig.sections.map((s) => s.id));
+      setEditorCanvas(nextCanvas);
+      setSelectedSectionId(null);
       localStorage.setItem('templateConfig', serializeTemplateConfig(nextConfig));
       localStorage.setItem('editorCanvas', serializeEditorCanvas(nextCanvas));
       setIsLoading(false);
@@ -2457,6 +2461,7 @@ export default function CustomizePage() {
                     mainColor={(previewConfig ?? config).theme.primaryColor}
                     backgroundColor={(previewConfig ?? config).theme.backgroundColor}
                     templateConfig={previewConfig ?? config}
+                    canvasEditor={canvasEditorBindings}
                   />
                 ) : (
                   <div className="p-6 text-sm text-muted-foreground">Template not found.</div>
