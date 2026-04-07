@@ -50,6 +50,12 @@ import {
 import { fetchTemplateConfig, saveTemplateConfig } from '@/lib/template-config-api';
 import { PortfolioDataWithCustomTemplate } from '@/lib/custom-template';
 import { templateComponentMap, templateNames } from '@/lib/template-map';
+import {
+  deserializeEditorCanvas,
+  serializeEditorCanvas,
+  normalizeEditorCanvas,
+  type EditorCanvasStateV1,
+} from '@/lib/editor-canvas';
 
 const LIGHT_BG = '#F8FAFC';
 const DARK_BG = '#111111';
