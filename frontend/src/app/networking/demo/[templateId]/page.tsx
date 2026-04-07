@@ -61,10 +61,6 @@ const templateComponentMap: Record<string, ComponentType<TemplateComponentProps>
     ssr: false,
     loading: templateLoadFallback,
   }),
-  "8": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/TimelineNarrative"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
   "9": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/BoldBrand"), {
     ssr: false,
     loading: templateLoadFallback,

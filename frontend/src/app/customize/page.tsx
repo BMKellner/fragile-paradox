@@ -2484,10 +2484,10 @@ export default function CustomizePage() {
                     <p className="font-medium">{sectionTitle(selectedSection)}</p>
                     <p className="text-xs text-muted-foreground capitalize">{selectedSection.type}</p>
                   </div>
-                ) : (
-                  <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">Properties</span>
-                )}
-              </div>
+                </div>
+              ) : (
+                <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">Properties</span>
+              )}
 
               {/* Fields */}
               <div className="flex-1 overflow-y-auto [&_label]:text-[10px] [&_label]:uppercase [&_label]:tracking-wider [&_label]:text-muted-foreground [&_label]:mb-0.5 [&_input]:h-7 [&_input]:text-xs [&_textarea]:text-xs [&_.space-y-3]:space-y-2">
