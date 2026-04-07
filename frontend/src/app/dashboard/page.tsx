@@ -41,11 +41,12 @@ export default function DashboardPage() {
   const info = useUser();
   const session = createClient();
   const [websites, setWebsites] = useState<Website[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!info.user) return;
+      setIsLoading(true);
 
       try {
         const supabaseSession = await session.auth.getSession();
@@ -70,11 +71,22 @@ export default function DashboardPage() {
       }
     };
 
-    if (info.user) {
-      fetchData();
+    if (info.loading) return;
+
+    if (!info.user) {
+      setIsLoading(false);
+      return;
     }
+
+    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [info.user]);
+  }, [info.loading, info.user]);
+
+  useEffect(() => {
+    if (!info.loading && !info.user) {
+      router.replace('/signin?next=/dashboard');
+    }
+  }, [info.loading, info.user, router]);
 
   const handleDeleteWebsite = async (websiteId: string) => {
     if (!confirm('Are you sure you want to delete this website?')) return;
@@ -112,6 +124,12 @@ export default function DashboardPage() {
       localStorage.setItem('templateConfig', JSON.stringify(website.data.__template_config));
     } else {
       localStorage.removeItem('templateConfig');
+    }
+
+    if (website.data.__editor_canvas) {
+      localStorage.setItem('editorCanvas', JSON.stringify(website.data.__editor_canvas));
+    } else {
+      localStorage.removeItem('editorCanvas');
     }
 
     if (website.data.__custom_template?.sections && website.template_id === 'custom') {
@@ -261,7 +279,7 @@ export default function DashboardPage() {
     return `${Math.floor(diffDays / 30)} months ago`;
   };
 
-  if (info.loading || isLoading) {
+  if (info.loading || (info.user && isLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -273,7 +291,6 @@ export default function DashboardPage() {
   }
 
   if (!info.user) {
-    router.push('/signin?next=/dashboard');
     return null;
   }
 

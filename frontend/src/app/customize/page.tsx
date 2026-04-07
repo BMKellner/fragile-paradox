@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { useUser } from '@/hooks/use-user';
 import { ParsedResume } from '@/constants/ResumeFormat';
-import Header from '@/components/Header';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -56,6 +55,7 @@ const LIGHT_BG = '#F8FAFC';
 const DARK_BG = '#111111';
 
 const modeBackground = (mode: 'light' | 'dark'): string => (mode === 'light' ? LIGHT_BG : DARK_BG);
+const CANVAS_EDITOR_ENABLED = process.env.NEXT_PUBLIC_CANVAS_EDITOR !== 'false';
 
 const TEMPLATE_RENDERED_SECTIONS: Partial<Record<string, SectionType[]>> = {
   '2': [SectionType.Hero, SectionType.About, SectionType.Projects, SectionType.Experience, SectionType.Contact],
@@ -153,6 +153,7 @@ export default function CustomizePage() {
       const storedColor = localStorage.getItem('selectedColor') || '#2563EB';
       const storedMode = (localStorage.getItem('selectedMode') as 'light' | 'dark' | null) || 'light';
       const localTemplateConfig = deserializeTemplateConfig(localStorage.getItem('templateConfig'));
+      const localCanvas = deserializeEditorCanvas(localStorage.getItem('editorCanvas'));
 
       if (!storedResume) {
         router.push('/upload');
@@ -216,6 +217,7 @@ export default function CustomizePage() {
       setPreviewConfig(nextConfig);
       setSelectedSectionId(nextConfig.sections[0]?.id ?? null);
       localStorage.setItem('templateConfig', serializeTemplateConfig(nextConfig));
+      localStorage.setItem('editorCanvas', serializeEditorCanvas(nextCanvas));
       setIsLoading(false);
     };
 
@@ -232,6 +234,23 @@ export default function CustomizePage() {
     localStorage.setItem('selectedColor', config.theme.primaryColor);
     localStorage.setItem('selectedMode', config.theme.mode);
   }, [config]);
+
+  useEffect(() => {
+    if (!config) return;
+    setEditorCanvas((previous) =>
+      normalizeEditorCanvas(
+        {
+          ...previous,
+          selectedSectionId,
+        },
+        config.sections.map((section) => section.id)
+      )
+    );
+  }, [config, selectedSectionId]);
+
+  useEffect(() => {
+    localStorage.setItem('editorCanvas', serializeEditorCanvas(editorCanvas));
+  }, [editorCanvas]);
 
   const selectedSection = useMemo(
     () => config?.sections.find((section) => section.id === selectedSectionId) ?? null,
@@ -293,6 +312,52 @@ export default function CustomizePage() {
       setSelectedSectionId(visibleSidebarSections[0].id);
     }
   }, [visibleSidebarSections, selectedSectionId]);
+
+  const handleCanvasFieldUpdate = (sectionId: string, fieldPath: string, value: string) => {
+    setConfig((previous) => {
+      if (!previous) return previous;
+      return updateSectionField(previous, sectionId, fieldPath, value);
+    });
+  };
+
+  const handleCanvasReorder = (draggedSectionId: string, targetSectionId: string) => {
+    setConfig((previous) => {
+      if (!previous) return previous;
+      return {
+        ...previous,
+        sections: reorderSections(previous.sections, draggedSectionId, targetSectionId),
+      };
+    });
+  };
+
+  const handleCanvasResize = useCallback((sectionId: string, height: number) => {
+    setEditorCanvas((previous) => {
+      const updated = previous.sectionLayouts.map((layout) =>
+        layout.sectionId === sectionId ? { ...layout, height } : layout
+      );
+      if (!updated.some((l) => l.sectionId === sectionId)) {
+        updated.push({ sectionId, order: updated.length, height });
+      }
+      return { ...previous, sectionLayouts: updated };
+    });
+  }, []);
+
+  const canvasEditorBindings: CanvasEditorBindings | undefined = useMemo(() => {
+    if (!CANVAS_EDITOR_ENABLED) return undefined;
+    return {
+      enabled: true,
+      selectedSectionId: selectedSectionId ?? null,
+      onSelectSection: (sectionId) => {
+        setSelectedSectionId(sectionId);
+      },
+      onReorderSections: handleCanvasReorder,
+      onUpdateField: handleCanvasFieldUpdate,
+      getEditableFields: getSectionEditableFields,
+      onResizeSection: handleCanvasResize,
+      getSectionHeight: (sectionId) =>
+        editorCanvas.sectionLayouts.find((l) => l.sectionId === sectionId)?.height,
+    };
+  }, [selectedSectionId, editorCanvas, handleCanvasResize]);
 
   const setSection = (
     sectionId: string,
@@ -441,6 +506,7 @@ export default function CustomizePage() {
     localStorage.setItem('selectedColor', config.theme.primaryColor);
     localStorage.setItem('selectedMode', config.theme.mode);
     localStorage.setItem('templateConfig', serializeTemplateConfig(config));
+    localStorage.setItem('editorCanvas', serializeEditorCanvas(editorCanvas));
 
     router.push('/preview');
   };
@@ -487,6 +553,7 @@ export default function CustomizePage() {
         data: {
           ...(resumeData as PortfolioDataWithCustomTemplate),
           __template_config: config,
+          __editor_canvas: editorCanvas,
         },
       };
 
@@ -534,6 +601,7 @@ export default function CustomizePage() {
 
       localStorage.setItem('currentPortfolioId', resolvedPortfolioId);
       localStorage.setItem('templateConfig', serializeTemplateConfig(config));
+      localStorage.setItem('editorCanvas', serializeEditorCanvas(editorCanvas));
       setSaveMessage({ type: 'success', message: 'Template configuration saved.' });
       window.setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
@@ -2118,7 +2186,6 @@ export default function CustomizePage() {
   if (!resumeData || !config) {
     return (
       <div className="min-h-screen">
-        <Header currentPage="customize" />
         <div className="container-base py-8">
           <p className="text-muted-foreground">Missing resume or template data.</p>
           <Button className="mt-4" onClick={() => router.push('/templates')}>
@@ -2130,8 +2197,25 @@ export default function CustomizePage() {
   }
 
   return (
-    <div className="min-h-screen">
-      <Header currentPage="customize" />
+    <div className="h-screen flex flex-col overflow-hidden">
+      {/* ── Figma-style top bar ── */}
+      <header className="h-11 flex items-center justify-between px-3 border-b bg-background shrink-0 z-30">
+        {/* Left: back + template name */}
+        <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={() => router.push('/templates')}
+            className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded hover:bg-muted/60"
+            aria-label="Back to templates"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 shrink-0" />
+            <span className="hidden sm:inline">Templates</span>
+          </button>
+          <span className="text-muted-foreground/40 select-none hidden sm:inline">/</span>
+          <span className="text-xs font-medium truncate hidden sm:inline">
+            {templateNames[selectedTemplate] || `Template ${selectedTemplate}`}
+          </span>
+        </div>
 
       <main className="h-[calc(100vh-80px)] overflow-hidden">
         <div className="h-full flex flex-col lg:flex-row">
@@ -2400,26 +2484,52 @@ export default function CustomizePage() {
                     <p className="font-medium">{sectionTitle(selectedSection)}</p>
                     <p className="text-xs text-muted-foreground capitalize">{selectedSection.type}</p>
                   </div>
-                  <div>
-                    <Label>Navbar Label</Label>
-                    <Input
-                      value={selectedSection.navLabel || ''}
-                      placeholder="Navbar text"
-                      onChange={(event) =>
-                        setSection(selectedSection.id, (current) => ({
-                          ...current,
-                          navLabel: event.target.value,
-                        }))
-                      }
-                    />
+                ) : (
+                  <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">Properties</span>
+                )}
+              </div>
+
+              {/* Fields */}
+              <div className="flex-1 overflow-y-auto [&_label]:text-[10px] [&_label]:uppercase [&_label]:tracking-wider [&_label]:text-muted-foreground [&_label]:mb-0.5 [&_input]:h-7 [&_input]:text-xs [&_textarea]:text-xs [&_.space-y-3]:space-y-2">
+                {selectedSection ? (
+                  <div className="p-3 space-y-2">
+                    <div>
+                      <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Nav Label</label>
+                      <Input
+                        className="h-7 text-xs"
+                        value={selectedSection.navLabel || ''}
+                        placeholder="Navbar text"
+                        onChange={(event) =>
+                          setSection(selectedSection.id, (current) => ({
+                            ...current,
+                            navLabel: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    {renderContentEditor(selectedSection)}
                   </div>
-                  {renderContentEditor(selectedSection)}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Select a section from the left panel.</p>
-              )}
-            </div>
-          </aside>
+                ) : (
+                  <p className="p-3 text-xs text-muted-foreground">Select a section to edit properties.</p>
+                )}
+              </div>
+
+              {/* Theme footer */}
+              <div className="border-t p-3 space-y-2">
+                <label className="block text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Accent Gradient</label>
+                <Input
+                  className="h-7 text-xs"
+                  value={config.theme.accentGradient || ''}
+                  placeholder="linear-gradient(...)"
+                  onChange={(event) =>
+                    setTheme({
+                      accentGradient: event.target.value || undefined,
+                    })
+                  }
+                />
+              </div>
+            </aside>
+          ) : null}
         </div>
       </main>
 

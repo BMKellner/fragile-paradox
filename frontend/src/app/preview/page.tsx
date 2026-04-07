@@ -639,6 +639,8 @@ export default function PreviewPage() {
               },
             })
           : null;
+      const editorCanvasRaw = localStorage.getItem('editorCanvas');
+      const editorCanvas = editorCanvasRaw ? JSON.parse(editorCanvasRaw) : undefined;
 
       // Prepare portfolio data
       const customSectionsRaw = localStorage.getItem('customSections');
@@ -657,10 +659,12 @@ export default function PreviewPage() {
           ? {
               ...resumeData,
               __custom_template: serializedCustomTemplate ?? undefined,
+              __editor_canvas: editorCanvas,
             }
           : {
               ...resumeData,
               __template_config: currentTemplateConfig ?? undefined,
+              __editor_canvas: editorCanvas,
             };
 
       if (serializedCustomTemplate) {

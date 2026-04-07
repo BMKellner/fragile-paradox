@@ -41,7 +41,8 @@ export function HeroSection({
         <div className={styles.roleBadge}>{careerName || "Full Stack Developer"}</div>
 
         <p className={styles.heroSummary}>
-          {summary} <span className={styles.gradientText}>I focus on elegant systems and frictionless user experiences.</span>
+          {summary}{" "}
+          <span className={styles.gradientText}>I focus on elegant systems and frictionless user experiences.</span>
         </p>
 
         <div className={styles.heroActions}>
