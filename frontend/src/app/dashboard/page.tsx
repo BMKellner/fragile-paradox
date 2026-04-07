@@ -48,16 +48,23 @@ export default function DashboardPage() {
       if (!info.user) return;
       setIsLoading(true);
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
       try {
         const supabaseSession = await session.auth.getSession();
         const token = supabaseSession.data.session?.access_token;
         if (!token) return;
 
         const url = process.env.NEXT_PUBLIC_BACKEND_URL;
+        if (!url || url.includes('localhost')) {
+          // Backend not available in this environment — show empty state
+          return;
+        }
+
         const response = await fetch(`${url}/portfolios/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
         });
 
         if (response.ok) {
@@ -65,8 +72,12 @@ export default function DashboardPage() {
           setWebsites(data || []);
         }
       } catch (error) {
-        console.error('Error fetching websites:', error);
+        // Backend unreachable — show empty state gracefully
+        if ((error as Error)?.name !== 'AbortError') {
+          console.error('Error fetching websites:', error);
+        }
       } finally {
+        clearTimeout(timeoutId);
         setIsLoading(false);
       }
     };
