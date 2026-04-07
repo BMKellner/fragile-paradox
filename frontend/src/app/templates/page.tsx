@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
@@ -106,30 +106,11 @@ const mockResumeForGallery: ParsedResume = {
   ],
 };
 
-const PREVIEW_SCALE = 0.24;
-const LG_BREAKPOINT = 1024;
-const XXL_BREAKPOINT = 1536;
-
-const getVisibleCountForWidth = (width: number): number => {
-  if (width >= XXL_BREAKPOINT) return 3;
-  if (width >= LG_BREAKPOINT) return 2;
-  return 1;
-};
+const PREVIEW_SCALE = 0.34;
 
 const toCircularIndex = (index: number, total: number): number => {
   if (total <= 0) return 0;
   return ((index % total) + total) % total;
-};
-
-const getVisibleTemplateIndexes = (
-  startIndex: number,
-  visibleCount: number,
-  totalTemplates: number
-): number[] => {
-  const count = Math.min(visibleCount, totalTemplates);
-  return Array.from({ length: count }, (_, offset) =>
-    toCircularIndex(startIndex + offset, totalTemplates)
-  );
 };
 
 function TemplateGalleryCard({
@@ -193,7 +174,10 @@ function TemplateGalleryCard({
       } ${animateIn ? "template-card-enter" : ""}`}
     >
       <div className="mb-4 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/35">
-        <div className="relative h-56 overflow-hidden">
+        <div
+          className="relative mx-auto w-full max-w-[28rem] overflow-hidden sm:max-w-[33rem] lg:max-w-[36rem]"
+          style={{ aspectRatio: "1 / 1" }}
+        >
           {SelectedTemplate ? (
             <div
               className="absolute inset-0 origin-top-left pointer-events-none"
@@ -215,7 +199,9 @@ function TemplateGalleryCard({
               />
             </div>
           ) : (
-            <div className="h-full w-full items-center justify-center text-sm text-muted-foreground" />
+            <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
+              Loading template preview...
+            </div>
           )}
         </div>
       </div>
@@ -258,32 +244,15 @@ export default function TemplatesPage() {
   const [selectedColor, setSelectedColor] = useState<string>("#2563EB");
   const [customColor, setCustomColor] = useState<string>("#2563EB");
   const [displayMode, setDisplayMode] = useState<DisplayMode>("light");
-  const [visibleCount, setVisibleCount] = useState<number>(1);
-  const [carouselStartIndex, setCarouselStartIndex] = useState<number>(0);
-  const [incomingTemplateIds, setIncomingTemplateIds] = useState<string[]>([]);
+  const [carouselCenterIndex, setCarouselCenterIndex] = useState<number>(0);
+  const [incomingTemplateId, setIncomingTemplateId] = useState<string | null>(null);
   const hasNavigatedCarouselRef = useRef<boolean>(false);
-  const previousVisibleTemplateIdsRef = useRef<string[]>([]);
+  const previousVisibleTemplateIdRef = useRef<string | null>(null);
+  const preloadedTemplateIdsRef = useRef<Set<string>>(new Set());
   const router = useRouter();
   const info = useUser();
 
   useEffect(() => {
-    const updateVisibleCount = () => {
-      const nextVisibleCount = getVisibleCountForWidth(window.innerWidth);
-      setVisibleCount(nextVisibleCount);
-      if (nextVisibleCount >= totalTemplates) {
-        setCarouselStartIndex(0);
-      }
-    };
-
-    updateVisibleCount();
-    window.addEventListener("resize", updateVisibleCount);
-    return () => window.removeEventListener("resize", updateVisibleCount);
-  }, [totalTemplates]);
-
-  useEffect(() => {
-    const initialVisibleCount = getVisibleCountForWidth(window.innerWidth);
-    setVisibleCount(initialVisibleCount);
-
     const storedData = localStorage.getItem("resumeData");
     if (storedData) {
       try {
@@ -326,11 +295,7 @@ export default function TemplatesPage() {
         (template) => template.id === initialSelectedTemplateId
       );
       if (selectedIndex >= 0) {
-        const startIndex = Math.max(
-          0,
-          selectedIndex - (Math.min(initialVisibleCount, totalTemplates) - 1)
-        );
-        setCarouselStartIndex(startIndex);
+        setCarouselCenterIndex(selectedIndex);
       }
     }
 
@@ -358,27 +323,39 @@ export default function TemplatesPage() {
     localStorage.setItem("selectedColor", normalized);
   };
 
-  const visibleTemplateIndexes = useMemo(
-    () => getVisibleTemplateIndexes(carouselStartIndex, visibleCount, totalTemplates),
-    [carouselStartIndex, visibleCount, totalTemplates]
+  const normalizedCenterIndex = useMemo(
+    () => toCircularIndex(carouselCenterIndex, totalTemplates),
+    [carouselCenterIndex, totalTemplates]
   );
-  const visibleTemplates = useMemo(
-    () => visibleTemplateIndexes.map((templateIndex) => galleryTemplates[templateIndex]),
-    [visibleTemplateIndexes]
+  const currentTemplate = useMemo(
+    () => galleryTemplates[normalizedCenterIndex] ?? null,
+    [normalizedCenterIndex]
   );
-  const effectiveVisibleCount = Math.min(visibleCount, totalTemplates);
-  const canNavigate = totalTemplates > effectiveVisibleCount;
+  const canNavigate = totalTemplates > 1;
+
+  const preloadTemplate = useCallback((templateId: string | undefined) => {
+    if (!templateId) return;
+    if (preloadedTemplateIdsRef.current.has(templateId)) return;
+
+    const loader = templateLoaderMap[templateId];
+    if (!loader) return;
+
+    preloadedTemplateIdsRef.current.add(templateId);
+    void loader().catch(() => {
+      preloadedTemplateIdsRef.current.delete(templateId);
+    });
+  }, []);
 
   const handleShowPrevious = () => {
     if (!canNavigate) return;
     hasNavigatedCarouselRef.current = true;
-    setCarouselStartIndex((current) => toCircularIndex(current - 1, totalTemplates));
+    setCarouselCenterIndex((current) => toCircularIndex(current - 1, totalTemplates));
   };
 
   const handleShowNext = () => {
     if (!canNavigate) return;
     hasNavigatedCarouselRef.current = true;
-    setCarouselStartIndex((current) => toCircularIndex(current + 1, totalTemplates));
+    setCarouselCenterIndex((current) => toCircularIndex(current + 1, totalTemplates));
   };
 
   const handleSelectTemplate = (templateId: string) => {
@@ -396,46 +373,70 @@ export default function TemplatesPage() {
   };
 
   useEffect(() => {
-    if (!canNavigate || totalTemplates === 0) return;
+    if (!currentTemplate || totalTemplates === 0) return;
 
-    const previousIndex = toCircularIndex(carouselStartIndex - 1, totalTemplates);
-    const nextIndex = toCircularIndex(carouselStartIndex + effectiveVisibleCount, totalTemplates);
-    const preloadTemplateIds = new Set<string>([
-      galleryTemplates[previousIndex]?.id,
-      galleryTemplates[nextIndex]?.id,
-    ]);
+    preloadTemplate(currentTemplate.id);
 
-    preloadTemplateIds.forEach((templateId) => {
-      const loader = templateLoaderMap[templateId];
-      if (!loader) return;
-      void loader().catch(() => undefined);
-    });
-  }, [canNavigate, carouselStartIndex, effectiveVisibleCount, totalTemplates]);
+    if (!canNavigate) return;
+    const previousIndex = toCircularIndex(normalizedCenterIndex - 1, totalTemplates);
+    const nextIndex = toCircularIndex(normalizedCenterIndex + 1, totalTemplates);
+    preloadTemplate(galleryTemplates[previousIndex]?.id);
+    preloadTemplate(galleryTemplates[nextIndex]?.id);
+  }, [canNavigate, currentTemplate, normalizedCenterIndex, preloadTemplate, totalTemplates]);
 
   useEffect(() => {
-    const currentTemplateIds = visibleTemplates.map((template) => template.id);
-    const previousTemplateIds = previousVisibleTemplateIdsRef.current;
+    if (totalTemplates === 0) return;
 
-    if (hasNavigatedCarouselRef.current && previousTemplateIds.length > 0) {
-      setIncomingTemplateIds(
-        currentTemplateIds.filter((templateId) => !previousTemplateIds.includes(templateId))
-      );
-    } else {
-      setIncomingTemplateIds([]);
+    let cancelled = false;
+    const preloadRemaining = () => {
+      if (cancelled) return;
+      galleryTemplates.forEach((template) => preloadTemplate(template.id));
+    };
+
+    const requestIdle = (
+      window as Window & { requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number }
+    ).requestIdleCallback;
+    const cancelIdle = (
+      window as Window & { cancelIdleCallback?: (handle: number) => void }
+    ).cancelIdleCallback;
+
+    if (requestIdle && cancelIdle) {
+      const idleId = requestIdle(preloadRemaining, { timeout: 1800 });
+      return () => {
+        cancelled = true;
+        cancelIdle(idleId);
+      };
     }
 
-    previousVisibleTemplateIdsRef.current = currentTemplateIds;
-  }, [visibleTemplates]);
+    const timeoutId = window.setTimeout(preloadRemaining, 350);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [preloadTemplate, totalTemplates]);
 
   useEffect(() => {
-    if (incomingTemplateIds.length === 0) return;
+    const currentTemplateId = currentTemplate?.id ?? null;
+    const previousTemplateId = previousVisibleTemplateIdRef.current;
+
+    if (hasNavigatedCarouselRef.current && previousTemplateId && currentTemplateId && currentTemplateId !== previousTemplateId) {
+      setIncomingTemplateId(currentTemplateId);
+    } else {
+      setIncomingTemplateId(null);
+    }
+
+    previousVisibleTemplateIdRef.current = currentTemplateId;
+  }, [currentTemplate]);
+
+  useEffect(() => {
+    if (!incomingTemplateId) return;
 
     const timeoutId = window.setTimeout(() => {
-      setIncomingTemplateIds([]);
+      setIncomingTemplateId(null);
     }, 280);
 
     return () => window.clearTimeout(timeoutId);
-  }, [incomingTemplateIds]);
+  }, [incomingTemplateId]);
 
   if (info.loading) {
     return (
@@ -478,7 +479,7 @@ export default function TemplatesPage() {
                   Premium Template Gallery
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                  Browse live previews with arrows. Each card is a real rendered template using normalized mock data.
+                  One template is shown at a time in a larger preview. Neighbor and background preloading keep switching fast.
                 </p>
               </div>
               <Badge className="bg-[var(--color-primary)]/12 text-foreground">
@@ -541,38 +542,38 @@ export default function TemplatesPage() {
           </section>
 
           <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]/65 p-3 shadow-sm backdrop-blur-sm">
-            <div className="flex items-center gap-2 p-2 sm:gap-3 sm:p-3">
+            <div className="mx-auto flex w-full max-w-[60rem] items-center justify-center gap-3 p-2 sm:gap-4 sm:p-3 lg:gap-5">
               <button
                 type="button"
                 aria-label="Show previous templates"
                 onClick={handleShowPrevious}
                 disabled={!canNavigate}
-                className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-foreground transition hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex h-[4.75rem] w-[4.75rem] flex-none items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-foreground transition hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-45 sm:h-[5.5rem] sm:w-[5.5rem]"
               >
-                <ChevronLeft className="h-5 w-5" />
+                <ChevronLeft className="h-9 w-9 sm:h-10 sm:w-10" />
               </button>
 
-              <div className="min-w-0 flex-1">
-                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
-                  {visibleTemplates.map((template) => (
+              <div className="min-w-0 w-full max-w-[40rem] sm:max-w-[46rem] lg:max-w-[50rem]">
+                <div className="mx-auto">
+                  {currentTemplate ? (
                     <TemplateGalleryCard
-                      key={template.id}
-                      template={template}
+                      key={currentTemplate.id}
+                      template={currentTemplate}
                       selectedColor={selectedColor}
                       displayMode={displayMode}
-                      active={selectedTemplate === template.id}
-                      animateIn={incomingTemplateIds.includes(template.id)}
+                      active={selectedTemplate === currentTemplate.id}
+                      animateIn={incomingTemplateId === currentTemplate.id}
                       resumeData={resumeData}
                       savedConfig={
-                        selectedTemplate === template.id &&
+                        selectedTemplate === currentTemplate.id &&
                         savedTemplateConfig &&
-                        String(savedTemplateConfig.templateId) === template.id
+                        String(savedTemplateConfig.templateId) === currentTemplate.id
                           ? savedTemplateConfig
                           : null
                       }
                       onSelect={handleSelectTemplate}
                     />
-                  ))}
+                  ) : null}
                 </div>
               </div>
 
@@ -581,9 +582,9 @@ export default function TemplatesPage() {
                 aria-label="Show next templates"
                 onClick={handleShowNext}
                 disabled={!canNavigate}
-                className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-foreground transition hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex h-[4.75rem] w-[4.75rem] flex-none items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-foreground transition hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-45 sm:h-[5.5rem] sm:w-[5.5rem]"
               >
-                <ChevronRight className="h-5 w-5" />
+                <ChevronRight className="h-9 w-9 sm:h-10 sm:w-10" />
               </button>
             </div>
           </section>

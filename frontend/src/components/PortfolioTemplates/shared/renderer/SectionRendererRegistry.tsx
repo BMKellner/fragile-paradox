@@ -1,4 +1,4 @@
-import { SectionType, type SectionConfig, type SectionConfigFor } from "@/lib/template-config";
+import { SectionType, type SectionConfig, type SectionConfigFor } from "@/lib/template-config-types";
 import type { ReactNode } from "react";
 
 import { AboutSectionRenderer } from "./AboutSectionRenderer";

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { ProjectItem } from "@/lib/template-config";
+import type { ProjectItem } from "@/lib/template-config-types";
 import { cn } from "@/lib/utils";
 import styles from "../ElegantSophisticated.module.css";
 import { Card, Pill } from "../components/cards";

@@ -4,7 +4,7 @@ import type {
   PersonalInformation,
   Project,
 } from "@/constants/ResumeFormat";
-import type { TemplateConfig } from "@/lib/template-config";
+import type { TemplateConfig } from "@/lib/template-config-types";
 
 export type TemplateProps = {
   personalInformation?: PersonalInformation;

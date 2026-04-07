@@ -1,4 +1,4 @@
-import type { SectionConfig } from "@/lib/template-config";
+import type { SectionConfig } from "@/lib/template-config-types";
 
 type FallbackSectionRendererProps = {
   section: SectionConfig;

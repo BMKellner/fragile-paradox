@@ -189,6 +189,13 @@ See the architecture reference for the current parser/normalization/template def
 
 - `docs/canonical-parsing-template-contract-v1.md`
 
+### Networking Architecture
+
+For Network feature flow, backend rollout, and scalability planning:
+
+- `docs/networking-readme.md`
+- `docs/network-feature-rollout.md`
+
 ### Modifying Resume Parsing
 
 The resume parsing logic is in `backend/app/core/resume_parser.py`. You can modify the OpenAI prompt or the parsing schema in `backend/app/models/resumes.py`.

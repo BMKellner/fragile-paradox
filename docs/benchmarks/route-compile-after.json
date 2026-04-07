@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-04-01T19:35:59.141Z",
+  "routes": [
+    "/dashboard",
+    "/home",
+    "/templates",
+    "/customize",
+    "/preview"
+  ],
+  "basePort": 3300,
+  "results": [
+    {
+      "route": "/dashboard",
+      "port": 3300,
+      "readyMs": 1807,
+      "statusCode": 200,
+      "compileMs": 1904,
+      "requestWallMs": 2186.0096670000003,
+      "capturedAt": "2026-04-01T19:35:34.918Z"
+    },
+    {
+      "route": "/home",
+      "port": 3301,
+      "readyMs": 1607,
+      "statusCode": 200,
+      "compileMs": 2100,
+      "requestWallMs": 2430.6530829999992,
+      "capturedAt": "2026-04-01T19:35:40.804Z"
+    },
+    {
+      "route": "/templates",
+      "port": 3302,
+      "readyMs": 1608,
+      "statusCode": 200,
+      "compileMs": 2200,
+      "requestWallMs": 2471.8253749999985,
+      "capturedAt": "2026-04-01T19:35:46.718Z"
+    },
+    {
+      "route": "/customize",
+      "port": 3303,
+      "readyMs": 1607,
+      "statusCode": 200,
+      "compileMs": 2200,
+      "requestWallMs": 2444.385083000001,
+      "capturedAt": "2026-04-01T19:35:52.609Z"
+    },
+    {
+      "route": "/preview",
+      "port": 3304,
+      "readyMs": 1610,
+      "statusCode": 200,
+      "compileMs": 2800,
+      "requestWallMs": 3090.3599170000016,
+      "capturedAt": "2026-04-01T19:35:59.140Z"
+    }
+  ]
+}

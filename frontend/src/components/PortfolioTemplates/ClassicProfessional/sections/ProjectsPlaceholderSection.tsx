@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import styles from "../ClassicProfessional.module.css";
-import type { ProjectItem } from "@/lib/template-config";
+import type { ProjectItem } from "@/lib/template-config-types";
 
 type ProjectsPlaceholderSectionProps = {
   title: string;

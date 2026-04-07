@@ -7,11 +7,13 @@ import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Leaf, User, LayoutDashboard } from "lucide-react";
+import { Leaf, User, LayoutDashboard, Users } from "lucide-react";
+
+type HeaderPage = 'home' | 'dashboard' | 'profile' | 'network' | 'upload' | 'templates' | 'preview' | 'customize';
 
 interface HeaderProps {
   showNav?: boolean;
-  currentPage?: 'home' | 'dashboard' | 'profile' | 'upload' | 'templates' | 'preview' | 'customize';
+  currentPage?: HeaderPage;
 }
 
 const profileImageCache = new Map<string, string>();
@@ -116,80 +118,115 @@ export default function Header({ showNav = true, currentPage }: HeaderProps) {
 
   const dashboardPath = info.user ? '/dashboard' : '/signin?next=/dashboard';
   const profilePath = info.user ? '/profile' : '/signin?next=/profile';
+  const networkPath = info.user ? '/network' : '/signin?next=/network';
+  const navItems = [
+    {
+      key: 'dashboard' as const,
+      label: 'Dashboard',
+      href: dashboardPath,
+      Icon: LayoutDashboard,
+    },
+    {
+      key: 'profile' as const,
+      label: 'Profile',
+      href: profilePath,
+      Icon: User,
+    },
+    {
+      key: 'network' as const,
+      label: 'Network',
+      href: networkPath,
+      Icon: Users,
+    },
+  ];
 
   return (
     <header className="header-base sticky top-0 z-50">
       <div className="container-base">
-        <div className="flex items-center justify-between py-4">
-          {/* Left side - Logo */}
-          <div className="flex items-center gap-8">
-            <button
-              type="button"
-              className="flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0"
-              onClick={() => router.push('/home')}
-              aria-label="Go to homepage"
-            >
-              <Leaf className="w-7 h-7 text-[var(--color-primary)]" />
-              <h1 className="text-3xl leading-[1.3] font-bold gradient-text">Foliage</h1>
-            </button>
-            
-            {/* Navigation Tabs */}
-            {showNav && (
-              <nav className="hidden md:flex items-center gap-1">
-                <Button
-                  asChild
-                  variant="ghost"
-                  className={`gap-2 ${currentPage === 'dashboard' ? 'bg-[var(--color-primary)]/15 text-[var(--color-foreground)]' : ''}`}
-                >
-                  <Link href={dashboardPath}>
-                    <LayoutDashboard className="w-4 h-4" />
-                    Dashboard
-                  </Link>
+        <div className="py-4">
+          <div className="flex items-center justify-between gap-3">
+            {/* Left side - Logo */}
+            <div className="flex items-center gap-8">
+              <button
+                type="button"
+                className="flex items-center gap-2 cursor-pointer bg-transparent border-0 p-0"
+                onClick={() => router.push('/home')}
+                aria-label="Go to homepage"
+              >
+                <Leaf className="w-7 h-7 text-[var(--color-primary)]" />
+                <h1 className="text-3xl leading-[1.3] font-bold gradient-text">Foliage</h1>
+              </button>
+
+              {/* Navigation Tabs */}
+              {showNav && (
+                <nav className="hidden md:flex items-center gap-1">
+                  {navItems.map(({ key, href, label, Icon }) => (
+                    <Button
+                      key={key}
+                      asChild
+                      variant="ghost"
+                      className={`gap-2 ${currentPage === key ? 'bg-[var(--color-primary)]/15 text-[var(--color-foreground)]' : ''}`}
+                    >
+                      <Link href={href}>
+                        <Icon className="w-4 h-4" />
+                        {label}
+                      </Link>
+                    </Button>
+                  ))}
+                </nav>
+              )}
+            </div>
+
+            {/* Right side - User info and actions */}
+            {info.user ? (
+              <div className="flex items-center gap-3">
+                <ThemeToggle />
+                <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--color-secondary)]/75">
+                  <div className="w-6 h-6 rounded-full bg-[var(--color-primary)]/18 flex items-center justify-center overflow-hidden">
+                    {profileImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={profileImageUrl}
+                        alt="Profile"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <User className="w-3 h-3 text-[var(--color-primary)]" />
+                    )}
+                  </div>
+                  <span className="text-sm font-medium text-[var(--color-foreground)]">{info.user.email?.split('@')[0]}</span>
+                </div>
+                <Button onClick={handleSignOut} variant="outline" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-accent)]">
+                  Sign Out
                 </Button>
-                <Button
-                  asChild
-                  variant="ghost"
-                  className={`gap-2 ${currentPage === 'profile' ? 'bg-[var(--color-primary)]/15 text-[var(--color-foreground)]' : ''}`}
-                >
-                  <Link href={profilePath}>
-                    <User className="w-4 h-4" />
-                    Profile
-                  </Link>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <ThemeToggle />
+                <Button asChild variant="outline" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-accent)]">
+                  <Link href={signInPath}>Sign In</Link>
                 </Button>
-              </nav>
+              </div>
             )}
           </div>
 
-          {/* Right side - User info and actions */}
-          {info.user ? (
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-[var(--color-secondary)]/75">
-                <div className="w-6 h-6 rounded-full bg-[var(--color-primary)]/18 flex items-center justify-center overflow-hidden">
-                  {profileImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={profileImageUrl}
-                      alt="Profile"
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-3 h-3 text-[var(--color-primary)]" />
-                  )}
-                </div>
-                <span className="text-sm font-medium text-[var(--color-foreground)]">{info.user.email?.split('@')[0]}</span>
-              </div>
-              <Button onClick={handleSignOut} variant="outline" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-accent)]">
-                Sign Out
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              <ThemeToggle />
-              <Button asChild variant="outline" size="sm" className="border-[var(--color-border)] hover:bg-[var(--color-accent)]">
-                <Link href={signInPath}>Sign In</Link>
-              </Button>
-            </div>
+          {showNav && (
+            <nav className="mt-3 grid grid-cols-3 gap-2 md:hidden">
+              {navItems.map(({ key, href, label, Icon }) => (
+                <Button
+                  key={key}
+                  asChild
+                  variant="ghost"
+                  size="sm"
+                  className={`w-full justify-center gap-1.5 ${currentPage === key ? 'bg-[var(--color-primary)]/18 text-[var(--color-foreground)]' : 'bg-[var(--color-card)]/60'}`}
+                >
+                  <Link href={href}>
+                    <Icon className="w-3.5 h-3.5" />
+                    {label}
+                  </Link>
+                </Button>
+              ))}
+            </nav>
           )}
         </div>
       </div>

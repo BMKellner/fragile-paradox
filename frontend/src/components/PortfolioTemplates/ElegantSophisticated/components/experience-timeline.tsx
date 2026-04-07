@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { ExperienceItem } from "@/lib/template-config";
+import type { ExperienceItem } from "@/lib/template-config-types";
 import styles from "../ElegantSophisticated.module.css";
 import { Card } from "./cards";
 import { revealItemVariants } from "./motion";

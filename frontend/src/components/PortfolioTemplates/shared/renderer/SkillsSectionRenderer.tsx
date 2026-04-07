@@ -1,4 +1,4 @@
-import { SectionType, type SectionConfigFor } from "@/lib/template-config";
+import { SectionType, type SectionConfigFor } from "@/lib/template-config-types";
 
 type SkillsSectionRendererProps = {
   section: SectionConfigFor<SectionType.Skills>;

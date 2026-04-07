@@ -1,4 +1,4 @@
-import type { ExperienceItem, SectionStat } from "@/lib/template-config";
+import type { ExperienceItem, SectionStat } from "@/lib/template-config-types";
 
 export interface TimelineExperienceEntry {
   id: string;
