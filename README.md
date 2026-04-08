@@ -180,8 +180,14 @@ See `supabase/migrations/` for the complete schema.
 ### Adding New Portfolio Templates
 
 1. Create a new template component in `frontend/src/components/PortfolioTemplates/`
-2. Add the template to the templates list in `frontend/src/app/templates/page.tsx`
+2. Register the template in `frontend/src/lib/template-map.tsx` (`templateComponentMap`, `templateNames`, and `galleryTemplates`)
 3. Implement the template component following the existing template structure
+
+### Canonical Parsing + Template Contract
+
+See the architecture reference for the current parser/normalization/template defaults contract:
+
+- `docs/canonical-parsing-template-contract-v1.md`
 
 ### Modifying Resume Parsing
 

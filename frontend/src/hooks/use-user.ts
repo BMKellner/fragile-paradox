@@ -33,15 +33,30 @@ const publish = (partialState: Partial<UserState>) => {
 const toRole = (session: Session | null) =>
   (session?.user?.app_metadata?.role as string | undefined) ?? null;
 
+const AUTH_TIMEOUT_MS = 8000;
+
 const hydrateUser = async () => {
   if (activeRequest) return activeRequest;
 
   activeRequest = (async () => {
+    const timeoutId = setTimeout(() => {
+      hasHydrated = true;
+      publish({
+        loading: false,
+        error: null,
+        session: null,
+        user: null,
+        role: null,
+      });
+    }, AUTH_TIMEOUT_MS);
+
     try {
       const {
         data: { session },
         error,
       } = await supabase.auth.getSession();
+
+      clearTimeout(timeoutId);
 
       if (error) {
         publish({
@@ -61,6 +76,7 @@ const hydrateUser = async () => {
         });
       }
     } catch (error) {
+      clearTimeout(timeoutId);
       publish({
         loading: false,
         error: error as AuthError,

@@ -1,113 +1,29 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ComponentType } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, MoonStar, Palette, Sparkles, Sun, TreePine } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, MoonStar, Sparkles, Sun, TreePine } from "lucide-react";
 import Header from "@/components/Header";
 import { ParsedResume } from "@/constants/ResumeFormat";
-import { normalizeTemplateConfig, type TemplateConfig } from "@/lib/template-config";
-
-type TemplateComponentProps = {
-  personalInformation?: ParsedResume["personal_information"];
-  overviewData?: ParsedResume["overview"];
-  projects?: ParsedResume["projects"];
-  experience?: ParsedResume["experience"];
-  skills?: ParsedResume["skills"];
-  mainColor: string;
-  backgroundColor: string;
-  templateConfig?: TemplateConfig;
-};
+import { deserializeTemplateConfig, normalizeTemplateConfig, type TemplateConfig } from "@/lib/template-config";
+import { clearPortfolioLinkageKeepTemplateChoice } from "@/lib/portfolio-workflow-storage";
+import {
+  galleryTemplates,
+  templateComponentMap,
+  templateLoaderMap,
+  type TemplateMeta,
+} from "@/lib/template-map";
 
 type DisplayMode = "light" | "dark";
-
-type TemplateMeta = {
-  id: string;
-  name: string;
-  description: string;
-  bestFor: Array<"Tech" | "Creative" | "Corporate" | "Academic" | "Writer" | "Creator">;
-};
 
 const LIGHT_DISPLAY_BG = "#F8FAFC";
 const DARK_DISPLAY_BG = "#111111";
 
 const modeBackground = (mode: DisplayMode): string =>
   mode === "light" ? LIGHT_DISPLAY_BG : DARK_DISPLAY_BG;
-
-const presetColorOptions = [
-  { id: "evergreen", value: "#16A34A", label: "Evergreen" },
-  { id: "ocean", value: "#0EA5E9", label: "Ocean" },
-  { id: "ember", value: "#F97316", label: "Ember" },
-  { id: "crimson", value: "#DC2626", label: "Crimson" },
-  { id: "indigo", value: "#4F46E5", label: "Indigo" },
-  { id: "charcoal", value: "#334155", label: "Charcoal" },
-];
-
-const galleryTemplates: TemplateMeta[] = [
-  {
-    id: "1",
-    name: "Modern Minimal",
-    description: "Sharp modern layout with confident spacing and clean hierarchy.",
-    bestFor: ["Tech", "Corporate"],
-  },
-  {
-    id: "2",
-    name: "Classic Professional",
-    description: "Traditional structure tuned for clarity and executive readability.",
-    bestFor: ["Corporate", "Academic"],
-  },
-  {
-    id: "3",
-    name: "Creative Bold",
-    description: "High-energy structure with strong motion cues and visual rhythm.",
-    bestFor: ["Creative", "Creator"],
-  },
-  {
-    id: "4",
-    name: "Elegant Sophisticated",
-    description: "Refined premium aesthetic with polished typography and spacing.",
-    bestFor: ["Corporate", "Writer"],
-  },
-  {
-    id: "5",
-    name: "SideRail Pro",
-    description: "Identity rail + content flow with scroll-aware navigation anchors.",
-    bestFor: ["Tech", "Corporate"],
-  },
-  {
-    id: "6",
-    name: "Editorial Story",
-    description: "Writing-first case-study format with generous margins and pace.",
-    bestFor: ["Writer", "Academic"],
-  },
-  {
-    id: "7",
-    name: "IDE Clean",
-    description: "Panel-style, tool-native UI language with crisp tags and separators.",
-    bestFor: ["Tech", "Creator"],
-  },
-  {
-    id: "8",
-    name: "Timeline Narrative",
-    description: "Chronological storytelling with timeline controls for key milestones.",
-    bestFor: ["Academic", "Corporate"],
-  },
-  {
-    id: "9",
-    name: "Bold Brand",
-    description: "Oversized hero and high-impact project cards for standout positioning.",
-    bestFor: ["Creative", "Creator"],
-  },
-  {
-    id: "10",
-    name: "Minimal Creator Hub",
-    description: "Dense, tag-forward profile built for creators shipping continuously.",
-    bestFor: ["Creator", "Tech"],
-  },
-];
 
 const normalizeHexColor = (value: string): string | null => {
   const trimmed = value.trim();
@@ -124,24 +40,11 @@ const normalizeHexColor = (value: string): string | null => {
   return null;
 };
 
-const getContrastTextColor = (hexColor: string): string => {
-  const normalized = normalizeHexColor(hexColor);
-  if (!normalized) return "#FFFFFF";
-
-  const hex = normalized.replace("#", "");
-  const r = Number.parseInt(hex.slice(0, 2), 16);
-  const g = Number.parseInt(hex.slice(2, 4), 16);
-  const b = Number.parseInt(hex.slice(4, 6), 16);
-  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
-
-  return brightness > 160 ? "#111827" : "#FFFFFF";
-};
-
 const mockResumeForGallery: ParsedResume = {
   resume_pdf: "",
   portfolio_id: "gallery-preview",
   personal_information: {
-    full_name: "Alex Rivera",
+    full_name: "Your Name",
     contact_info: {
       email: "alex@folio.dev",
       linkedin: "https://www.linkedin.com/in/alexrivera",
@@ -203,85 +106,82 @@ const mockResumeForGallery: ParsedResume = {
   ],
 };
 
-const templateLoadFallback = () => (
-  <div className="rounded-lg border border-dashed border-[var(--color-border)] p-6 text-sm text-muted-foreground">
-    Loading template preview...
-  </div>
-);
+const PREVIEW_SCALE = 0.24;
+const LG_BREAKPOINT = 1024;
+const XXL_BREAKPOINT = 1536;
 
-const templateComponentMap: Record<string, ComponentType<TemplateComponentProps>> = {
-  "1": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ModernMinimalist"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "2": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ClassicProfessional"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "3": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/CreativeBold"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "4": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ElegantSophisticated"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "5": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/SideRailPro"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "6": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/EditorialStory"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "7": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/IDEClean"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "8": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/TimelineNarrative"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "9": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/BoldBrand"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "10": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/MinimalCreatorHub"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
+const getVisibleCountForWidth = (width: number): number => {
+  if (width >= XXL_BREAKPOINT) return 3;
+  if (width >= LG_BREAKPOINT) return 2;
+  return 1;
 };
 
-const PREVIEW_SCALE = 0.24;
+const toCircularIndex = (index: number, total: number): number => {
+  if (total <= 0) return 0;
+  return ((index % total) + total) % total;
+};
+
+const getVisibleTemplateIndexes = (
+  startIndex: number,
+  visibleCount: number,
+  totalTemplates: number
+): number[] => {
+  const count = Math.min(visibleCount, totalTemplates);
+  return Array.from({ length: count }, (_, offset) =>
+    toCircularIndex(startIndex + offset, totalTemplates)
+  );
+};
 
 function TemplateGalleryCard({
   template,
   selectedColor,
   displayMode,
   active,
+  animateIn,
+  resumeData,
+  savedConfig,
   onSelect,
 }: {
   template: TemplateMeta;
   selectedColor: string;
   displayMode: DisplayMode;
   active: boolean;
+  animateIn: boolean;
+  resumeData: ParsedResume | null;
+  savedConfig: TemplateConfig | null;
   onSelect: (templateId: string) => void;
 }) {
   const SelectedTemplate = templateComponentMap[template.id];
   const backgroundColor = modeBackground(displayMode);
+  const previewResume = active && resumeData ? resumeData : mockResumeForGallery;
+  const previewConfigSource = active ? savedConfig : null;
 
-  const mockConfig = useMemo(
-    () =>
-      normalizeTemplateConfig({
+  const previewConfig = useMemo(
+    () => {
+      const configWithDisplayTheme = previewConfigSource
+        ? {
+            ...previewConfigSource,
+            theme: {
+              ...previewConfigSource.theme,
+              primaryColor: selectedColor,
+              backgroundColor,
+              mode: displayMode,
+            },
+          }
+        : null;
+
+      return normalizeTemplateConfig({
         templateId: template.id,
-        resumeData: mockResumeForGallery,
+        resumeData: previewResume,
+        config: configWithDisplayTheme,
         fallbackTheme: {
           primaryColor: selectedColor,
           backgroundColor,
           mode: displayMode,
         },
-      }),
-    [template.id, selectedColor, backgroundColor, displayMode]
+      });
+    },
+    [template.id, previewResume, previewConfigSource, selectedColor, backgroundColor, displayMode]
   );
 
   return (
@@ -290,7 +190,7 @@ function TemplateGalleryCard({
         active
           ? "border-[var(--color-primary)]/65 shadow-xl"
           : "border-[var(--color-border)]/75 hover:border-[var(--color-primary)]/35"
-      }`}
+      } ${animateIn ? "template-card-enter" : ""}`}
     >
       <div className="mb-4 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-muted)]/35">
         <div className="relative h-56 overflow-hidden">
@@ -304,14 +204,14 @@ function TemplateGalleryCard({
               }}
             >
               <SelectedTemplate
-                personalInformation={mockResumeForGallery.personal_information}
-                overviewData={mockResumeForGallery.overview}
-                projects={mockResumeForGallery.projects}
-                experience={mockResumeForGallery.experience}
-                skills={mockResumeForGallery.skills}
-                mainColor={selectedColor}
-                backgroundColor={backgroundColor}
-                templateConfig={mockConfig}
+                personalInformation={previewResume.personal_information}
+                overviewData={previewResume.overview}
+                projects={previewResume.projects}
+                experience={previewResume.experience}
+                skills={previewResume.skills}
+                mainColor={previewConfig.theme.primaryColor}
+                backgroundColor={previewConfig.theme.backgroundColor}
+                templateConfig={previewConfig}
               />
             </div>
           ) : (
@@ -351,16 +251,39 @@ function TemplateGalleryCard({
 }
 
 export default function TemplatesPage() {
+  const totalTemplates = galleryTemplates.length;
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
+  const [savedTemplateConfig, setSavedTemplateConfig] = useState<TemplateConfig | null>(null);
   const [selectedColor, setSelectedColor] = useState<string>("#2563EB");
   const [customColor, setCustomColor] = useState<string>("#2563EB");
-  const [isCustomColorSelected, setIsCustomColorSelected] = useState<boolean>(false);
   const [displayMode, setDisplayMode] = useState<DisplayMode>("light");
+  const [visibleCount, setVisibleCount] = useState<number>(1);
+  const [carouselStartIndex, setCarouselStartIndex] = useState<number>(0);
+  const [incomingTemplateIds, setIncomingTemplateIds] = useState<string[]>([]);
+  const hasNavigatedCarouselRef = useRef<boolean>(false);
+  const previousVisibleTemplateIdsRef = useRef<string[]>([]);
   const router = useRouter();
   const info = useUser();
 
   useEffect(() => {
+    const updateVisibleCount = () => {
+      const nextVisibleCount = getVisibleCountForWidth(window.innerWidth);
+      setVisibleCount(nextVisibleCount);
+      if (nextVisibleCount >= totalTemplates) {
+        setCarouselStartIndex(0);
+      }
+    };
+
+    updateVisibleCount();
+    window.addEventListener("resize", updateVisibleCount);
+    return () => window.removeEventListener("resize", updateVisibleCount);
+  }, [totalTemplates]);
+
+  useEffect(() => {
+    const initialVisibleCount = getVisibleCountForWidth(window.innerWidth);
+    setVisibleCount(initialVisibleCount);
+
     const storedData = localStorage.getItem("resumeData");
     if (storedData) {
       try {
@@ -374,8 +297,41 @@ export default function TemplatesPage() {
     }
 
     const storedTemplate = localStorage.getItem("selectedTemplate");
+    const hasActivePortfolioLink = Boolean(localStorage.getItem("currentPortfolioId"));
+    const storedTemplateConfig = deserializeTemplateConfig(localStorage.getItem("templateConfig"));
+    const templateConfigMatchesSelection =
+      storedTemplateConfig &&
+      ((storedTemplate && String(storedTemplateConfig.templateId) === storedTemplate) ||
+        (!storedTemplate && hasActivePortfolioLink));
+
+    if (storedTemplateConfig && !templateConfigMatchesSelection) {
+      clearPortfolioLinkageKeepTemplateChoice();
+    }
+
+    if (templateConfigMatchesSelection) {
+      setSavedTemplateConfig(storedTemplateConfig);
+    }
+
+    let initialSelectedTemplateId: string | null = null;
     if (storedTemplate) {
       setSelectedTemplate(storedTemplate);
+      initialSelectedTemplateId = storedTemplate;
+    } else if (templateConfigMatchesSelection && storedTemplateConfig?.templateId) {
+      initialSelectedTemplateId = String(storedTemplateConfig.templateId);
+      setSelectedTemplate(initialSelectedTemplateId);
+    }
+
+    if (initialSelectedTemplateId) {
+      const selectedIndex = galleryTemplates.findIndex(
+        (template) => template.id === initialSelectedTemplateId
+      );
+      if (selectedIndex >= 0) {
+        const startIndex = Math.max(
+          0,
+          selectedIndex - (Math.min(initialVisibleCount, totalTemplates) - 1)
+        );
+        setCarouselStartIndex(startIndex);
+      }
     }
 
     const storedColor = localStorage.getItem("selectedColor");
@@ -384,8 +340,6 @@ export default function TemplatesPage() {
       if (normalized) {
         setSelectedColor(normalized);
         setCustomColor(normalized);
-        const isPreset = presetColorOptions.some((option) => option.value.toUpperCase() === normalized);
-        setIsCustomColorSelected(!isPreset);
       }
     }
 
@@ -393,28 +347,95 @@ export default function TemplatesPage() {
     if (storedMode === "light" || storedMode === "dark") {
       setDisplayMode(storedMode);
     }
-  }, [router]);
+  }, [router, totalTemplates]);
 
-  const setColorSelection = (value: string, useCustomColor: boolean) => {
+  const setColorSelection = (value: string) => {
     const normalized = normalizeHexColor(value);
     if (!normalized) return;
 
     setSelectedColor(normalized);
     setCustomColor(normalized);
-    setIsCustomColorSelected(useCustomColor);
     localStorage.setItem("selectedColor", normalized);
+  };
+
+  const visibleTemplateIndexes = useMemo(
+    () => getVisibleTemplateIndexes(carouselStartIndex, visibleCount, totalTemplates),
+    [carouselStartIndex, visibleCount, totalTemplates]
+  );
+  const visibleTemplates = useMemo(
+    () => visibleTemplateIndexes.map((templateIndex) => galleryTemplates[templateIndex]),
+    [visibleTemplateIndexes]
+  );
+  const effectiveVisibleCount = Math.min(visibleCount, totalTemplates);
+  const canNavigate = totalTemplates > effectiveVisibleCount;
+
+  const handleShowPrevious = () => {
+    if (!canNavigate) return;
+    hasNavigatedCarouselRef.current = true;
+    setCarouselStartIndex((current) => toCircularIndex(current - 1, totalTemplates));
+  };
+
+  const handleShowNext = () => {
+    if (!canNavigate) return;
+    hasNavigatedCarouselRef.current = true;
+    setCarouselStartIndex((current) => toCircularIndex(current + 1, totalTemplates));
   };
 
   const handleSelectTemplate = (templateId: string) => {
     if (!resumeData) return;
+    const isSwitchingTemplate = selectedTemplate !== null && selectedTemplate !== templateId;
 
     setSelectedTemplate(templateId);
     localStorage.setItem("selectedTemplate", templateId);
     localStorage.setItem("selectedColor", selectedColor);
     localStorage.setItem("selectedMode", displayMode);
-    localStorage.removeItem("templateConfig");
+    if (isSwitchingTemplate) {
+      localStorage.removeItem("templateConfig");
+    }
     router.push("/customize");
   };
+
+  useEffect(() => {
+    if (!canNavigate || totalTemplates === 0) return;
+
+    const previousIndex = toCircularIndex(carouselStartIndex - 1, totalTemplates);
+    const nextIndex = toCircularIndex(carouselStartIndex + effectiveVisibleCount, totalTemplates);
+    const preloadTemplateIds = new Set<string>([
+      galleryTemplates[previousIndex]?.id,
+      galleryTemplates[nextIndex]?.id,
+    ]);
+
+    preloadTemplateIds.forEach((templateId) => {
+      const loader = templateLoaderMap[templateId];
+      if (!loader) return;
+      void loader().catch(() => undefined);
+    });
+  }, [canNavigate, carouselStartIndex, effectiveVisibleCount, totalTemplates]);
+
+  useEffect(() => {
+    const currentTemplateIds = visibleTemplates.map((template) => template.id);
+    const previousTemplateIds = previousVisibleTemplateIdsRef.current;
+
+    if (hasNavigatedCarouselRef.current && previousTemplateIds.length > 0) {
+      setIncomingTemplateIds(
+        currentTemplateIds.filter((templateId) => !previousTemplateIds.includes(templateId))
+      );
+    } else {
+      setIncomingTemplateIds([]);
+    }
+
+    previousVisibleTemplateIdsRef.current = currentTemplateIds;
+  }, [visibleTemplates]);
+
+  useEffect(() => {
+    if (incomingTemplateIds.length === 0) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setIncomingTemplateIds([]);
+    }, 280);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [incomingTemplateIds]);
 
   if (info.loading) {
     return (
@@ -457,7 +478,7 @@ export default function TemplatesPage() {
                   Premium Template Gallery
                 </h2>
                 <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                  Browse live, scrollable previews. Each card is a real rendered template using normalized mock data.
+                  Browse live previews with arrows. Each card is a real rendered template using normalized mock data.
                 </p>
               </div>
               <Badge className="bg-[var(--color-primary)]/12 text-foreground">
@@ -468,38 +489,20 @@ export default function TemplatesPage() {
 
             <div className="mt-5 flex flex-wrap items-center gap-4 border-t border-[var(--color-border)] pt-4">
               <div className="flex items-center gap-2">
-                <Palette className="h-4 w-4 text-[var(--color-primary)]" />
-                <span className="text-sm font-medium">Accent</span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                {presetColorOptions.map((color) => (
-                  <button
-                    key={color.id}
-                    type="button"
-                    aria-label={`Choose ${color.label}`}
-                    title={color.label}
-                    onClick={() => setColorSelection(color.value, false)}
-                    className={`h-8 w-8 rounded-full border-2 transition ${
-                      !isCustomColorSelected && selectedColor === color.value.toUpperCase()
-                        ? "scale-110 ring-2 ring-[var(--color-primary)] ring-offset-2 ring-offset-[var(--color-background)]"
-                        : "border-[var(--color-border)] hover:scale-105"
-                    }`}
-                    style={{ backgroundColor: color.value }}
-                  />
-                ))}
-
+                <span className="text-sm font-medium">Custom</span>
                 <label className="sr-only" htmlFor="custom-accent-input">
-                  Custom accent color
+                  Custom template color
                 </label>
-                <input
-                  id="custom-accent-input"
-                  type="color"
-                  value={normalizeHexColor(customColor) ?? "#2563EB"}
-                  onChange={(event) => setColorSelection(event.target.value, true)}
-                  className="h-8 w-8 cursor-pointer rounded border border-[var(--color-border)] bg-transparent p-0"
-                  style={{ color: getContrastTextColor(customColor) }}
-                />
+                <div className="relative h-8 w-28 overflow-hidden rounded-md border border-[var(--color-border)] shadow-sm">
+                  <div className="h-full w-full" style={{ backgroundColor: customColor }} />
+                  <input
+                    id="custom-accent-input"
+                    type="color"
+                    value={normalizeHexColor(customColor) ?? "#2563EB"}
+                    onChange={(event) => setColorSelection(event.target.value)}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  />
+                </div>
               </div>
 
               <div className="ml-auto flex items-center gap-2 rounded-lg border border-[var(--color-border)] p-1">
@@ -538,19 +541,50 @@ export default function TemplatesPage() {
           </section>
 
           <section className="rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)]/65 p-3 shadow-sm backdrop-blur-sm">
-            <div className="max-h-[72vh] overflow-y-auto p-2 sm:p-3">
-              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
-                {galleryTemplates.map((template) => (
-                  <TemplateGalleryCard
-                    key={template.id}
-                    template={template}
-                    selectedColor={selectedColor}
-                    displayMode={displayMode}
-                    active={selectedTemplate === template.id}
-                    onSelect={handleSelectTemplate}
-                  />
-                ))}
+            <div className="flex items-center gap-2 p-2 sm:gap-3 sm:p-3">
+              <button
+                type="button"
+                aria-label="Show previous templates"
+                onClick={handleShowPrevious}
+                disabled={!canNavigate}
+                className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-foreground transition hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+
+              <div className="min-w-0 flex-1">
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 2xl:grid-cols-3">
+                  {visibleTemplates.map((template) => (
+                    <TemplateGalleryCard
+                      key={template.id}
+                      template={template}
+                      selectedColor={selectedColor}
+                      displayMode={displayMode}
+                      active={selectedTemplate === template.id}
+                      animateIn={incomingTemplateIds.includes(template.id)}
+                      resumeData={resumeData}
+                      savedConfig={
+                        selectedTemplate === template.id &&
+                        savedTemplateConfig &&
+                        String(savedTemplateConfig.templateId) === template.id
+                          ? savedTemplateConfig
+                          : null
+                      }
+                      onSelect={handleSelectTemplate}
+                    />
+                  ))}
+                </div>
               </div>
+
+              <button
+                type="button"
+                aria-label="Show next templates"
+                onClick={handleShowNext}
+                disabled={!canNavigate}
+                className="inline-flex h-11 w-11 flex-none items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--color-card)] text-foreground transition hover:border-[var(--color-primary)]/50 hover:text-[var(--color-primary)] disabled:cursor-not-allowed disabled:opacity-45"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
             </div>
           </section>
         </div>

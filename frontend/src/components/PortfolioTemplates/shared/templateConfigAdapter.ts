@@ -5,6 +5,7 @@ import {
   type TemplateConfig,
   type TemplateId,
   buildParsedResumeFromTemplateInput,
+  hasRenderableSectionContent,
   normalizeTemplateConfig,
   type SectionConfigFor,
 } from "@/lib/template-config";
@@ -64,7 +65,9 @@ export const resolveTemplateConfigFromProps = (
 };
 
 export const enabledSections = (config: TemplateConfig): SectionConfig[] => {
-  return config.sections.filter((section) => section.enabled);
+  return config.sections.filter(
+    (section) => section.enabled && hasRenderableSectionContent(section)
+  );
 };
 
 export const firstSectionOfType = <T extends SectionType>(
@@ -72,7 +75,10 @@ export const firstSectionOfType = <T extends SectionType>(
   type: T
 ): SectionConfigFor<T> | undefined => {
   return config.sections.find(
-    (section): section is SectionConfigFor<T> => section.type === type && section.enabled
+    (section): section is SectionConfigFor<T> =>
+      section.type === type &&
+      section.enabled &&
+      hasRenderableSectionContent(section)
   );
 };
 
