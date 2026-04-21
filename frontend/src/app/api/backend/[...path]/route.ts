@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-async function proxy(req: NextRequest, params: { path: string[] }) {
+async function proxy(req: NextRequest, params: Promise<{ path: string[] }>) {
   if (!BACKEND_URL) {
     return NextResponse.json({ error: "Backend URL not configured" }, { status: 503 });
   }
 
-  const path = params.path.join("/");
+  const { path: pathSegments } = await params;
+  const path = pathSegments.join("/");
   const search = req.nextUrl.search;
   const target = `${BACKEND_URL}/${path}${search}`;
 
@@ -43,8 +44,8 @@ async function proxy(req: NextRequest, params: { path: string[] }) {
   });
 }
 
-export const GET = (req: NextRequest, { params }: { params: { path: string[] } }) => proxy(req, params);
-export const POST = (req: NextRequest, { params }: { params: { path: string[] } }) => proxy(req, params);
-export const PUT = (req: NextRequest, { params }: { params: { path: string[] } }) => proxy(req, params);
-export const PATCH = (req: NextRequest, { params }: { params: { path: string[] } }) => proxy(req, params);
-export const DELETE = (req: NextRequest, { params }: { params: { path: string[] } }) => proxy(req, params);
+export const GET = (req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) => proxy(req, params);
+export const POST = (req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) => proxy(req, params);
+export const PUT = (req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) => proxy(req, params);
+export const PATCH = (req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) => proxy(req, params);
+export const DELETE = (req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) => proxy(req, params);
