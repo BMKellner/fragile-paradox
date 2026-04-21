@@ -96,7 +96,7 @@ export default function UploadPage() {
       // Get auth session for the API call
       const sessionData = await session.auth.getSession();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/resumes`, {
+      const response = await fetch(`/api/backend/resumes`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${sessionData.data.session?.access_token}`

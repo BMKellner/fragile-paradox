@@ -56,13 +56,7 @@ export default function DashboardPage() {
         const token = supabaseSession.data.session?.access_token;
         if (!token) return;
 
-        const url = process.env.NEXT_PUBLIC_BACKEND_URL;
-        if (!url || url.includes('localhost')) {
-          // Backend not available in this environment — show empty state
-          return;
-        }
-
-        const response = await fetch(`${url}/portfolios/`, {
+        const response = await fetch(`/api/backend/portfolios/`, {
           headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });
@@ -107,7 +101,7 @@ export default function DashboardPage() {
       const token = supabaseSession.data.session?.access_token;
       if (!token) return;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/${websiteId}`, {
+      const response = await fetch(`/api/backend/portfolios/${websiteId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,

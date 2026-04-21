@@ -1,7 +1,5 @@
 import type { TemplateConfig } from "@/lib/template-config";
 
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-
 type TemplateConfigPayload = {
   portfolio_id: string;
   template_config: TemplateConfig;
@@ -11,10 +9,8 @@ export async function fetchTemplateConfig(params: {
   portfolioId: string;
   token: string;
 }): Promise<TemplateConfig | null> {
-  if (!backendUrl) return null;
-
   const response = await fetch(
-    `${backendUrl}/portfolios/${params.portfolioId}/template-config`,
+    `/api/backend/portfolios/${params.portfolioId}/template-config`,
     {
       headers: {
         Authorization: `Bearer ${params.token}`,
@@ -36,12 +32,8 @@ export async function saveTemplateConfig(params: {
   token: string;
   config: TemplateConfig;
 }): Promise<TemplateConfig> {
-  if (!backendUrl) {
-    throw new Error("Backend URL is not configured");
-  }
-
   const response = await fetch(
-    `${backendUrl}/portfolios/${params.portfolioId}/template-config`,
+    `/api/backend/portfolios/${params.portfolioId}/template-config`,
     {
       method: "PUT",
       headers: {

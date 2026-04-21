@@ -469,7 +469,7 @@ export default function PreviewPage() {
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/resumes/`, {
+      const response = await fetch(`/api/backend/resumes/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -509,7 +509,7 @@ export default function PreviewPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/resumes/${selectedResumeId}/download`,
+        `/api/backend/resumes/${selectedResumeId}/download`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -687,7 +687,7 @@ export default function PreviewPage() {
 
       if (existingPortfolioId) {
         // Try to update existing portfolio
-        const updateResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/${existingPortfolioId}`, {
+        const updateResponse = await fetch(`/api/backend/portfolios/${existingPortfolioId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -699,7 +699,7 @@ export default function PreviewPage() {
         // If portfolio not found (404), create a new one instead
         if (updateResponse.status === 404) {
           localStorage.removeItem('currentPortfolioId');
-          response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/`, {
+          response = await fetch(`/api/backend/portfolios/`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -712,7 +712,7 @@ export default function PreviewPage() {
         }
       } else {
         // Create new portfolio
-        response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/`, {
+        response = await fetch(`/api/backend/portfolios/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
