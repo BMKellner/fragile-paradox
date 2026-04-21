@@ -6,6 +6,12 @@ export async function GET(request: Request) {
   // Extract search parameters and origin from the request URL
   const { searchParams, origin } = new URL(request.url)
 
+  // On Vercel (and other proxied environments), request.url contains the internal
+  // host (often localhost). Use x-forwarded-host to get the real public origin.
+  const forwardedHost = request.headers.get("x-forwarded-host")
+  const forwardedProto = request.headers.get("x-forwarded-proto") ?? "https"
+  const siteOrigin = forwardedHost ? `${forwardedProto}://${forwardedHost}` : origin
+
   // Get the authorization code and the 'next' redirect path
   const code = searchParams.get("code")
   const requestedNext = searchParams.get("next")
@@ -23,10 +29,10 @@ export async function GET(request: Request) {
 
     if (!error) {
       // If successful, redirect to the requested safe path or dashboard
-      return NextResponse.redirect(`${origin}${next}`)
+      return NextResponse.redirect(`${siteOrigin}${next}`)
     }
   }
 
   // If there's no code or an error occurred, redirect to an error page
-  return NextResponse.redirect(`${origin}/signin`)
+  return NextResponse.redirect(`${siteOrigin}/signin`)
 }

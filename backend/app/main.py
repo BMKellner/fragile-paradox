@@ -9,11 +9,11 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:3000",  # Next.js default port for development
-        "http://localhost:3002",  # Frontend custom port
-        "https://fragile-paradox.vercel.app",  # Your Vercel frontend URL
-        "https://*.vercel.app"  # Allow all Vercel preview deployments
+        "http://localhost:3000",
+        "http://localhost:3002",
+        "https://fragile-paradox.vercel.app",
     ],
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
