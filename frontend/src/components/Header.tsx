@@ -53,7 +53,7 @@ export default function Header({ showNav = true, currentPage }: HeaderProps) {
 
     const request = (async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/pfp`, {
+        const response = await fetch(`/api/backend/users/pfp`, {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           }

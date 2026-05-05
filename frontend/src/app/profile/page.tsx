@@ -64,7 +64,7 @@ export default function ProfilePage() {
     setProfileImageError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/pfp`, {
+      const response = await fetch(`/api/backend/users/pfp`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -128,7 +128,7 @@ export default function ProfilePage() {
 
     const fetchProfile = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profiles/me`, {
+        const response = await fetch(`/api/backend/profiles/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -211,7 +211,7 @@ export default function ProfilePage() {
         company: profile.company,
       };
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/profiles/me`, {
+      const response = await fetch(`/api/backend/profiles/me`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -269,7 +269,7 @@ export default function ProfilePage() {
       const formData = new FormData();
       formData.append("file", selectedPfpFile);
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/users/pfp`, {
+      const response = await fetch(`/api/backend/users/pfp`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,

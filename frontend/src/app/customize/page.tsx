@@ -550,12 +550,6 @@ export default function CustomizePage() {
         return;
       }
 
-      const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-      if (!backendUrl) {
-        setSaveMessage({ type: 'error', message: 'Backend URL is not configured.' });
-        return;
-      }
-
       const portfolioName = `${resumeData.personal_information?.full_name || 'My'} Portfolio - ${templateNames[selectedTemplate] || 'Template'}`;
       let portfolioId = localStorage.getItem('currentPortfolioId');
 
@@ -574,7 +568,7 @@ export default function CustomizePage() {
 
       let response: Response;
       if (portfolioId) {
-        response = await fetch(`${backendUrl}/portfolios/${portfolioId}`, {
+        response = await fetch(`/api/backend/portfolios/${portfolioId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -590,7 +584,7 @@ export default function CustomizePage() {
       }
 
       if (!portfolioId) {
-        response = await fetch(`${backendUrl}/portfolios/`, {
+        response = await fetch(`/api/backend/portfolios/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
