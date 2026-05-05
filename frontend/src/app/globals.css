@@ -305,6 +305,20 @@ h6 {
   }
 }
 
+@keyframes selectedSectionOutlineBreathe {
+  0%,
+  100% {
+    opacity: 0.28;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.selected-section-outline-breathe {
+  animation: selectedSectionOutlineBreathe 2.4s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .word-glow-cycle {
     animation: none;
@@ -313,6 +327,11 @@ h6 {
 
   .template-card-enter {
     animation: none;
+  }
+
+  .selected-section-outline-breathe {
+    animation: none;
+    opacity: 1;
   }
 }
 

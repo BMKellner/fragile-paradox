@@ -11,6 +11,7 @@ import {
   type SectionConfig,
   type TemplateConfig,
 } from "@/lib/template-config";
+import { sectionComponentId } from "@/lib/component-id";
 import { cn } from "@/lib/utils";
 
 import { renderSectionContent } from "./SectionRendererRegistry";
@@ -381,6 +382,8 @@ export function BaseTemplateRenderer({
             data-customize-section-id={section.id}
             data-customize-section-type={section.type}
             data-section-variant={section.variant || ""}
+            data-component-id={sectionComponentId(String(config.templateId), section.id, section.type)}
+            style={section.style as CSSProperties | undefined}
           >
             {renderSectionContent(section)}
           </section>
@@ -499,23 +502,42 @@ export function BaseTemplateRenderer({
       ) : null}
 
       {sections.map((section, index) => (
-        <section
-          key={section.id}
-          id={section.id}
-          data-customize-section-id={section.id}
-          data-customize-section-type={section.type}
-          data-section-variant={section.variant || ""}
-          data-reveal={isImmersiveVariant && section.type !== SectionType.Hero ? "true" : undefined}
-          data-visible={isImmersiveVariant && section.type !== SectionType.Hero ? "false" : undefined}
-          style={
+        (() => {
+          const revealStyle =
             isImmersiveVariant && section.type !== SectionType.Hero
               ? ({ "--reveal-index": index } as CSSProperties)
-              : undefined
-          }
-          className={styles.section}
-        >
-          <div className={styles.sectionContent}>{renderSectionContent(section)}</div>
-        </section>
+              : undefined;
+          const sectionStyle = (section.style || undefined) as CSSProperties | undefined;
+          const mergedStyle =
+            revealStyle || sectionStyle
+              ? ({
+                  ...(sectionStyle || {}),
+                  ...(revealStyle || {}),
+                } as CSSProperties)
+              : undefined;
+
+          return (
+            <section
+              key={section.id}
+              id={section.id}
+              data-customize-section-id={section.id}
+              data-customize-section-type={section.type}
+              data-section-variant={section.variant || ""}
+              data-reveal={isImmersiveVariant && section.type !== SectionType.Hero ? "true" : undefined}
+              data-visible={isImmersiveVariant && section.type !== SectionType.Hero ? "false" : undefined}
+              data-component-id={sectionComponentId(String(config.templateId), section.id, section.type)}
+              style={mergedStyle}
+              className={styles.section}
+            >
+              <div
+                className={styles.sectionContent}
+                data-component-id={sectionComponentId(String(config.templateId), `${section.id}-content`, section.type)}
+              >
+                {renderSectionContent(section)}
+              </div>
+            </section>
+          );
+        })()
       ))}
     </div>
   );

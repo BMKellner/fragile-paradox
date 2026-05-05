@@ -1,4 +1,5 @@
 import type { SectionConfig } from "@/lib/template-config-types";
+import { textStyleForPath } from "./styleUtils";
 
 type FallbackSectionRendererProps = {
   section: SectionConfig;
@@ -11,8 +12,14 @@ export function FallbackSectionRenderer({ section }: FallbackSectionRendererProp
 
   return (
     <>
-      <h2>{title}</h2>
-      {subtitle ? <p>{subtitle}</p> : null}
+      <h2 data-edit-path="content.title" style={textStyleForPath(section, "content.title")}>
+        {title}
+      </h2>
+      {subtitle ? (
+        <p data-edit-path="content.subtitle" style={textStyleForPath(section, "content.subtitle")}>
+          {subtitle}
+        </p>
+      ) : null}
     </>
   );
 }

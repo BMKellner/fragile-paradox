@@ -28,6 +28,7 @@ interface Website {
   id: string;
   name: string;
   template_id: string;
+  user_template_id?: string | null;
   data: PortfolioDataWithCustomTemplate;
   color: string;
   display_mode: string;
@@ -108,6 +109,11 @@ export default function DashboardPage() {
     localStorage.setItem('selectedTemplate', website.template_id);
     localStorage.setItem('selectedColor', website.color);
     localStorage.setItem('selectedMode', website.display_mode);
+    if (website.user_template_id) {
+      localStorage.setItem('currentUserTemplateId', website.user_template_id);
+    } else {
+      localStorage.removeItem('currentUserTemplateId');
+    }
     if (website.data.__template_config) {
       localStorage.setItem('templateConfig', JSON.stringify(website.data.__template_config));
     } else {

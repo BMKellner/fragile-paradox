@@ -96,7 +96,7 @@ export default function ResumeDropzone({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div
         role="button"
         tabIndex={0}
@@ -109,7 +109,7 @@ export default function ResumeDropzone({
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         className={cn(
-          "relative mx-auto flex w-full max-w-2xl min-h-[17.5rem] cursor-pointer items-center justify-center rounded-2xl border-2 border-dashed px-8 py-9 text-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] sm:min-h-[18.5rem]",
+          "relative mx-auto flex w-full max-w-2xl min-h-[14rem] cursor-pointer items-center justify-center rounded-xl border-2 border-dashed px-6 py-7 text-center transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--color-background)] sm:min-h-[15.5rem]",
           error
             ? "border-destructive/70 bg-destructive/5"
             : "border-[var(--color-border)] bg-[var(--color-background)]/45 hover:border-[var(--color-primary)]/70 hover:bg-[var(--color-accent)]/45",
@@ -130,18 +130,18 @@ export default function ResumeDropzone({
           onChange={handleInputChange}
         />
 
-        <div className="pointer-events-none flex flex-col items-center gap-3">
-          <UploadCloud className="h-9 w-9 text-[var(--color-primary)]" />
-          <p className="text-base font-medium text-[var(--color-foreground)] sm:text-lg">
+        <div className="pointer-events-none flex flex-col items-center gap-2.5">
+          <UploadCloud className="h-8 w-8 text-[var(--color-primary)]" />
+          <p className="text-sm font-medium text-[var(--color-foreground)] sm:text-base">
             Drag &amp; drop your resume here
           </p>
-          <p className="text-sm text-[var(--color-muted-foreground)]">or</p>
-          <p className="text-base font-semibold text-[var(--color-primary)] sm:text-lg">
+          <p className="text-xs text-[var(--color-muted-foreground)]">or</p>
+          <p className="text-sm font-semibold text-[var(--color-primary)] sm:text-base">
             Click to upload (PDF, DOCX)
           </p>
           <p
             id={maxSizeId}
-            className="pt-1 text-sm text-[var(--color-muted-foreground)]"
+            className="pt-1 text-xs text-[var(--color-muted-foreground)]"
           >
             Max size: {maxSizeMB}MB
           </p>
@@ -150,7 +150,7 @@ export default function ResumeDropzone({
 
       <p
         id={reassuranceId}
-        className="text-sm text-[var(--color-muted-foreground)]"
+        className="text-xs text-[var(--color-muted-foreground)]"
       >
         Your resume is only used to generate your portfolio.
       </p>
@@ -162,16 +162,16 @@ export default function ResumeDropzone({
         )}
       >
         {selectedFile ? (
-          <div className="space-y-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-accent)]/40 p-4">
+          <div className="space-y-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-accent)]/40 p-3">
             <div className="flex flex-wrap items-center gap-2">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <FileText className="h-5 w-5 shrink-0 text-[var(--color-primary)]" />
-                  <span className="truncate text-base font-medium text-[var(--color-foreground)]">
+                  <FileText className="h-4 w-4 shrink-0 text-[var(--color-primary)]" />
+                  <span className="truncate text-sm font-medium text-[var(--color-foreground)]">
                     {selectedFile.name}
                   </span>
                 </div>
-                <p className="pl-7 text-sm text-[var(--color-muted-foreground)]">
+                <p className="pl-6 text-xs text-[var(--color-muted-foreground)]">
                   {formatBytes(selectedFile.size)}
                 </p>
               </div>
@@ -182,7 +182,7 @@ export default function ResumeDropzone({
                 size="sm"
                 onClick={onClear}
                 aria-label={`Remove ${selectedFile.name}`}
-                className="h-9 px-3 text-sm text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
+                className="h-8 px-2.5 text-xs text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
               >
                 <X className="h-4 w-4" />
                 Remove
@@ -193,7 +193,7 @@ export default function ResumeDropzone({
               <p
                 role="status"
                 aria-live="polite"
-                className="flex items-center gap-2 text-sm font-medium text-[var(--color-primary)]"
+                className="flex items-center gap-2 text-xs font-medium text-[var(--color-primary)]"
               >
                 <CheckCircle2 className="h-4 w-4" />
                 Ready to generate
@@ -204,7 +204,7 @@ export default function ResumeDropzone({
       </div>
 
       {error ? (
-        <p id={errorId} role="alert" className="text-sm text-destructive">
+        <p id={errorId} role="alert" className="text-xs text-destructive">
           {error}
         </p>
       ) : null}

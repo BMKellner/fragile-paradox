@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type DragEvent as ReactDragEvent, type MouseEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/utils/supabase/client';
 import { useUser } from '@/hooks/use-user';
@@ -11,6 +11,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { DesignOverlay } from '@/components/design/DesignOverlay';
+import { DesignSidebar } from '@/components/design/DesignSidebar';
+import { SelectedSectionOverlay } from '@/components/design/SelectedSectionOverlay';
 import {
   Plus,
   GripVertical,
@@ -26,6 +29,7 @@ import {
   SectionType,
   canAddSectionType,
   createSectionConfig,
+  createDefaultTemplateConfig,
   deserializeTemplateConfig,
   getAddableSectionTypes,
   hasRenderableSectionContent,
@@ -51,6 +55,11 @@ import {
 import { fetchTemplateConfig, saveTemplateConfig } from '@/lib/template-config-api';
 import { PortfolioDataWithCustomTemplate } from '@/lib/custom-template';
 import { templateComponentMap, templateNames } from '@/lib/template-map';
+import { useDesignEditorState } from '@/hooks/use-design-editor-state';
+import { isDesignModeAvailableForRuntime, isDesignModeEnabledForUser } from '@/lib/feature-flags';
+import { trackTelemetryEvent } from '@/lib/telemetry';
+import { createUserTemplate, updateUserTemplate } from '@/lib/user-template-api';
+import { findPreviewSectionElement } from '@/lib/preview-section-target';
 
 const LIGHT_BG = '#F8FAFC';
 const DARK_BG = '#111111';
@@ -108,20 +117,24 @@ const sectionMatchFromPreviewTarget = (
 ): {
   sectionId: string | null;
   sectionType: SectionType | null;
+  editPath: string | null;
 } | null => {
   if (!(target instanceof HTMLElement)) return null;
 
   const section = target.closest<HTMLElement>(PREVIEW_SECTION_SELECTOR);
   if (!section) return null;
 
+  const editableTarget = target.closest<HTMLElement>('[data-edit-path]');
   const sectionId = section.dataset.customizeSectionId?.trim() || section.id?.trim() || null;
   const sectionType = parseSectionType(section.dataset.customizeSectionType || sectionId || undefined);
+  const editPath = editableTarget?.dataset.editPath?.trim() || null;
 
-  if (!sectionId && !sectionType) return null;
+  if (!sectionId && !sectionType && !editPath) return null;
 
   return {
     sectionId,
     sectionType,
+    editPath,
   };
 };
 
@@ -130,6 +143,7 @@ export default function CustomizePage() {
   const info = useUser();
   const session = useMemo(() => createClient(), []);
   const editorPanelRef = useRef<HTMLDivElement | null>(null);
+  const previewRootRef = useRef<HTMLDivElement | null>(null);
 
   const [resumeData, setResumeData] = useState<ParsedResume | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>('1');
@@ -140,9 +154,28 @@ export default function CustomizePage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [draggedSectionId, setDraggedSectionId] = useState<string | null>(null);
+  const [previewDraggedSectionId, setPreviewDraggedSectionId] = useState<string | null>(null);
+  const [previewDropTargetSectionId, setPreviewDropTargetSectionId] = useState<string | null>(null);
   const [showAddDrawer, setShowAddDrawer] = useState(false);
   const [leftSidebarCollapsed, setLeftSidebarCollapsed] = useState(false);
   const [rightSidebarCollapsed, setRightSidebarCollapsed] = useState(false);
+  const [designModeEnabled, setDesignModeEnabled] = useState(false);
+  const [userTemplateId, setUserTemplateId] = useState<string | null>(null);
+  const canUseDesignMode = isDesignModeAvailableForRuntime();
+
+  useEffect(() => {
+    const enabled = isDesignModeEnabledForUser();
+    setDesignModeEnabled(enabled);
+    if (enabled) {
+      trackTelemetryEvent({ event: 'design_mode_opened' });
+    }
+
+    return () => {
+      if (enabled) {
+        trackTelemetryEvent({ event: 'design_mode_closed' });
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -153,6 +186,7 @@ export default function CustomizePage() {
       const storedColor = localStorage.getItem('selectedColor') || '#2563EB';
       const storedMode = (localStorage.getItem('selectedMode') as 'light' | 'dark' | null) || 'light';
       const localTemplateConfig = deserializeTemplateConfig(localStorage.getItem('templateConfig'));
+      const storedUserTemplateId = localStorage.getItem('currentUserTemplateId');
 
       if (!storedResume) {
         router.push('/upload');
@@ -171,6 +205,7 @@ export default function CustomizePage() {
 
       setResumeData(parsedResume);
       setSelectedTemplate(storedTemplate);
+      setUserTemplateId(storedUserTemplateId);
 
       let nextConfig = normalizeTemplateConfig({
         templateId: storedTemplate,
@@ -189,6 +224,19 @@ export default function CustomizePage() {
           const supabaseSession = await session.auth.getSession();
           const token = supabaseSession.data.session?.access_token;
           if (token) {
+            const portfolioResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/${existingPortfolioId}`, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+            if (portfolioResponse.ok) {
+              const portfolioPayload = (await portfolioResponse.json()) as { user_template_id?: string | null };
+              if (portfolioPayload.user_template_id) {
+                setUserTemplateId(portfolioPayload.user_template_id);
+                localStorage.setItem('currentUserTemplateId', portfolioPayload.user_template_id);
+              }
+            }
+
             const remoteConfig = await fetchTemplateConfig({
               portfolioId: existingPortfolioId,
               token,
@@ -238,6 +286,48 @@ export default function CustomizePage() {
     [config, selectedSectionId]
   );
 
+  const editorSeedConfig = useMemo(
+    () =>
+      config ??
+      createDefaultTemplateConfig({
+        templateId: selectedTemplate,
+        resumeData: resumeData ?? undefined,
+      }),
+    [config, resumeData, selectedTemplate]
+  );
+
+  const designEditor = useDesignEditorState({
+    enabled: designModeEnabled && Boolean(config),
+    config: editorSeedConfig,
+    storageKey: `design-editor:${selectedTemplate}`,
+  });
+  const isDesignModeActive = designModeEnabled && Boolean(config);
+  const renderedPreviewConfig = isDesignModeActive ? designEditor.resolvedConfig : previewConfig ?? config;
+  const reorderablePreviewSections = useMemo(
+    () => renderedPreviewConfig?.sections ?? [],
+    [renderedPreviewConfig]
+  );
+  const selectedDesignSectionId = useMemo(() => {
+    if (!isDesignModeActive) return null;
+    const selectedNodeId = designEditor.selectedNodeId?.trim();
+    if (!selectedNodeId) return null;
+
+    const candidate = selectedNodeId.includes('::') ? selectedNodeId.split('::')[0]?.trim() : selectedNodeId;
+    if (!candidate) return null;
+
+    return reorderablePreviewSections.some((section) => section.id === candidate) ? candidate : null;
+  }, [designEditor.selectedNodeId, isDesignModeActive, reorderablePreviewSections]);
+  const draggablePreviewSectionId = isDesignModeActive ? selectedDesignSectionId : selectedSectionId;
+  const previewOutlineColor =
+    renderedPreviewConfig?.theme.primaryColor || config?.theme.primaryColor || '#2563EB';
+
+  useEffect(() => {
+    if (!isDesignModeActive || !renderedPreviewConfig) return;
+    localStorage.setItem('templateConfig', serializeTemplateConfig(renderedPreviewConfig));
+    localStorage.setItem('selectedColor', renderedPreviewConfig.theme.primaryColor);
+    localStorage.setItem('selectedMode', renderedPreviewConfig.theme.mode);
+  }, [isDesignModeActive, renderedPreviewConfig]);
+
   const addableSections = useMemo(() => {
     if (!config) return [];
     return getAddableSectionTypes(config);
@@ -273,13 +363,14 @@ export default function CustomizePage() {
     [previewConfig]
   );
   const hasPendingPreviewChanges = Boolean(
-    config &&
+    !isDesignModeActive &&
+      config &&
       previewConfig &&
       serializedConfig !== serializedPreviewConfig
   );
 
   const applyPreviewChanges = () => {
-    if (!config) return;
+    if (!config || isDesignModeActive) return;
     setPreviewConfig(config);
   };
 
@@ -293,6 +384,46 @@ export default function CustomizePage() {
       setSelectedSectionId(visibleSidebarSections[0].id);
     }
   }, [visibleSidebarSections, selectedSectionId]);
+
+  useEffect(() => {
+    const previewRoot = previewRootRef.current;
+    if (!previewRoot) return;
+
+    const sectionNodes = Array.from(previewRoot.querySelectorAll<HTMLElement>(PREVIEW_SECTION_SELECTOR));
+    sectionNodes.forEach((sectionNode) => {
+      const sectionId = sectionNode.dataset.customizeSectionId?.trim() || sectionNode.id?.trim() || '';
+      const normalizedSectionId = sectionId.toLowerCase();
+      const normalizedSelectedId = draggablePreviewSectionId?.toLowerCase() || '';
+      const normalizedDraggedId = previewDraggedSectionId?.toLowerCase() || '';
+      const normalizedDropTargetId = previewDropTargetSectionId?.toLowerCase() || '';
+
+      const isSelectedSection = Boolean(normalizedSectionId && normalizedSectionId === normalizedSelectedId);
+      const isDraggedSection = Boolean(normalizedSectionId && normalizedSectionId === normalizedDraggedId);
+      const isDropTarget = Boolean(normalizedSectionId && normalizedSectionId === normalizedDropTargetId);
+
+      sectionNode.draggable = isSelectedSection;
+      sectionNode.style.cursor = isSelectedSection ? (isDraggedSection ? 'grabbing' : 'grab') : '';
+      sectionNode.style.opacity = isDraggedSection ? '0.72' : '';
+      sectionNode.style.outline = isDropTarget ? `2px dashed ${previewOutlineColor}` : '';
+      sectionNode.style.outlineOffset = isDropTarget ? '6px' : '';
+    });
+
+    return () => {
+      sectionNodes.forEach((sectionNode) => {
+        sectionNode.draggable = false;
+        sectionNode.style.cursor = '';
+        sectionNode.style.opacity = '';
+        sectionNode.style.outline = '';
+        sectionNode.style.outlineOffset = '';
+      });
+    };
+  }, [
+    draggablePreviewSectionId,
+    previewDraggedSectionId,
+    previewDropTargetSectionId,
+    previewOutlineColor,
+    renderedPreviewConfig,
+  ]);
 
   const setSection = (
     sectionId: string,
@@ -368,25 +499,78 @@ export default function CustomizePage() {
     setDraggedSectionId(sectionId);
   };
 
-  const handleDrop = (targetId: string) => {
-    if (!draggedSectionId || !config) return;
+  const reorderTemplateSections = (draggedId: string, targetId: string) => {
+    if (draggedId === targetId) return;
 
     setConfig((previous) => {
       if (!previous) return previous;
       return {
         ...previous,
-        sections: reorderSections(previous.sections, draggedSectionId, targetId),
+        sections: reorderSections(previous.sections, draggedId, targetId),
       };
     });
+  };
+
+  const handleDrop = (targetId: string) => {
+    if (!draggedSectionId || !config) return;
+    reorderTemplateSections(draggedSectionId, targetId);
     setDraggedSectionId(null);
   };
 
-  const focusActiveEditorField = () => {
+  const scrollPreviewToSection = (sectionId: string, sectionType: SectionType) => {
+    const previewRoot = previewRootRef.current;
+    if (!previewRoot) return;
+
+    const target = findPreviewSectionElement(previewRoot, {
+      sectionId,
+      sectionType,
+    });
+
+    target?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'start',
+    });
+  };
+
+  const editPathCandidates = (editPath: string): string[] => {
+    const trimmed = editPath.trim();
+    if (!trimmed) return [];
+
+    const candidates = new Set<string>([trimmed]);
+    if (/\[\d+\]$/.test(trimmed)) {
+      candidates.add(trimmed.replace(/\[\d+\]$/, ''));
+    }
+
+    return Array.from(candidates);
+  };
+
+  const focusActiveEditorField = (preferredEditPath?: string | null) => {
     window.setTimeout(() => {
       const editorPanel = editorPanelRef.current;
       if (!editorPanel) return;
 
+      const mappedFields = Array.from(
+        editorPanel.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>(
+          'input[data-edit-path]:not([disabled]), textarea[data-edit-path]:not([disabled])'
+        )
+      );
+
+      if (preferredEditPath) {
+        const candidates = editPathCandidates(preferredEditPath);
+        const matchingField = mappedFields.find((field) => {
+          const fieldPath = field.dataset.editPath?.trim();
+          if (!fieldPath) return false;
+          return candidates.includes(fieldPath) || candidates.includes(fieldPath.replace(/\[\d+\]$/, ''));
+        });
+
+        if (matchingField) {
+          matchingField.focus();
+          return;
+        }
+      }
+
       const firstField =
+        mappedFields[0] ??
         editorPanel.querySelector<HTMLInputElement | HTMLTextAreaElement>(
           'input[type="text"]:not([disabled]), textarea:not([disabled])'
         ) ??
@@ -399,6 +583,8 @@ export default function CustomizePage() {
   };
 
   const handlePreviewClick = (event: MouseEvent<HTMLDivElement>) => {
+    if (isDesignModeActive) return;
+
     const previewMatch = sectionMatchFromPreviewTarget(event.target);
     if (!previewMatch) return;
 
@@ -430,25 +616,25 @@ export default function CustomizePage() {
       });
     }, 0);
 
-    focusActiveEditorField();
+    focusActiveEditorField(previewMatch.editPath);
   };
 
   const openPreview = () => {
-    if (!resumeData || !config) return;
+    if (!resumeData || !renderedPreviewConfig) return;
 
     localStorage.setItem('resumeData', JSON.stringify(resumeData));
     localStorage.setItem('selectedTemplate', selectedTemplate);
-    localStorage.setItem('selectedColor', config.theme.primaryColor);
-    localStorage.setItem('selectedMode', config.theme.mode);
-    localStorage.setItem('templateConfig', serializeTemplateConfig(config));
+    localStorage.setItem('selectedColor', renderedPreviewConfig.theme.primaryColor);
+    localStorage.setItem('selectedMode', renderedPreviewConfig.theme.mode);
+    localStorage.setItem('templateConfig', serializeTemplateConfig(renderedPreviewConfig));
 
     router.push('/preview');
   };
 
   const handleSave = async () => {
-    if (!resumeData || !config) return;
+    if (!resumeData || !renderedPreviewConfig) return;
 
-    const validation = validateTemplateConfig(config);
+    const validation = validateTemplateConfig(renderedPreviewConfig);
     if (!validation.valid) {
       setSaveMessage({
         type: 'error',
@@ -477,16 +663,50 @@ export default function CustomizePage() {
 
       const portfolioName = `${resumeData.personal_information?.full_name || 'My'} Portfolio - ${templateNames[selectedTemplate] || 'Template'}`;
       let portfolioId = localStorage.getItem('currentPortfolioId');
+      let resolvedUserTemplateId = userTemplateId;
+
+      if (isDesignModeActive) {
+        const changeSummary = designEditor.isDirty ? 'Saved visual editor changes' : 'Saved design template';
+        if (resolvedUserTemplateId) {
+          const updatedUserTemplate = await updateUserTemplate({
+            token,
+            userTemplateId: resolvedUserTemplateId,
+            payload: {
+              document: designEditor.document,
+              schema_version: designEditor.document.schema_version,
+              template_id: selectedTemplate,
+              increment_version: true,
+              change_summary: changeSummary,
+            },
+          });
+          resolvedUserTemplateId = updatedUserTemplate.id;
+        } else {
+          const createdUserTemplate = await createUserTemplate({
+            token,
+            payload: {
+              name: `${portfolioName} (Design Mode)`,
+              template_id: selectedTemplate,
+              schema_version: designEditor.document.schema_version,
+              document: designEditor.document,
+              portfolio_id: portfolioId,
+            },
+          });
+          resolvedUserTemplateId = createdUserTemplate.id;
+          setUserTemplateId(createdUserTemplate.id);
+          localStorage.setItem('currentUserTemplateId', createdUserTemplate.id);
+        }
+      }
 
       const payload = {
         name: portfolioName,
         template_id: selectedTemplate,
-        color: config.theme.primaryColor,
-        display_mode: config.theme.mode,
+        color: renderedPreviewConfig.theme.primaryColor,
+        display_mode: renderedPreviewConfig.theme.mode,
         is_published: false,
+        user_template_id: resolvedUserTemplateId || undefined,
         data: {
           ...(resumeData as PortfolioDataWithCustomTemplate),
-          __template_config: config,
+          __template_config: renderedPreviewConfig,
         },
       };
 
@@ -526,14 +746,36 @@ export default function CustomizePage() {
       const saved = await response!.json();
       const resolvedPortfolioId = saved.id;
 
+      if (isDesignModeActive && resolvedUserTemplateId) {
+        await updateUserTemplate({
+          token,
+          userTemplateId: resolvedUserTemplateId,
+          payload: {
+            portfolio_id: resolvedPortfolioId,
+            increment_version: false,
+          },
+        });
+        setUserTemplateId(resolvedUserTemplateId);
+        localStorage.setItem('currentUserTemplateId', resolvedUserTemplateId);
+      }
+
       await saveTemplateConfig({
         portfolioId: resolvedPortfolioId,
         token,
-        config,
+        config: renderedPreviewConfig,
       });
 
       localStorage.setItem('currentPortfolioId', resolvedPortfolioId);
-      localStorage.setItem('templateConfig', serializeTemplateConfig(config));
+      localStorage.setItem('templateConfig', serializeTemplateConfig(renderedPreviewConfig));
+      trackTelemetryEvent({
+        event: 'design_save',
+        portfolioId: resolvedPortfolioId,
+        userTemplateId: resolvedUserTemplateId || undefined,
+        metadata: {
+          designMode: isDesignModeActive,
+          templateId: selectedTemplate,
+        },
+      });
       setSaveMessage({ type: 'success', message: 'Template configuration saved.' });
       window.setTimeout(() => setSaveMessage(null), 3000);
     } catch (error) {
@@ -547,6 +789,125 @@ export default function CustomizePage() {
     }
   };
 
+  const handleDesignReorderSections = (draggedSectionId: string, targetSectionId: string) => {
+    if (!isDesignModeActive) return;
+
+    const children = Array.isArray(designEditor.document.root.children)
+      ? [...designEditor.document.root.children]
+      : [];
+    const from = children.findIndex((node) => node.id === draggedSectionId);
+    const to = children.findIndex((node) => node.id === targetSectionId);
+    if (from < 0 || to < 0 || from === to) return;
+
+    const [node] = children.splice(from, 1);
+    children.splice(to, 0, node);
+
+    designEditor.setDocument({
+      ...designEditor.document,
+      root: {
+        ...designEditor.document.root,
+        children,
+      },
+      metadata: {
+        ...designEditor.document.metadata,
+        source: 'editor',
+        updated_at: new Date().toISOString(),
+      },
+    });
+  };
+
+  const resolvePreviewSectionId = (target: EventTarget | null): string | null => {
+    const previewMatch = sectionMatchFromPreviewTarget(target);
+    if (!previewMatch) return null;
+
+    const normalizedPreviewId = previewMatch.sectionId?.trim().toLowerCase();
+    if (normalizedPreviewId) {
+      const matched = reorderablePreviewSections.find(
+        (section) => section.id.toLowerCase() === normalizedPreviewId
+      );
+      if (matched) return matched.id;
+    }
+
+    if (previewMatch.sectionType) {
+      const matched = reorderablePreviewSections.find(
+        (section) => section.type === previewMatch.sectionType
+      );
+      if (matched) return matched.id;
+    }
+
+    return null;
+  };
+
+  const handlePreviewDragStartCapture = (event: ReactDragEvent<HTMLDivElement>) => {
+    const dragTarget = event.target;
+    if (!(dragTarget instanceof HTMLElement)) {
+      event.preventDefault();
+      return;
+    }
+
+    if (dragTarget.closest('a, button, input, textarea, select, label')) {
+      event.preventDefault();
+      return;
+    }
+
+    const draggedId = resolvePreviewSectionId(event.target);
+    if (!draggedId || !draggablePreviewSectionId) {
+      event.preventDefault();
+      return;
+    }
+
+    if (draggedId.toLowerCase() !== draggablePreviewSectionId.toLowerCase()) {
+      event.preventDefault();
+      return;
+    }
+
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', draggedId);
+    setPreviewDraggedSectionId(draggedId);
+    setPreviewDropTargetSectionId(null);
+  };
+
+  const handlePreviewDragOverCapture = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (!previewDraggedSectionId) return;
+
+    const targetId = resolvePreviewSectionId(event.target);
+    if (!targetId || targetId.toLowerCase() === previewDraggedSectionId.toLowerCase()) {
+      setPreviewDropTargetSectionId(null);
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    setPreviewDropTargetSectionId(targetId);
+  };
+
+  const handlePreviewDropCapture = (event: ReactDragEvent<HTMLDivElement>) => {
+    if (!previewDraggedSectionId) return;
+
+    event.preventDefault();
+    const targetId = resolvePreviewSectionId(event.target);
+    if (!targetId || targetId.toLowerCase() === previewDraggedSectionId.toLowerCase()) {
+      setPreviewDraggedSectionId(null);
+      setPreviewDropTargetSectionId(null);
+      return;
+    }
+
+    if (isDesignModeActive) {
+      handleDesignReorderSections(previewDraggedSectionId, targetId);
+    } else {
+      reorderTemplateSections(previewDraggedSectionId, targetId);
+      setSelectedSectionId(previewDraggedSectionId);
+    }
+
+    setPreviewDraggedSectionId(null);
+    setPreviewDropTargetSectionId(null);
+  };
+
+  const handlePreviewDragEndCapture = () => {
+    setPreviewDraggedSectionId(null);
+    setPreviewDropTargetSectionId(null);
+  };
+
   const renderContentEditor = (section: SectionConfig) => {
     switch (section.type) {
       case SectionType.Hero: {
@@ -556,6 +917,7 @@ export default function CustomizePage() {
             <div>
               <Label>Eyebrow</Label>
               <Input
+                data-edit-path="content.eyebrow"
                 value={content.eyebrow}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -574,6 +936,7 @@ export default function CustomizePage() {
             <div>
               <Label>Full Name</Label>
               <Input
+                data-edit-path="content.fullName"
                 value={content.fullName}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -592,6 +955,7 @@ export default function CustomizePage() {
             <div>
               <Label>Career Name</Label>
               <Input
+                data-edit-path="content.careerName"
                 value={content.careerName}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -610,6 +974,7 @@ export default function CustomizePage() {
             <div>
               <Label>Summary</Label>
               <Textarea
+                data-edit-path="content.summary"
                 value={content.summary}
                 rows={5}
                 onChange={(event) =>
@@ -672,6 +1037,7 @@ export default function CustomizePage() {
             <div>
               <Label>Section Title</Label>
               <Input
+                data-edit-path="content.title"
                 value={content.title}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -690,6 +1056,7 @@ export default function CustomizePage() {
             <div>
               <Label>Subtitle</Label>
               <Textarea
+                data-edit-path="content.subtitle"
                 value={content.subtitle}
                 rows={3}
                 onChange={(event) =>
@@ -709,6 +1076,7 @@ export default function CustomizePage() {
             <div>
               <Label>Summary</Label>
               <Textarea
+                data-edit-path="content.summary"
                 value={content.summary}
                 rows={5}
                 onChange={(event) =>
@@ -746,6 +1114,7 @@ export default function CustomizePage() {
             <div>
               <Label>Education Details</Label>
               <Textarea
+                data-edit-path="content.educationDetails"
                 value={content.educationDetails}
                 rows={3}
                 onChange={(event) =>
@@ -834,6 +1203,7 @@ export default function CustomizePage() {
             <div>
               <Label>Section Title</Label>
               <Input
+                data-edit-path="content.title"
                 value={content.title}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -852,6 +1222,7 @@ export default function CustomizePage() {
             <div>
               <Label>Subtitle</Label>
               <Textarea
+                data-edit-path="content.subtitle"
                 rows={3}
                 value={content.subtitle}
                 onChange={(event) =>
@@ -892,6 +1263,7 @@ export default function CustomizePage() {
                   </Button>
                 </div>
                 <Input
+                  data-edit-path={`content.items[${index}].title`}
                   value={project.title}
                   placeholder="Project title"
                   onChange={(event) =>
@@ -910,6 +1282,7 @@ export default function CustomizePage() {
                   }
                 />
                 <Textarea
+                  data-edit-path={`content.items[${index}].description`}
                   value={project.description}
                   rows={3}
                   placeholder="Description"
@@ -929,6 +1302,7 @@ export default function CustomizePage() {
                   }
                 />
                 <Textarea
+                  data-edit-path={`content.items[${index}].highlights`}
                   value={project.highlights.join('\n')}
                   rows={3}
                   placeholder="Highlights (one per line)"
@@ -948,6 +1322,7 @@ export default function CustomizePage() {
                   }
                 />
                 <Input
+                  data-edit-path={`content.items[${index}].tags`}
                   value={project.tags.join(', ')}
                   placeholder="Tags (comma separated)"
                   onChange={(event) =>
@@ -1052,6 +1427,7 @@ export default function CustomizePage() {
             <div>
               <Label>Section Title</Label>
               <Input
+                data-edit-path="content.title"
                 value={content.title}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -1070,6 +1446,7 @@ export default function CustomizePage() {
             <div>
               <Label>Subtitle</Label>
               <Textarea
+                data-edit-path="content.subtitle"
                 rows={3}
                 value={content.subtitle}
                 onChange={(event) =>
@@ -1110,6 +1487,7 @@ export default function CustomizePage() {
                   </Button>
                 </div>
                 <Input
+                  data-edit-path={`content.categories[${index}].title`}
                   value={category.title}
                   placeholder="Category title"
                   onChange={(event) =>
@@ -1128,6 +1506,7 @@ export default function CustomizePage() {
                   }
                 />
                 <Input
+                  data-edit-path={`content.categories[${index}].skills`}
                   value={category.skills.join(', ')}
                   placeholder="Skills (comma separated)"
                   onChange={(event) =>
@@ -1181,6 +1560,7 @@ export default function CustomizePage() {
             <div>
               <Label>Section Title</Label>
               <Input
+                data-edit-path="content.title"
                 value={content.title}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -1199,6 +1579,7 @@ export default function CustomizePage() {
             <div>
               <Label>Subtitle</Label>
               <Textarea
+                data-edit-path="content.subtitle"
                 rows={3}
                 value={content.subtitle}
                 onChange={(event) =>
@@ -1239,6 +1620,7 @@ export default function CustomizePage() {
                   </Button>
                 </div>
                 <Input
+                  data-edit-path={`content.items[${index}].company`}
                   value={item.company}
                   placeholder="Company"
                   onChange={(event) =>
@@ -1257,6 +1639,7 @@ export default function CustomizePage() {
                   }
                 />
                 <Input
+                  data-edit-path={`content.items[${index}].employedDates`}
                   value={item.employedDates}
                   placeholder="Dates"
                   onChange={(event) =>
@@ -1275,6 +1658,7 @@ export default function CustomizePage() {
                   }
                 />
                 <Textarea
+                  data-edit-path={`content.items[${index}].bullets`}
                   rows={3}
                   value={item.bullets.join('\n')}
                   placeholder="Bullets (one per line)"
@@ -1349,6 +1733,7 @@ export default function CustomizePage() {
             <div>
               <Label>Section Title</Label>
               <Input
+                data-edit-path="content.title"
                 value={content.title}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -1367,6 +1752,7 @@ export default function CustomizePage() {
             <div>
               <Label>Subtitle</Label>
               <Textarea
+                data-edit-path="content.subtitle"
                 rows={3}
                 value={content.subtitle}
                 onChange={(event) =>
@@ -1407,6 +1793,7 @@ export default function CustomizePage() {
                   </Button>
                 </div>
                 <Input
+                  data-edit-path={`content.entries[${index}].school`}
                   value={entry.school}
                   placeholder="School"
                   onChange={(event) =>
@@ -1425,6 +1812,7 @@ export default function CustomizePage() {
                   }
                 />
                 <Input
+                  data-edit-path={`content.entries[${index}].majors`}
                   value={entry.majors.join(', ')}
                   placeholder="Majors (comma separated)"
                   onChange={(event) =>
@@ -1443,6 +1831,7 @@ export default function CustomizePage() {
                   }
                 />
                 <Input
+                  data-edit-path={`content.entries[${index}].minors`}
                   value={entry.minors.join(', ')}
                   placeholder="Minors (comma separated)"
                   onChange={(event) =>
@@ -1461,6 +1850,7 @@ export default function CustomizePage() {
                   }
                 />
                 <Input
+                  data-edit-path={`content.entries[${index}].expectedGrad`}
                   value={entry.expectedGrad}
                   placeholder="Expected graduation"
                   onChange={(event) =>
@@ -1516,6 +1906,7 @@ export default function CustomizePage() {
             <div>
               <Label>Section Title</Label>
               <Input
+                data-edit-path="content.title"
                 value={content.title}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -1534,6 +1925,7 @@ export default function CustomizePage() {
             <div>
               <Label>Subtitle</Label>
               <Textarea
+                data-edit-path="content.subtitle"
                 rows={3}
                 value={content.subtitle}
                 onChange={(event) =>
@@ -1574,6 +1966,7 @@ export default function CustomizePage() {
                   </Button>
                 </div>
                 <Input
+                  data-edit-path={`content.entries[${index}].name`}
                   value={entry.name}
                   placeholder="Certification name"
                   onChange={(event) =>
@@ -1592,6 +1985,7 @@ export default function CustomizePage() {
                   }
                 />
                 <Input
+                  data-edit-path={`content.entries[${index}].issuer`}
                   value={entry.issuer}
                   placeholder="Issuer"
                   onChange={(event) =>
@@ -1610,6 +2004,7 @@ export default function CustomizePage() {
                   }
                 />
                 <Input
+                  data-edit-path={`content.entries[${index}].year`}
                   value={entry.year}
                   placeholder="Year"
                   onChange={(event) =>
@@ -1664,6 +2059,7 @@ export default function CustomizePage() {
             <div>
               <Label>Section Title</Label>
               <Input
+                data-edit-path="content.title"
                 value={content.title}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -1682,6 +2078,7 @@ export default function CustomizePage() {
             <div>
               <Label>Subtitle</Label>
               <Textarea
+                data-edit-path="content.subtitle"
                 rows={3}
                 value={content.subtitle}
                 onChange={(event) =>
@@ -1805,6 +2202,7 @@ export default function CustomizePage() {
             <div>
               <Label>Section Title</Label>
               <Input
+                data-edit-path="content.title"
                 value={content.title}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -1823,6 +2221,7 @@ export default function CustomizePage() {
             <div>
               <Label>Subtitle</Label>
               <Textarea
+                data-edit-path="content.subtitle"
                 rows={3}
                 value={content.subtitle}
                 onChange={(event) =>
@@ -1973,6 +2372,7 @@ export default function CustomizePage() {
             <div>
               <Label>Section Title</Label>
               <Input
+                data-edit-path="content.title"
                 value={content.title}
                 onChange={(event) =>
                   setConfig((prev) =>
@@ -1991,6 +2391,7 @@ export default function CustomizePage() {
             <div>
               <Label>Subtitle</Label>
               <Textarea
+                data-edit-path="content.subtitle"
                 rows={3}
                 value={content.subtitle}
                 onChange={(event) =>
@@ -2007,9 +2408,10 @@ export default function CustomizePage() {
                 }
               />
             </div>
-            <Input
-              value={content.email}
-              placeholder="Email"
+              <Input
+                data-edit-path="content.email"
+                value={content.email}
+                placeholder="Email"
               onChange={(event) =>
                 setConfig((prev) =>
                   prev
@@ -2023,9 +2425,10 @@ export default function CustomizePage() {
                 )
               }
             />
-            <Input
-              value={content.phone}
-              placeholder="Phone"
+              <Input
+                data-edit-path="content.phone"
+                value={content.phone}
+                placeholder="Phone"
               onChange={(event) =>
                 setConfig((prev) =>
                   prev
@@ -2039,9 +2442,10 @@ export default function CustomizePage() {
                 )
               }
             />
-            <Input
-              value={content.address}
-              placeholder="Add Location"
+              <Input
+                data-edit-path="content.address"
+                value={content.address}
+                placeholder="Add Location"
               onChange={(event) =>
                 setConfig((prev) =>
                   prev
@@ -2055,9 +2459,10 @@ export default function CustomizePage() {
                 )
               }
             />
-            <Input
-              value={content.linkedin}
-              placeholder="LinkedIn URL"
+              <Input
+                data-edit-path="content.linkedin"
+                value={content.linkedin}
+                placeholder="LinkedIn URL"
               onChange={(event) =>
                 setConfig((prev) =>
                   prev
@@ -2130,14 +2535,14 @@ export default function CustomizePage() {
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="h-dvh overflow-hidden flex flex-col">
       <Header currentPage="customize" />
 
-      <main className="h-[calc(100vh-80px)] overflow-hidden">
-        <div className="h-full flex flex-col lg:flex-row">
+      <main className="flex-1 min-h-0 overflow-hidden">
+        <div className="h-full min-h-0 flex flex-col lg:flex-row">
           <aside
-            className={`relative w-full border-b bg-background flex flex-col overflow-hidden transition-[width,opacity,border-color] duration-300 ease-in-out lg:border-b-0 lg:border-r ${
-              leftSidebarCollapsed
+            className={`relative w-full min-h-0 border-b bg-background flex flex-col overflow-hidden transition-[width,opacity,border-color] duration-300 ease-in-out lg:border-b-0 lg:border-r ${
+              leftSidebarCollapsed || isDesignModeActive
                 ? 'lg:w-0 lg:min-w-0 lg:opacity-0 lg:pointer-events-none lg:border-r-transparent'
                 : 'lg:w-80 lg:opacity-100'
             }`}
@@ -2223,7 +2628,11 @@ export default function CustomizePage() {
                     <GripVertical className="w-4 h-4 text-muted-foreground" />
                     <button
                       type="button"
-                      onClick={() => setSelectedSectionId(section.id)}
+                      onClick={() => {
+                        setSelectedSectionId(section.id);
+                        scrollPreviewToSection(section.id, section.type);
+                        focusActiveEditorField();
+                      }}
                       className="min-w-0 flex-1 text-left"
                     >
                       <p className="text-sm font-medium truncate">{sectionTitle(section)}</p>
@@ -2261,7 +2670,7 @@ export default function CustomizePage() {
             </div>
           </aside>
 
-          <section className="relative flex-1 overflow-hidden bg-muted/30 transition-all duration-300 ease-in-out">
+          <section className="relative flex-1 min-h-0 overflow-hidden bg-muted/30 transition-all duration-300 ease-in-out">
             <button
               type="button"
               onClick={() => setLeftSidebarCollapsed((value) => !value)}
@@ -2282,144 +2691,216 @@ export default function CustomizePage() {
               {rightSidebarCollapsed ? <ChevronsLeft className="h-4 w-4" /> : <ChevronsRight className="h-4 w-4" />}
             </button>
 
-            <div className="h-full overflow-y-auto p-4 lg:p-6">
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="ghost" size="sm" className="gap-2" onClick={() => router.push('/templates')}>
-                    <ArrowLeft className="w-4 h-4" />
-                    Back to Templates
-                  </Button>
-                  <div className="hidden items-center gap-1 lg:flex">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => setLeftSidebarCollapsed((value) => !value)}
-                      title={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
-                      aria-label={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
-                    >
-                      {leftSidebarCollapsed ? (
-                        <ChevronsRight className="h-4 w-4" />
-                      ) : (
-                        <ChevronsLeft className="h-4 w-4" />
-                      )}
+            <div className="h-full min-h-0 flex flex-col">
+              <div className="shrink-0 border-b bg-background/90 px-4 py-4 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:px-6">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="ghost" size="sm" className="gap-2" onClick={() => router.push('/templates')}>
+                      <ArrowLeft className="w-4 h-4" />
+                      Back to Templates
                     </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-8 w-8 p-0"
-                      onClick={() => setRightSidebarCollapsed((value) => !value)}
-                      title={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
-                      aria-label={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
-                    >
-                      {rightSidebarCollapsed ? (
-                        <ChevronsLeft className="h-4 w-4" />
-                      ) : (
-                        <ChevronsRight className="h-4 w-4" />
-                      )}
-                    </Button>
+                    {canUseDesignMode ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={isDesignModeActive ? 'default' : 'outline'}
+                        onClick={() => {
+                          setDesignModeEnabled((value) => {
+                            const next = !value;
+                            trackTelemetryEvent({ event: next ? 'design_mode_opened' : 'design_mode_closed' });
+                            return next;
+                          });
+                        }}
+                      >
+                        {isDesignModeActive ? 'Exit Design Mode' : 'Design Mode'}
+                      </Button>
+                    ) : null}
+                    <div className="hidden items-center gap-1 lg:flex">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => setLeftSidebarCollapsed((value) => !value)}
+                        title={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
+                        aria-label={leftSidebarCollapsed ? 'Expand sections sidebar' : 'Collapse sections sidebar'}
+                      >
+                        {leftSidebarCollapsed ? (
+                          <ChevronsRight className="h-4 w-4" />
+                        ) : (
+                          <ChevronsLeft className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => setRightSidebarCollapsed((value) => !value)}
+                        title={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
+                        aria-label={rightSidebarCollapsed ? 'Expand content sidebar' : 'Collapse content sidebar'}
+                      >
+                        {rightSidebarCollapsed ? (
+                          <ChevronsLeft className="h-4 w-4" />
+                        ) : (
+                          <ChevronsRight className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-sm text-muted-foreground">
+                      {isDesignModeActive ? 'Live preview updates instantly in Design Mode' : 'Preview updates when you apply changes'}
+                    </div>
+                    {!isDesignModeActive ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={hasPendingPreviewChanges ? 'default' : 'outline'}
+                        className="gap-2"
+                        onClick={applyPreviewChanges}
+                        disabled={!hasPendingPreviewChanges}
+                      >
+                        <Save className="w-4 h-4" />
+                        Apply changes
+                      </Button>
+                    ) : (
+                      <Badge variant="secondary">Design Mode</Badge>
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="text-sm text-muted-foreground">
-                    Preview updates when you apply changes
-                  </div>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={hasPendingPreviewChanges ? 'default' : 'outline'}
-                    className="gap-2"
-                    onClick={applyPreviewChanges}
-                    disabled={!hasPendingPreviewChanges}
+
+                {saveMessage ? (
+                  <div
+                    className={`mt-3 rounded-md border px-3 py-2 text-sm ${
+                      saveMessage.type === 'success'
+                        ? 'border-green-200 bg-green-50 text-green-700'
+                        : 'border-red-200 bg-red-50 text-red-700'
+                    }`}
                   >
-                    <Save className="w-4 h-4" />
-                    Apply changes
-                  </Button>
-                </div>
+                    {saveMessage.message}
+                  </div>
+                ) : null}
               </div>
 
-              {saveMessage ? (
+              <div className="flex-1 min-h-0 overflow-hidden p-4 lg:p-6">
                 <div
-                  className={`mb-4 rounded-md border px-3 py-2 text-sm ${
-                    saveMessage.type === 'success'
-                      ? 'border-green-200 bg-green-50 text-green-700'
-                      : 'border-red-200 bg-red-50 text-red-700'
-                  }`}
+                  ref={previewRootRef}
+                  className="relative h-full min-h-0 rounded-lg border bg-background shadow-sm overflow-y-auto overscroll-contain"
+                  onClickCapture={handlePreviewClick}
+                  onDragStartCapture={handlePreviewDragStartCapture}
+                  onDragOverCapture={handlePreviewDragOverCapture}
+                  onDropCapture={handlePreviewDropCapture}
+                  onDragEndCapture={handlePreviewDragEndCapture}
                 >
-                  {saveMessage.message}
+                  {SelectedTemplate ? (
+                    <SelectedTemplate
+                      personalInformation={resumeData.personal_information}
+                      overviewData={resumeData.overview}
+                      projects={resumeData.projects}
+                      experience={resumeData.experience}
+                      skills={resumeData.skills}
+                      mainColor={renderedPreviewConfig?.theme.primaryColor || config.theme.primaryColor}
+                      backgroundColor={renderedPreviewConfig?.theme.backgroundColor || config.theme.backgroundColor}
+                      templateConfig={renderedPreviewConfig || config}
+                    />
+                  ) : (
+                    <div className="p-6 text-sm text-muted-foreground">Template not found.</div>
+                  )}
                 </div>
-              ) : null}
-
-              <div
-                className="rounded-lg border bg-background shadow-sm overflow-hidden"
-                onClickCapture={handlePreviewClick}
-              >
-                {SelectedTemplate ? (
-                  <SelectedTemplate
-                    personalInformation={resumeData.personal_information}
-                    overviewData={resumeData.overview}
-                    projects={resumeData.projects}
-                    experience={resumeData.experience}
-                    skills={resumeData.skills}
-                    mainColor={(previewConfig ?? config).theme.primaryColor}
-                    backgroundColor={(previewConfig ?? config).theme.backgroundColor}
-                    templateConfig={previewConfig ?? config}
-                  />
-                ) : (
-                  <div className="p-6 text-sm text-muted-foreground">Template not found.</div>
-                )}
+                <DesignOverlay
+                  enabled={isDesignModeActive}
+                  previewRoot={previewRootRef.current}
+                  selectedNodeId={designEditor.selectedNodeId}
+                  onSelectNode={(nodeId) => {
+                    designEditor.setSelectedNodeId(nodeId);
+                    trackTelemetryEvent({
+                      event: 'design_edit_start',
+                      metadata: { nodeId },
+                      userTemplateId: userTemplateId || undefined,
+                      portfolioId: localStorage.getItem('currentPortfolioId') || undefined,
+                    });
+                  }}
+                />
+                <SelectedSectionOverlay
+                  enabled={!isDesignModeActive}
+                  previewRoot={previewRootRef.current}
+                  selectedSectionId={selectedSectionId}
+                  selectedSectionType={selectedSection?.type ?? null}
+                  outlineColor={renderedPreviewConfig?.theme.primaryColor || config.theme.primaryColor}
+                />
               </div>
             </div>
           </section>
 
-          <aside
-            className={`relative w-full border-t bg-background overflow-hidden flex flex-col transition-[width,opacity,border-color] duration-300 ease-in-out lg:border-t-0 lg:border-l ${
-              rightSidebarCollapsed
-                ? 'lg:w-0 lg:min-w-0 lg:opacity-0 lg:pointer-events-none lg:border-l-transparent'
-                : 'lg:w-96 lg:opacity-100'
-            }`}
-          >
-            <div className="p-4 border-b">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <h3 className="text-lg font-semibold">Content</h3>
-                  <p className="text-sm text-muted-foreground">Edit the selected section content.</p>
+          {isDesignModeActive ? (
+            <DesignSidebar
+              document={designEditor.document}
+              selectedNodeId={designEditor.selectedNodeId}
+              onSelectNode={designEditor.setSelectedNodeId}
+              onUpdateNode={(nodeId, updater) => {
+                designEditor.updateNode(nodeId, updater);
+                trackTelemetryEvent({
+                  event: 'design_edit_applied',
+                  metadata: { nodeId },
+                  userTemplateId: userTemplateId || undefined,
+                  portfolioId: localStorage.getItem('currentPortfolioId') || undefined,
+                });
+              }}
+              onReorderSections={handleDesignReorderSections}
+              onUndo={designEditor.undo}
+              onRedo={designEditor.redo}
+              canUndo={designEditor.canUndo}
+              canRedo={designEditor.canRedo}
+            />
+          ) : (
+            <aside
+              className={`relative w-full min-h-0 border-t bg-background overflow-hidden flex flex-col transition-[width,opacity,border-color] duration-300 ease-in-out lg:border-t-0 lg:border-l ${
+                rightSidebarCollapsed
+                  ? 'lg:w-0 lg:min-w-0 lg:opacity-0 lg:pointer-events-none lg:border-l-transparent'
+                  : 'lg:w-96 lg:opacity-100'
+              }`}
+            >
+              <div className="p-4 border-b">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h3 className="text-lg font-semibold">Content</h3>
+                    <p className="text-sm text-muted-foreground">Edit the selected section content.</p>
+                  </div>
                 </div>
               </div>
-            </div>
-            <div
-              ref={editorPanelRef}
-              className="flex-1 overflow-y-auto p-4 [&_label]:mb-1.5 [&_label]:block [&_input]:mt-1.5 [&_textarea]:mt-1.5"
-            >
-              {selectedSection ? (
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Selected</p>
-                    <p className="font-medium">{sectionTitle(selectedSection)}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{selectedSection.type}</p>
+              <div
+                ref={editorPanelRef}
+                className="flex-1 overflow-y-auto p-4 [&_label]:mb-1.5 [&_label]:block [&_input]:mt-1.5 [&_textarea]:mt-1.5"
+              >
+                {selectedSection ? (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-xs uppercase tracking-wide text-muted-foreground">Selected</p>
+                      <p className="font-medium">{sectionTitle(selectedSection)}</p>
+                      <p className="text-xs text-muted-foreground capitalize">{selectedSection.type}</p>
+                    </div>
+                    <div>
+                      <Label>Navbar Label</Label>
+                      <Input
+                        value={selectedSection.navLabel || ''}
+                        placeholder="Navbar text"
+                        onChange={(event) =>
+                          setSection(selectedSection.id, (current) => ({
+                            ...current,
+                            navLabel: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+                    {renderContentEditor(selectedSection)}
                   </div>
-                  <div>
-                    <Label>Navbar Label</Label>
-                    <Input
-                      value={selectedSection.navLabel || ''}
-                      placeholder="Navbar text"
-                      onChange={(event) =>
-                        setSection(selectedSection.id, (current) => ({
-                          ...current,
-                          navLabel: event.target.value,
-                        }))
-                      }
-                    />
-                  </div>
-                  {renderContentEditor(selectedSection)}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">Select a section from the left panel.</p>
-              )}
-            </div>
-          </aside>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Select a section from the left panel.</p>
+                )}
+              </div>
+            </aside>
+          )}
         </div>
       </main>
 

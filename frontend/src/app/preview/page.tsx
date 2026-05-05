@@ -26,6 +26,8 @@ import {
   clearPortfolioLinkageKeepTemplateChoice,
   clearPortfolioSessionForNewDraft,
 } from "@/lib/portfolio-workflow-storage";
+import { exportUserTemplateJson } from "@/lib/user-template-api";
+import { trackTelemetryEvent } from "@/lib/telemetry";
 
 // personalInformation={personal_information}
 //          overviewData={overview_data}
@@ -300,6 +302,7 @@ export default function PreviewPage() {
   const [mainColor, setMainColor] = useState<string>('#2563EB');
   const [backgroundColor, setBackgroundColor] = useState<string>(LIGHT_DISPLAY_BG);
   const [templateConfig, setTemplateConfig] = useState<TemplateConfig | null>(null);
+  const [userTemplateId, setUserTemplateId] = useState<string | null>(null);
   const [isGenerating, setIsGenerating] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState<{type: 'success' | 'error', message: string} | null>(null);
@@ -331,6 +334,7 @@ export default function PreviewPage() {
       const storedCustomSections = localStorage.getItem('customSections');
       const storedSerializedLayout = localStorage.getItem('customLayoutSerialized');
       const storedTemplateConfig = deserializeTemplateConfig(localStorage.getItem('templateConfig'));
+      const storedUserTemplateId = localStorage.getItem('currentUserTemplateId');
       const parsedSerializedLayout = tryParseCustomLayoutTemplate(storedSerializedLayout);
       const effectiveCustomSections =
         storedCustomSections ??
@@ -354,9 +358,11 @@ export default function PreviewPage() {
         if (!isCancelled) {
           setSelectedTemplate('custom');
           setTemplateConfig(null);
+          setUserTemplateId(storedUserTemplateId);
         }
       } else if (storedTemplate) {
         if (!isCancelled) setSelectedTemplate(storedTemplate);
+        if (!isCancelled) setUserTemplateId(storedUserTemplateId);
 
         if (storedTemplate !== 'custom' && parsedResume) {
           let workingConfig = normalizeTemplateConfig({
@@ -673,6 +679,7 @@ export default function PreviewPage() {
       const portfolioData = {
         name: `${resumeData.personal_information?.full_name || 'My'} Portfolio - ${templateName}`,
         template_id: selectedTemplate,
+        user_template_id: userTemplateId || undefined,
         data: dataToSave,
         color: mainColor,
         display_mode: backgroundColor === LIGHT_DISPLAY_BG ? 'light' : 'dark',
@@ -721,6 +728,10 @@ export default function PreviewPage() {
       if (response.ok) {
         const savedPortfolio = await response.json();
         localStorage.setItem('currentPortfolioId', savedPortfolio.id);
+        if (savedPortfolio.user_template_id) {
+          localStorage.setItem('currentUserTemplateId', savedPortfolio.user_template_id);
+          setUserTemplateId(savedPortfolio.user_template_id);
+        }
 
         if (selectedTemplate !== 'custom' && currentTemplateConfig) {
           await saveTemplateConfig({
@@ -744,69 +755,155 @@ export default function PreviewPage() {
     }
   };
 
-  const handleDownload = () => {
-    const sectionHtml =
-      selectedTemplate !== 'custom' && templateConfig
-        ? templateConfig.sections
-            .filter((section) => section.enabled)
-            .map((section) => {
-              const title =
-                typeof (section.content as { title?: unknown }).title === 'string'
-                  ? ((section.content as { title?: string }).title as string)
-                  : section.type;
-              const summary =
-                typeof (section.content as { summary?: unknown }).summary === 'string'
-                  ? ((section.content as { summary?: string }).summary as string)
-                  : '';
+  const handleDownload = async () => {
+    if (!selectedTemplate || !resumeData) return;
 
-              return `
-    <section class=\"section\">
-      <h2>${title}</h2>
-      ${summary ? `<p>${summary}</p>` : ''}
-    </section>`;
-            })
-            .join('')
-        : '';
+    try {
+      const supabaseSession = await session.auth.getSession();
+      const token = supabaseSession.data.session?.access_token;
 
-    // Generate HTML file for download using TemplateConfig sections when available.
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${resumeData.personal_information?.full_name || 'Portfolio'}</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-      background: ${backgroundColor};
-      color: ${backgroundColor === LIGHT_DISPLAY_BG ? '#1a202c' : '#fff'};
-      padding: 20px;
+      let payload: unknown;
+      if (token && userTemplateId) {
+        payload = await exportUserTemplateJson({
+          token,
+          userTemplateId,
+        });
+      } else {
+        payload = {
+          template_id: selectedTemplate,
+          schema_version: 1,
+          resume_data: resumeData,
+          template_config: templateConfig,
+          exported_at: new Date().toISOString(),
+        };
+      }
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `portfolio-${selectedTemplate}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      trackTelemetryEvent({
+        event: 'design_export_json',
+        userTemplateId: userTemplateId || undefined,
+        portfolioId: localStorage.getItem('currentPortfolioId') || undefined,
+      });
+    } catch (error) {
+      console.error('Error exporting json:', error);
+      setSaveMessage({ type: 'error', message: 'Failed to export JSON.' });
     }
-    .container { max-width: 1200px; margin: 0 auto; }
-    h1 { color: ${mainColor}; margin-bottom: 10px; }
-    h2 { color: ${mainColor}; margin: 20px 0 10px; border-bottom: 2px solid ${mainColor}; padding-bottom: 5px; }
-    .section { margin: 20px 0; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <h1>${resumeData.personal_information?.full_name || 'Portfolio'}</h1>
-    <p>${resumeData.overview?.resume_summary || ''}</p>
-    ${sectionHtml}
-  </div>
-</body>
-</html>`;
+  };
 
-    const blob = new Blob([html], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `portfolio-${selectedTemplate}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleExportPdf = async () => {
+    try {
+      const portfolioId = localStorage.getItem('currentPortfolioId');
+      if (!portfolioId) {
+        setSaveMessage({ type: 'error', message: 'Save the portfolio before exporting PDF.' });
+        return;
+      }
+
+      const previewNode = document.querySelector('[data-preview-export-root]');
+      if (!(previewNode instanceof HTMLElement)) {
+        setSaveMessage({ type: 'error', message: 'Preview content is unavailable for PDF export.' });
+        return;
+      }
+
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8" /></head><body>${previewNode.outerHTML}</body></html>`;
+      const supabaseSession = await session.auth.getSession();
+      const token = supabaseSession.data.session?.access_token;
+      if (!token) {
+        setSaveMessage({ type: 'error', message: 'Please sign in to export PDF.' });
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/${portfolioId}/export/pdf`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          html,
+          paper_format: 'A4',
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.detail || 'Failed to export PDF');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `portfolio-${selectedTemplate || 'template'}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      trackTelemetryEvent({
+        event: 'design_export_pdf',
+        userTemplateId: userTemplateId || undefined,
+        portfolioId,
+      });
+    } catch (error) {
+      console.error('Error exporting pdf:', error);
+      setSaveMessage({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to export PDF.',
+      });
+    }
+  };
+
+  const handleDeploy = async () => {
+    try {
+      if (!selectedTemplate || !resumeData) return;
+      let portfolioId = localStorage.getItem('currentPortfolioId');
+
+      if (!portfolioId) {
+        await handleSave();
+        portfolioId = localStorage.getItem('currentPortfolioId');
+      }
+
+      if (!portfolioId) {
+        setSaveMessage({ type: 'error', message: 'Please save your portfolio before deploying.' });
+        return;
+      }
+
+      const supabaseSession = await session.auth.getSession();
+      const token = supabaseSession.data.session?.access_token;
+      if (!token) {
+        setSaveMessage({ type: 'error', message: 'Please sign in to deploy.' });
+        return;
+      }
+
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/${portfolioId}/publish`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json().catch(() => ({}));
+        throw new Error(errorBody.detail || 'Failed to deploy portfolio');
+      }
+
+      setSaveMessage({ type: 'success', message: 'Portfolio deployed and published.' });
+    } catch (error) {
+      console.error('Error deploying portfolio:', error);
+      setSaveMessage({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to deploy portfolio.',
+      });
+    }
   };
 
   return (
@@ -863,9 +960,13 @@ export default function PreviewPage() {
                 </Button>
                 <Button onClick={handleDownload} variant="outline" className="gap-2 border-emerald-200 hover:bg-emerald-50">
                   <Download className="w-4 h-4" />
-                  Download
+                  Export JSON
                 </Button>
-                <Button variant="outline" className="gap-2">
+                <Button variant="outline" className="gap-2" onClick={handleExportPdf}>
+                  <Download className="w-4 h-4" />
+                  Export PDF
+                </Button>
+                <Button variant="outline" className="gap-2" onClick={handleDeploy}>
                   <Globe className="w-4 h-4" />
                   Deploy
                 </Button>
@@ -891,7 +992,7 @@ export default function PreviewPage() {
           )}
 
           {/* Portfolio Preview */}
-          <div className="rounded-lg overflow-hidden shadow-lg bg-background">
+          <div className="rounded-lg overflow-hidden shadow-lg bg-background" data-preview-export-root>
             {resumeData && selectedTemplate && (
               <FullTemplateRender
                 templateId={selectedTemplate}

@@ -14,7 +14,6 @@ import {
   type AboutSectionContent,
   type BlogSectionContent,
   type BuiltInTemplateId,
-  type CertificationItem,
   type CertificationsSectionContent,
   type ContactSectionContent,
   type EducationItem,
@@ -32,6 +31,7 @@ import {
   type TemplateConfig,
   type TemplateId,
   type TemplateThemeConfig,
+  TEMPLATE_CONFIG_SCHEMA_VERSION,
   type TestimonialsSectionContent,
 } from "@/lib/template-config-types";
 
@@ -275,6 +275,8 @@ const createSection = <T extends SectionType>(section: {
   enabled?: boolean;
   navLabel?: string;
   variant?: string;
+  style?: Record<string, unknown>;
+  props?: Record<string, unknown>;
   content: SectionContentByType[T];
 }): SectionConfigFor<T> => {
   return {
@@ -283,6 +285,8 @@ const createSection = <T extends SectionType>(section: {
     enabled: section.enabled ?? true,
     navLabel: section.navLabel || defaultNavLabel(section.type),
     variant: section.variant,
+    style: section.style as SectionConfigFor<T>["style"],
+    props: section.props,
     content: section.content,
   } as SectionConfigFor<T>;
 };
@@ -722,6 +726,7 @@ export function createDefaultTemplateConfig(params: {
   };
 
   return {
+    schema_version: TEMPLATE_CONFIG_SCHEMA_VERSION,
     templateId: params.templateId,
     theme: mergedTheme,
     sections: buildDefaultSections(params.templateId, params.resumeData),
@@ -828,6 +833,9 @@ export function validateTemplateConfig(config: TemplateConfig): {
   if (!config.templateId) {
     errors.push("templateId is required");
   }
+  if (!Number.isInteger(config.schema_version) || config.schema_version <= 0) {
+    errors.push("schema_version must be a positive integer");
+  }
 
   if (!config.theme) {
     errors.push("theme is required");
@@ -852,6 +860,12 @@ export function validateTemplateConfig(config: TemplateConfig): {
 
     if (section.navLabel !== undefined && typeof section.navLabel !== "string") {
       errors.push(`sections[${index}].navLabel must be string when provided`);
+    }
+    if (section.style !== undefined && typeof section.style !== "object") {
+      errors.push(`sections[${index}].style must be object when provided`);
+    }
+    if (section.props !== undefined && typeof section.props !== "object") {
+      errors.push(`sections[${index}].props must be object when provided`);
     }
 
     if (!section.content || typeof section.content !== "object") {
@@ -1134,6 +1148,14 @@ export function normalizeTemplateConfig(params: {
           typeof section.navLabel === "string" && section.navLabel.trim()
             ? section.navLabel.trim()
             : defaultNavLabel(section.type),
+        style:
+          section.style && typeof section.style === "object"
+            ? (section.style as SectionConfig["style"])
+            : undefined,
+        props:
+          section.props && typeof section.props === "object"
+            ? (section.props as SectionConfig["props"])
+            : undefined,
       };
 
       return normalizeSectionContent(normalizedSection);
@@ -1141,9 +1163,17 @@ export function normalizeTemplateConfig(params: {
   const sectionsWithCoreDefaults = appendMissingCoreSections(sections, defaultConfig.sections);
 
   return {
+    schema_version:
+      Number.isInteger(params.config.schema_version) && (params.config.schema_version as number) > 0
+        ? (params.config.schema_version as number)
+        : TEMPLATE_CONFIG_SCHEMA_VERSION,
     templateId: params.templateId,
     theme,
     sections: sectionsWithCoreDefaults.length ? sectionsWithCoreDefaults : defaultConfig.sections,
+    user_template_id:
+      typeof params.config.user_template_id === "string" && params.config.user_template_id.trim()
+        ? params.config.user_template_id
+        : undefined,
   };
 }
 

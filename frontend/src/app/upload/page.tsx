@@ -142,13 +142,13 @@ export default function UploadPage() {
       <Header currentPage="upload" />
 
       {/* Main Content */}
-      <main className="py-10 md:py-12">
+      <main className="py-8 md:py-10">
         <div className="container-base max-w-4xl">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center gap-2 mb-5">
-              <Sprout className="w-11 h-11 text-[var(--color-primary)]" />
+          <div className="mb-6 text-center md:mb-7">
+            <div className="mb-4 inline-flex items-center justify-center gap-2">
+              <Sprout className="h-9 w-9 text-[var(--color-primary)]" />
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold mb-3">
+            <h2 className="mb-3 text-3xl font-bold md:text-4xl">
               Turn your{" "}
               <span className="gradient-text word-glow-cycle">Resume</span>
               {" "}into a{" "}
@@ -156,24 +156,24 @@ export default function UploadPage() {
                 Portfolio
               </span>
             </h2>
-            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+            <p className="mx-auto max-w-2xl text-sm text-muted-foreground md:text-base">
               Upload a PDF or DOCX and generate a shareable site in minutes.
             </p>
           </div>
 
           {/* Upload Card */}
           <Card className="mx-auto w-full max-w-2xl shadow-lg border border-[var(--color-border)]/80 bg-[var(--color-card)]/78 backdrop-blur-sm">
-            <CardHeader className="text-center items-center">
-              <CardTitle className="flex items-center justify-center gap-2 text-3xl">
-                <Sprout className="w-7 h-7 text-[var(--color-primary)]" />
+            <CardHeader className="items-center text-center">
+              <CardTitle className="flex items-center justify-center gap-2 text-2xl md:text-[1.65rem]">
+                <Sprout className="h-6 w-6 text-[var(--color-primary)]" />
                 Upload Your Resume
               </CardTitle>
-              <CardDescription className="text-base leading-relaxed max-w-xl mx-auto">
+              <CardDescription className="mx-auto max-w-xl text-sm leading-relaxed md:text-[0.95rem]">
                 Drop your file below and we&apos;ll transform your experience into portfolio-ready sections.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+              <form onSubmit={handleSubmit} className="space-y-4" noValidate>
                 <ResumeDropzone
                   selectedFile={selectedFile}
                   onFileSelected={handleFileSelected}
@@ -186,7 +186,7 @@ export default function UploadPage() {
                   type="submit" 
                   disabled={isSubmitDisabled}
                   className={cn(
-                    "mx-auto flex h-16 w-full max-w-2xl rounded-xl bg-[var(--color-primary)] text-lg text-[var(--color-primary-foreground)] shadow-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60",
+                    "mx-auto flex h-14 w-full max-w-2xl rounded-xl bg-[var(--color-primary)] text-base text-[var(--color-primary-foreground)] shadow-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60",
                     !isSubmitDisabled &&
                       "hover:bg-[var(--color-primary)]/90 hover:shadow-[0_12px_24px_-14px_var(--color-primary)] active:scale-[0.99]"
                   )}

@@ -32,6 +32,8 @@ export enum SectionType {
 }
 
 export type ThemeMode = "light" | "dark";
+export const TEMPLATE_CONFIG_SCHEMA_VERSION = 1;
+export const USER_TEMPLATE_SCHEMA_VERSION = 1;
 
 export interface TemplateThemeConfig {
   palette: string;
@@ -184,6 +186,8 @@ export type SectionConfig = {
     enabled: boolean;
     navLabel?: string;
     variant?: string;
+    style?: EditableStyle;
+    props?: Record<string, unknown>;
     content: SectionContentByType[K];
   };
 }[SectionType];
@@ -191,9 +195,90 @@ export type SectionConfig = {
 export type SectionConfigFor<T extends SectionType> = Extract<SectionConfig, { type: T }>;
 
 export interface TemplateConfig {
+  schema_version: number;
   templateId: TemplateId;
   theme: TemplateThemeConfig;
   sections: SectionConfig[];
+  user_template_id?: string;
+}
+
+export type EditableStyle = {
+  color?: string;
+  backgroundColor?: string;
+  fontSize?: string;
+  fontWeight?: string | number;
+  lineHeight?: string;
+  borderRadius?: string;
+  borderColor?: string;
+  borderStyle?: string;
+  borderWidth?: string;
+  padding?: string;
+  margin?: string;
+  gap?: string;
+  width?: string;
+  height?: string;
+  textAlign?: "left" | "center" | "right" | "justify";
+  opacity?: number;
+};
+
+export type UserTemplateBlockType = "root" | "section" | "row" | "column" | "stack" | "card" | "container";
+
+export interface UserTemplateTextNode {
+  id: string;
+  type: "text";
+  text: string;
+  style?: EditableStyle;
+  props?: Record<string, unknown>;
+}
+
+export interface UserTemplateBlockNode {
+  id: string;
+  type: UserTemplateBlockType;
+  sectionType?: SectionType;
+  title?: string;
+  enabled?: boolean;
+  style?: EditableStyle;
+  props?: Record<string, unknown>;
+  children?: UserTemplateNode[];
+}
+
+export type UserTemplateNode = UserTemplateBlockNode | UserTemplateTextNode;
+
+export interface UserTemplateDocumentV1 {
+  schema_version: 1;
+  template_id: TemplateId;
+  root: UserTemplateBlockNode;
+  metadata?: {
+    source?: "template-config" | "editor";
+    created_at?: string;
+    updated_at?: string;
+  };
+}
+
+export type UserTemplateDocument = UserTemplateDocumentV1;
+
+export interface UserTemplateRecord {
+  id: string;
+  user_id: string;
+  name: string;
+  template_id: TemplateId;
+  schema_version: number;
+  version: number;
+  document: UserTemplateDocument;
+  portfolio_id?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserTemplateVersionRecord {
+  id: string;
+  user_template_id: string;
+  user_id: string;
+  version: number;
+  schema_version: number;
+  document: UserTemplateDocument;
+  change_summary?: string | null;
+  created_at: string;
 }
 
 export interface SectionLibraryEntry {

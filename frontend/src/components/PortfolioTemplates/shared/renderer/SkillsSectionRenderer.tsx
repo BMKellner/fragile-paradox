@@ -1,4 +1,5 @@
 import { SectionType, type SectionConfigFor } from "@/lib/template-config-types";
+import { textStyleForPath } from "./styleUtils";
 
 type SkillsSectionRendererProps = {
   section: SectionConfigFor<SectionType.Skills>;
@@ -9,12 +10,24 @@ export function SkillsSectionRenderer({ section }: SkillsSectionRendererProps) {
 
   return (
     <>
-      <h2>{content.title || "Skills"}</h2>
+      <h2 data-edit-path="content.title" style={textStyleForPath(section, "content.title")}>
+        {content.title || "Skills"}
+      </h2>
       {content.categories.length ? (
-        content.categories.map((category) => (
+        content.categories.map((category, index) => (
           <div key={category.title}>
-            <h3>{category.title}</h3>
-            <p>{category.skills.join(", ")}</p>
+            <h3
+              data-edit-path={`content.categories[${index}].title`}
+              style={textStyleForPath(section, `content.categories[${index}].title`)}
+            >
+              {category.title}
+            </h3>
+            <p
+              data-edit-path={`content.categories[${index}].skills[0]`}
+              style={textStyleForPath(section, `content.categories[${index}].skills[0]`)}
+            >
+              {category.skills.join(", ")}
+            </p>
           </div>
         ))
       ) : (
