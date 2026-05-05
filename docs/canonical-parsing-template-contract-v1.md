@@ -18,8 +18,80 @@ In scope:
 
 Out of scope:
 - Paid entitlement gating.
-- Full custom component-swapping builder.
 - Database schema migration.
+
+## Fully Customizable Templates (v2 Addendum)
+This project now supports a versioned user-owned template document that can be edited in a visual design overlay and saved independently from immutable built-in template source files.
+
+### New Persistence Model
+- `portfolios.user_template_id` links a portfolio to a reusable user template document.
+- `user_templates` stores the current editable document (`document` JSON), `schema_version`, and `version`.
+- `user_template_versions` stores immutable version snapshots for undo/revert across sessions.
+
+Backward compatibility:
+- If `user_template_id` is missing, portfolio rendering continues to use `data.__template_config`.
+- Legacy `GET/PUT /portfolios/{id}/template-config` continue to work, and read/write through linked `user_templates` when present.
+
+### User Template Document Contract
+Frontend type source:
+- `frontend/src/lib/template-config-types.ts`
+- `frontend/src/lib/user-template-schema.ts`
+
+Current document shape:
+```json
+{
+  "schema_version": 1,
+  "template_id": "1",
+  "root": {
+    "id": "root",
+    "type": "root",
+    "props": { "theme": {} },
+    "children": [
+      {
+        "id": "hero-1",
+        "type": "section",
+        "sectionType": "hero",
+        "enabled": true,
+        "style": {},
+        "props": {},
+        "children": [
+          {
+            "id": "hero-1::content.summary",
+            "type": "text",
+            "text": "..."
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Visual Editor Contract
+- Design mode is runtime gated (development/staging) via `frontend/src/lib/feature-flags.ts`.
+- Overlay selection uses:
+  - `data-customize-section-id`
+  - `data-edit-path`
+  - `data-component-id`
+- Real-time preview path applies user-template document edits immediately (no staged “Apply changes” step in Design Mode).
+- Undo/redo and autosave are implemented in `frontend/src/hooks/use-design-editor-state.ts`.
+
+### New API Surface
+Backend routes:
+- `GET /user-templates`
+- `POST /user-templates`
+- `GET /user-templates/{id}`
+- `PATCH /user-templates/{id}`
+- `DELETE /user-templates/{id}`
+- `GET /user-templates/{id}/versions`
+- `POST /user-templates/{id}/versions/{version}/revert`
+- `GET /user-templates/{id}/export/json`
+- `POST /portfolios/{id}/export/pdf`
+- `GET /portfolios/{id}/export/json`
+
+### Production Safety
+- Overlay/editor path is feature-flagged and intended for non-production environments first.
+- Source-level instrumentation in production builds is intentionally avoided; element mapping relies on explicit data attributes (`data-component-id`, `data-edit-path`) for deterministic behavior without exposing file/line metadata.
 
 ## End-to-End Flow
 1. User uploads resume (`pdf` or `docx`).

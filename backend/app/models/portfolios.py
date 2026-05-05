@@ -9,6 +9,7 @@ class PortfolioBase(BaseModel):
     color: Optional[str] = "blue"
     display_mode: Optional[str] = "light"
     is_published: Optional[bool] = False
+    user_template_id: Optional[str] = None
 
 class PortfolioCreate(PortfolioBase):
     pass
@@ -20,6 +21,7 @@ class PortfolioUpdate(BaseModel):
     color: Optional[str] = None
     display_mode: Optional[str] = None
     is_published: Optional[bool] = None
+    user_template_id: Optional[str] = None
 
 class Portfolio(PortfolioBase):
     id: str
@@ -38,4 +40,3 @@ class TemplateConfigUpsert(BaseModel):
 class TemplateConfigResult(BaseModel):
     portfolio_id: str
     template_config: Dict[str, Any]
-
