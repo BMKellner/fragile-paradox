@@ -1,35 +1,148 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
-import Link from "next/link";
-import { Menu, X, ArrowUpRight, Mail, Phone, MapPin, Linkedin, Quote } from "lucide-react";
-import styles from "./MinimalCreatorHub.module.css";
+import { useEffect, useMemo, useState, type CSSProperties, type MouseEvent } from "react";
+
+import type { TemplateProps } from "@/components/PortfolioTemplates/shared/portfolioData";
+import { resolveTemplateConfigFromProps } from "@/components/PortfolioTemplates/shared/templateConfigAdapter";
+import { Particles } from "@/components/ui/particles";
 import {
   SectionType,
-  sectionTitle,
-  type AboutSectionContent,
-  type BlogSectionContent,
-  type CertificationsSectionContent,
   type ContactSectionContent,
-  type EducationSectionContent,
-  type ExperienceSectionContent,
-  type HeroSectionContent,
-  type ProjectsSectionContent,
-  type SkillsSectionContent,
-  type TestimonialsSectionContent,
+  type SectionConfig,
+  type SectionConfigFor,
 } from "@/lib/template-config";
-import { enabledSections, resolveTemplateConfigFromProps } from "@/components/PortfolioTemplates/shared/templateConfigAdapter";
-import { getInitials, isLightColor, sanitizeHexColor, type TemplateProps } from "@/components/PortfolioTemplates/shared/portfolioData";
 
-const navLabel = (type: SectionType, fallback: string): string => {
-  if (type === SectionType.Hero) return "Home";
-  if (type === SectionType.About) return "Now";
-  if (type === SectionType.Skills) return "Uses";
-  if (type === SectionType.Contact) return "Connect";
-  return fallback;
+import styles from "./MinimalCreatorHub.module.css";
+
+type NavItem = {
+  id: string;
+  label: string;
 };
 
-export default function MinimalCreatorHubPortfolio({
+type ContactLink = {
+  value: string;
+  href: string;
+  external?: boolean;
+};
+
+const normalizeExternalHref = (value: string): string => {
+  if (!value) return value;
+  if (value.startsWith("http://") || value.startsWith("https://")) return value;
+  return `https://${value}`;
+};
+
+const textParts = (value: string): string[] =>
+  value
+    .split(/\n+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+const navLabel = (section: SectionConfig): string => {
+  if (section.navLabel?.trim()) return section.navLabel.trim();
+
+  const titled = section.content as { title?: string };
+  if (typeof titled.title === "string" && titled.title.trim()) {
+    return titled.title.trim();
+  }
+
+  return section.type;
+};
+
+const uniqueValues = (values: string[]): string[] => Array.from(new Set(values.filter(Boolean)));
+
+const parseHexColor = (value: string): [number, number, number] | null => {
+  const hex = value.trim();
+  if (!/^#([\da-f]{3}|[\da-f]{6})$/i.test(hex)) return null;
+
+  const expanded =
+    hex.length === 4
+      ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+      : hex;
+
+  return [
+    Number.parseInt(expanded.slice(1, 3), 16),
+    Number.parseInt(expanded.slice(3, 5), 16),
+    Number.parseInt(expanded.slice(5, 7), 16),
+  ];
+};
+
+const mixHex = (baseColor: string, mixColor: string, ratio: number): string => {
+  const base = parseHexColor(baseColor);
+  const mix = parseHexColor(mixColor);
+  if (!base || !mix) return baseColor;
+
+  const clampedRatio = Math.min(1, Math.max(0, ratio));
+  const mixed = base.map((channel, index) =>
+    Math.round(channel + (mix[index] - channel) * clampedRatio)
+  );
+
+  return `#${mixed.map((channel) => channel.toString(16).padStart(2, "0")).join("")}`;
+};
+
+const contactLinksFromContent = (content: ContactSectionContent): ContactLink[] =>
+  [
+    content.email
+      ? {
+          value: content.email,
+          href: `mailto:${content.email}`,
+        }
+      : null,
+    content.linkedin
+      ? {
+          value: content.linkedin.replace(/^https?:\/\//, ""),
+          href: normalizeExternalHref(content.linkedin),
+          external: true,
+        }
+      : null,
+    content.phone
+      ? {
+          value: content.phone,
+          href: `tel:${content.phone.replace(/[^\d+]/g, "")}`,
+        }
+      : null,
+  ].filter((entry): entry is ContactLink => Boolean(entry));
+
+const skillValues = (section: SectionConfigFor<SectionType.Skills>, fallbackSkills: string[]): string[] => {
+  const groupedSkills = section.content.categories.flatMap((group) =>
+    group.skills.map((skill) => skill.trim()).filter(Boolean)
+  );
+  return uniqueValues(groupedSkills.length ? groupedSkills : fallbackSkills);
+};
+
+const isRenderableSection = (section: SectionConfig, fallbackSkills: string[]): boolean => {
+  switch (section.type) {
+    case SectionType.Hero:
+      return Boolean(
+        (section.content.fullName || "").trim() ||
+          (section.content.careerName || "").trim() ||
+          (section.content.summary || "").trim() ||
+          (section.content.eyebrow || "").trim()
+      );
+    case SectionType.About:
+      return Boolean((section.content.summary || "").trim());
+    case SectionType.Experience:
+      return section.content.items.length > 0;
+    case SectionType.Education:
+      return section.content.entries.length > 0;
+    case SectionType.Certifications:
+      return section.content.entries.length > 0;
+    case SectionType.Projects:
+      return section.content.items.length > 0;
+    case SectionType.Skills:
+      return skillValues(section as SectionConfigFor<SectionType.Skills>, fallbackSkills).length > 0;
+    case SectionType.Contact:
+      return Boolean(
+        contactLinksFromContent(section.content).length || (section.content.address || "").trim()
+      );
+    default:
+      return false;
+  }
+};
+
+const shouldReduceMotion = (): boolean =>
+  typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+export default function MinimalCreatorHubTemplate({
   personalInformation,
   overviewData,
   projects,
@@ -39,10 +152,7 @@ export default function MinimalCreatorHubPortfolio({
   backgroundColor,
   templateConfig,
 }: TemplateProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [emailCopied, setEmailCopied] = useState(false);
-  const [activeSection, setActiveSection] = useState<string>("hero-1");
-  const rootRef = useRef<HTMLDivElement | null>(null);
+  const [activeSectionId, setActiveSectionId] = useState("");
 
   const resolvedConfig = useMemo(
     () =>
@@ -58,546 +168,464 @@ export default function MinimalCreatorHubPortfolio({
         backgroundColor,
       }),
     [
-      templateConfig,
-      personalInformation,
-      overviewData,
-      projects,
-      experience,
-      skills,
-      mainColor,
       backgroundColor,
+      experience,
+      mainColor,
+      overviewData,
+      personalInformation,
+      projects,
+      skills,
+      templateConfig,
     ]
   );
 
-  const sections = useMemo(() => enabledSections(resolvedConfig), [resolvedConfig]);
+  const mode = resolvedConfig.theme.mode === "dark" ? "dark" : "light";
+  const fallbackSkills = useMemo(() => skills ?? [], [skills]);
 
-  const navTabs = useMemo(
+  const sections = useMemo(
     () =>
-      sections.map((section) => ({
-        id: section.id,
-        label: section.navLabel || navLabel(section.type, sectionTitle(section)),
-      })),
+      resolvedConfig.sections.filter(
+        (section) => section.enabled && isRenderableSection(section, fallbackSkills)
+      ),
+    [fallbackSkills, resolvedConfig.sections]
+  );
+
+  const navItems = useMemo<NavItem[]>(
+    () => sections.map((section) => ({ id: section.id, label: navLabel(section) })),
     [sections]
   );
 
-  useEffect(() => {
-    if (navTabs.length && !navTabs.some((tab) => tab.id === activeSection)) {
-      setActiveSection(navTabs[0].id);
-    }
-  }, [navTabs, activeSection]);
+  const heroSection = useMemo(
+    () =>
+      sections.find(
+        (section): section is SectionConfigFor<SectionType.Hero> => section.type === SectionType.Hero
+      ),
+    [sections]
+  );
+
+  const contactSection = useMemo(
+    () =>
+      sections.find(
+        (section): section is SectionConfigFor<SectionType.Contact> => section.type === SectionType.Contact
+      ),
+    [sections]
+  );
+
+  const heroName =
+    (heroSection?.content.fullName || "").trim() || personalInformation?.full_name?.trim() || "";
+  const heroRole =
+    (heroSection?.content.careerName || "").trim() || overviewData?.career_name?.trim() || "";
+  const heroSummary =
+    (heroSection?.content.summary || "").trim() || overviewData?.hero_summary?.trim() || "";
+  const siteIdentifier = heroName || heroRole;
+
+  const contactLinks = useMemo(
+    () => (contactSection ? contactLinksFromContent(contactSection.content) : []),
+    [contactSection]
+  );
+
+  const themeStyle = useMemo<CSSProperties>(
+    () =>
+      ({
+        "--mc-bg": resolvedConfig.theme.backgroundColor,
+        "--mc-primary": resolvedConfig.theme.primaryColor,
+      }) as CSSProperties,
+    [resolvedConfig.theme.backgroundColor, resolvedConfig.theme.primaryColor]
+  );
+
+  const particleColor = useMemo(() => {
+    const rawPrimary = resolvedConfig.theme.primaryColor || "#111111";
+    const primary = parseHexColor(rawPrimary) ? rawPrimary : "#111111";
+
+    return mode === "dark"
+      ? mixHex(primary, "#f8fafc", 0.38)
+      : mixHex(primary, "#111111", 0.2);
+  }, [mode, resolvedConfig.theme.primaryColor]);
 
   useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
-
-    const revealElements = Array.from(root.querySelectorAll<HTMLElement>("[data-reveal]"));
-    const revealObserver = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const target = entry.target as HTMLElement;
-            target.dataset.visible = "true";
-          }
-        });
-      },
-      { threshold: 0.15, rootMargin: "0px 0px -12% 0px" }
+    setActiveSectionId((current) =>
+      navItems.some((item) => item.id === current) ? current : navItems[0]?.id || ""
     );
+  }, [navItems]);
 
-    revealElements.forEach((element) => revealObserver.observe(element));
+  useEffect(() => {
+    if (!navItems.length) return;
 
-    const sectionElements = navTabs
-      .map((tab) => root.querySelector<HTMLElement>(`#${tab.id}`))
-      .filter((element): element is HTMLElement => Boolean(element));
+    const updateActiveSection = () => {
+      const threshold = window.innerHeight * 0.3;
+      let nextActive = navItems[0].id;
 
-    const activeObserver = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((entry) => entry.isIntersecting)
-          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+      navItems.forEach((item) => {
+        const target = document.getElementById(item.id);
+        if (!target) return;
 
-        const id = visible[0]?.target.id;
-        if (id) setActiveSection(id);
-      },
-      { threshold: [0.2, 0.45], rootMargin: "-35% 0px -45% 0px" }
-    );
+        if (target.getBoundingClientRect().top <= threshold) {
+          nextActive = item.id;
+        }
+      });
 
-    sectionElements.forEach((section) => activeObserver.observe(section));
+      setActiveSectionId(nextActive);
+    };
+
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection);
 
     return () => {
-      revealObserver.disconnect();
-      activeObserver.disconnect();
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
     };
-  }, [navTabs]);
+  }, [navItems]);
 
-  const accent = sanitizeHexColor(resolvedConfig.theme.primaryColor, "#16a34a");
-  const bg = sanitizeHexColor(resolvedConfig.theme.backgroundColor, "#f7faf7");
-  const darkMode = !isLightColor(bg, 170);
+  const handleNavClick = (event: MouseEvent<HTMLAnchorElement>, sectionId: string) => {
+    const target = document.getElementById(sectionId);
+    if (!target) return;
 
-  const rootStyle = {
-    "--mc-accent": accent,
-    "--mc-bg": bg,
-  } as CSSProperties;
-
-  const navigateTo = (id: string) => {
-    setActiveSection(id);
-    setMenuOpen(false);
-    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
-  const heroSection = sections.find((section) => section.type === SectionType.Hero);
-  const heroContent =
-    (heroSection?.content as HeroSectionContent | undefined) ??
-    ({
-      title: "Hero",
-      eyebrow: "Portfolio",
-      fullName: "Your Name",
-      careerName: "Creator in Motion",
-      summary: "",
-      primaryCtaLabel: "Explore Work",
-      secondaryCtaLabel: "Copy Email",
-    } satisfies HeroSectionContent);
-
-  const contactSection = sections.find((section) => section.type === SectionType.Contact);
-  const contactContent =
-    (contactSection?.content as ContactSectionContent | undefined) ??
-    ({
-      title: "Contact",
-      subtitle: "",
-      email: "",
-      phone: "",
-      address: "",
-      linkedin: "",
-      ctaLabel: "Send me an email",
-    } satisfies ContactSectionContent);
-
-  const copyEmail = async () => {
-    if (!contactContent.email) return;
-
-    try {
-      await navigator.clipboard.writeText(contactContent.email);
-      setEmailCopied(true);
-      window.setTimeout(() => setEmailCopied(false), 1500);
-    } catch {
-      setEmailCopied(false);
-    }
-  };
-
-  const renderSection = (section: (typeof sections)[number]) => {
-    switch (section.type) {
-      case SectionType.Hero: {
-        const content = section.content as HeroSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.hero} data-reveal>
-            <p className={styles.kicker}>{content.eyebrow || "Portfolio"}</p>
-            <h1>{content.fullName || "Your Name"}</h1>
-            <h2>{content.careerName || "Creator in Motion"}</h2>
-            <p className={styles.heroSummary}>{content.summary || "Documenting builds, tools, and experiments in one compact creator hub."}</p>
-
-            <div className={styles.heroActions}>
-              <button
-                type="button"
-                className={styles.primaryButton}
-                onClick={() => {
-                  const firstProjects = sections.find((item) => item.type === SectionType.Projects)?.id;
-                  navigateTo(firstProjects || sections[1]?.id || section.id);
-                }}
-              >
-                {content.primaryCtaLabel || "Explore Work"}
-              </button>
-              <button type="button" className={styles.ghostButton} onClick={copyEmail}>
-                {emailCopied ? "Email copied" : content.secondaryCtaLabel || "Copy Email"}
-              </button>
-            </div>
-          </section>
-        );
-      }
-      case SectionType.About: {
-        const content = section.content as AboutSectionContent;
-        const aboutTitle = content.title === "About" ? "Now" : content.title;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{aboutTitle}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.twoColumn}>
-              <article className={styles.card}>
-                <p>{content.summary}</p>
-                {(content.educationLabel || content.educationDetails) && (
-                  <div className={styles.educationLine}>
-                    <h3>{content.educationLabel || "Education"}</h3>
-                    <p>{content.educationDetails}</p>
-                  </div>
-                )}
-              </article>
-
-              <div className={styles.statsGrid}>
-                {content.stats.length ? (
-                  content.stats.map((stat) => (
-                    <article key={stat.label} className={styles.statCard}>
-                      <p>{stat.label}</p>
-                      <h3>{stat.value}</h3>
-                    </article>
-                  ))
-                ) : (
-                  <article className={styles.card}>
-                    <p>Add stats to populate this section.</p>
-                  </article>
-                )}
-              </div>
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Projects: {
-        const content = section.content as ProjectsSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.stackList}>
-              {content.items.length ? (
-                content.items.map((project, index) => (
-                  <article key={`${project.title}-${index}`} className={styles.itemRow}>
-                    <div>
-                      <h3>{project.title}</h3>
-                      <p>{project.description}</p>
-                      <ul>
-                        {(project.highlights.length ? project.highlights : ["Add a project highlight"]).map((highlight) => (
-                          <li key={`${project.title}-${highlight}`}>{highlight}</li>
-                        ))}
-                      </ul>
-                    </div>
-
-                    <div className={styles.itemMeta}>
-                      <div className={styles.tagRow}>
-                        {project.tags.map((tag) => (
-                          <span key={`${project.title}-${tag}`} className={styles.tag}>
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                      <div className={styles.linkRow}>
-                        {project.links.demo ? (
-                          <Link href={project.links.demo} target="_blank" rel="noreferrer" className={styles.inlineLink}>
-                            Demo <ArrowUpRight size={14} />
-                          </Link>
-                        ) : null}
-                        {project.links.code ? (
-                          <Link href={project.links.code} target="_blank" rel="noreferrer" className={styles.inlineLink}>
-                            Code <ArrowUpRight size={14} />
-                          </Link>
-                        ) : null}
-                      </div>
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <article className={styles.card}>
-                  <p>No projects listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Skills: {
-        const content = section.content as SkillsSectionContent;
-        const skillsTitle = content.title === "Skills" ? "Uses" : content.title;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{skillsTitle}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.skillGrid}>
-              {content.categories.length ? (
-                content.categories.map((group) => (
-                  <article key={group.title} className={styles.card}>
-                    <h3>{group.title}</h3>
-                    <div className={styles.tagRow}>
-                      {group.skills.map((skill) => (
-                        <span key={`${group.title}-${skill}`} className={styles.tag}>
-                          {skill}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <article className={styles.card}>
-                  <p>No skills listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Experience: {
-        const content = section.content as ExperienceSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.timeline}>
-              {content.items.length ? (
-                content.items.map((item, index) => (
-                  <article key={`${item.company}-${index}`} className={styles.timelineCard}>
-                    <div className={styles.timelineHeading}>
-                      <h3>{item.company}</h3>
-                      <p>{item.employedDates || "Current"}</p>
-                    </div>
-
-                    <ul>
-                      {item.bullets.map((bullet) => (
-                        <li key={`${item.company}-${bullet}`}>{bullet}</li>
-                      ))}
-                    </ul>
-
-                    <div className={styles.tagRow}>
-                      {item.tags.map((tag) => (
-                        <span key={`${item.company}-${tag}`} className={styles.tag}>
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  </article>
-                ))
-              ) : (
-                <article className={styles.card}>
-                  <p>No experience listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Education: {
-        const content = section.content as EducationSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.stackList}>
-              {content.entries.length ? (
-                content.entries.map((entry, index) => (
-                  <article key={`${entry.school}-${index}`} className={styles.itemRow}>
-                    <div>
-                      <h3>{entry.school || "School"}</h3>
-                      <p>
-                        {[...entry.majors, ...entry.minors.map((minor) => `Minor: ${minor}`)]
-                          .filter(Boolean)
-                          .join(" | ")}
-                      </p>
-                    </div>
-                    {entry.expectedGrad ? <p className={styles.note}>{entry.expectedGrad}</p> : null}
-                  </article>
-                ))
-              ) : (
-                <article className={styles.card}>
-                  <p>No education listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Certifications: {
-        const content = section.content as CertificationsSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.stackList}>
-              {content.entries.length ? (
-                content.entries.map((entry, index) => (
-                  <article key={`${entry.name}-${index}`} className={styles.itemRow}>
-                    <div>
-                      <h3>{entry.name || "Certification"}</h3>
-                      <p>{entry.issuer || "Issuer"}</p>
-                    </div>
-                    {entry.year ? <p className={styles.note}>{entry.year}</p> : null}
-                  </article>
-                ))
-              ) : (
-                <article className={styles.card}>
-                  <p>No certifications listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Blog: {
-        const content = section.content as BlogSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <article className={styles.card}>
-              <div className={styles.metaRow}>
-                <span>{content.date}</span>
-                <span>{content.readingTime}</span>
-              </div>
-              <h3>{content.postTitle}</h3>
-              <p>{content.excerpt}</p>
-              <div className={styles.tagRow}>
-                {content.tags.map((tag) => (
-                  <span key={`blog-${tag}`} className={styles.tag}>
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </article>
-          </section>
-        );
-      }
-      case SectionType.Testimonials: {
-        const content = section.content as TestimonialsSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <div className={styles.testimonialGrid}>
-              {content.items.length ? (
-                content.items.map((item) => (
-                  <article key={`${item.author}-${item.company}`} className={styles.card}>
-                    <Quote size={20} className={styles.quoteIcon} />
-                    <p>{item.quote}</p>
-                    <h3>{item.author}</h3>
-                    <p className={styles.note}>
-                      {item.role} - {item.company}
-                    </p>
-                  </article>
-                ))
-              ) : (
-                <article className={styles.card}>
-                  <p>No testimonials listed yet.</p>
-                </article>
-              )}
-            </div>
-          </section>
-        );
-      }
-      case SectionType.Contact: {
-        const content = section.content as ContactSectionContent;
-
-        return (
-          <section key={section.id} id={section.id} className={styles.section} data-reveal>
-            <header className={styles.sectionHeader}>
-              <h2>{content.title}</h2>
-              <p>{content.subtitle}</p>
-            </header>
-
-            <article className={styles.contactCard}>
-              <div className={styles.contactRow}>
-                {content.email ? (
-                  <a href={`mailto:${content.email}`} className={styles.contactItem}>
-                    <Mail size={15} />
-                    {content.email}
-                  </a>
-                ) : null}
-                {content.phone ? (
-                  <a href={`tel:${content.phone}`} className={styles.contactItem}>
-                    <Phone size={15} />
-                    {content.phone}
-                  </a>
-                ) : null}
-                {content.address ? (
-                  <div className={styles.contactItem}>
-                    <MapPin size={15} />
-                    {content.address}
-                  </div>
-                ) : null}
-                {content.linkedin ? (
-                  <Link href={content.linkedin} target="_blank" rel="noreferrer" className={styles.contactItem}>
-                    <Linkedin size={15} />
-                    LinkedIn
-                  </Link>
-                ) : null}
-              </div>
-
-              <a href={`mailto:${content.email || "hello@example.com"}`} className={styles.primaryButton}>
-                {content.ctaLabel || "Send me an email"}
-              </a>
-            </article>
-          </section>
-        );
-      }
-      default:
-        return null;
-    }
+    event.preventDefault();
+    target.scrollIntoView({
+      behavior: shouldReduceMotion() ? "auto" : "smooth",
+      block: "start",
+    });
+    window.history.replaceState(null, "", `#${sectionId}`);
+    setActiveSectionId(sectionId);
   };
 
   return (
-    <div className={`${styles.root} ${darkMode ? styles.darkMode : ""}`} style={rootStyle} ref={rootRef}>
-      <div className={styles.layout}>
-        <aside className={styles.rail}>
-          <div className={styles.railTop}>
-            <p className={styles.monogram}>{getInitials(heroContent.fullName)}</p>
-            <h2>{heroContent.fullName || "Your Name"}</h2>
-            <p>{heroContent.careerName || "Creator in Motion"}</p>
-          </div>
+    <div
+      className={`${styles.root} ${mode === "dark" ? styles.darkMode : ""}`}
+      style={themeStyle}
+      data-template-variant="minimal-creator-hub"
+      data-template-id={resolvedConfig.templateId}
+      data-template-mode={mode}
+    >
+      <Particles
+        className={styles.particlesBackground}
+        color={particleColor}
+        quantity={mode === "dark" ? 140 : 120}
+        size={1.2}
+        staticity={56}
+        ease={72}
+        vx={0.015}
+        vy={-0.01}
+      />
 
-          <button
-            type="button"
-            className={styles.mobileToggle}
-            onClick={() => setMenuOpen((value) => !value)}
-            aria-label={menuOpen ? "Close navigation" : "Open navigation"}
-          >
-            {menuOpen ? <X size={18} /> : <Menu size={18} />}
-          </button>
-
-          <nav className={`${styles.railNav} ${menuOpen ? styles.railNavOpen : ""}`} aria-label="Sections">
-            {navTabs.map((tab) => (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => navigateTo(tab.id)}
-                className={`${styles.navLink} ${activeSection === tab.id ? styles.navLinkActive : ""}`}
+      <div className={styles.pageLayer}>
+        <header className={styles.navBar}>
+          <div className={styles.navInner}>
+            {siteIdentifier && navItems[0]?.id ? (
+              <a
+                href={`#${navItems[0].id}`}
+                className={styles.siteIdentifier}
+                onClick={(event) => handleNavClick(event, navItems[0].id)}
               >
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+                {siteIdentifier}
+              </a>
+            ) : (
+              <span aria-hidden="true" />
+            )}
 
-          <div className={styles.railFooter}>
-            {contactContent.email ? <p>{contactContent.email}</p> : null}
-            {contactContent.phone ? <p>{contactContent.phone}</p> : null}
-            {contactContent.address ? <p>{contactContent.address}</p> : null}
+            {navItems.length ? (
+              <nav className={styles.navLinks} aria-label="Sections">
+                {navItems.map((item) => (
+                  <a
+                    key={`minimal-nav-${item.id}`}
+                    href={`#${item.id}`}
+                    className={`${styles.navLink} ${activeSectionId === item.id ? styles.navLinkActive : ""}`}
+                    onClick={(event) => handleNavClick(event, item.id)}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </nav>
+            ) : null}
           </div>
-        </aside>
+        </header>
 
-        <main className={styles.mainContent}>{sections.map((section) => renderSection(section))}</main>
+        <main className={styles.main}>
+          <div className={styles.contentColumn}>
+            {sections.map((section, index) => {
+              const sectionProps = {
+                id: section.id,
+                "data-customize-section-id": section.id,
+                "data-customize-section-type": section.type,
+                "data-section-variant": section.variant || "",
+                style: { "--section-index": index } as CSSProperties,
+              };
+
+              if (section.type === SectionType.Hero) {
+                return (
+                  <section key={section.id} {...sectionProps} className={`${styles.section} ${styles.hero}`}>
+                    {section.content.eyebrow ? <p className={styles.kicker}>{section.content.eyebrow}</p> : null}
+                    {heroName ? <h1 className={styles.heroTitle}>{heroName}</h1> : null}
+                    {heroRole ? <p className={styles.heroRole}>{heroRole}</p> : null}
+                    {heroSummary ? <p className={styles.heroSummary}>{heroSummary}</p> : null}
+
+                    {contactLinks.length ? (
+                      <div className={styles.inlineLinks}>
+                        {contactLinks.map((link) => (
+                          <a
+                            key={`${section.id}-${link.href}`}
+                            href={link.href}
+                            className={styles.textLink}
+                            target={link.external ? "_blank" : undefined}
+                            rel={link.external ? "noreferrer noopener" : undefined}
+                          >
+                            {link.value}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+                  </section>
+                );
+              }
+
+              if (section.type === SectionType.About) {
+                const summaryParagraphs = textParts(section.content.summary || "");
+
+                return (
+                  <section key={section.id} {...sectionProps} className={styles.section}>
+                    <header className={styles.sectionHeader}>
+                      {section.content.title ? <h2 className={styles.sectionTitle}>{section.content.title}</h2> : null}
+                    </header>
+
+                    {summaryParagraphs.map((paragraph, index) => (
+                      <p key={`${section.id}-about-paragraph-${index}`} className={styles.paragraph}>
+                        {paragraph}
+                      </p>
+                    ))}
+                  </section>
+                );
+              }
+
+              if (section.type === SectionType.Experience) {
+                return (
+                  <section key={section.id} {...sectionProps} className={styles.section}>
+                    <header className={styles.sectionHeader}>
+                      {section.content.title ? <h2 className={styles.sectionTitle}>{section.content.title}</h2> : null}
+                    </header>
+
+                    <div className={styles.entryList}>
+                      {section.content.items.map((item, index) => (
+                        <article key={`${section.id}-experience-${index}`} className={styles.entry}>
+                          <div className={styles.entryTitleRow}>
+                            {item.company ? <h3 className={styles.entryTitle}>{item.company}</h3> : null}
+                            {item.employedDates ? <p className={styles.meta}>{item.employedDates}</p> : null}
+                          </div>
+
+                          {item.tags.length ? <p className={styles.meta}>{item.tags.join(" • ")}</p> : null}
+
+                          {item.bullets.length ? (
+                            <ul className={styles.bulletList}>
+                              {item.bullets.map((bullet, bulletIndex) => (
+                                <li key={`${section.id}-experience-bullet-${index}-${bulletIndex}`}>{bullet}</li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
+
+              if (section.type === SectionType.Skills) {
+                const groups = section.content.categories.filter((group) =>
+                  group.skills.some((skill) => skill.trim())
+                );
+
+                const fallbackGroup = skillValues(section, fallbackSkills);
+                const itemsToRender = groups.length
+                  ? groups
+                  : fallbackGroup.length
+                    ? [{ title: "", skills: fallbackGroup }]
+                    : [];
+
+                return (
+                  <section key={section.id} {...sectionProps} className={styles.section}>
+                    <header className={styles.sectionHeader}>
+                      {section.content.title ? <h2 className={styles.sectionTitle}>{section.content.title}</h2> : null}
+                    </header>
+
+                    <div className={styles.skillGroups}>
+                      {itemsToRender.map((group, index) => (
+                        <article key={`${section.id}-skills-${index}`} className={styles.entry}>
+                          {group.title ? <h3 className={styles.skillGroupTitle}>{group.title}</h3> : null}
+                          <p className={styles.commaList}>
+                            {group.skills.map((skill) => skill.trim()).filter(Boolean).join(", ")}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
+
+              if (section.type === SectionType.Projects) {
+                return (
+                  <section key={section.id} {...sectionProps} className={styles.section}>
+                    <header className={styles.sectionHeader}>
+                      {section.content.title ? <h2 className={styles.sectionTitle}>{section.content.title}</h2> : null}
+                    </header>
+
+                    <div className={styles.entryList}>
+                      {section.content.items.map((item, index) => (
+                        <article key={`${section.id}-project-${index}`} className={styles.entry}>
+                          {item.title ? <h3 className={styles.entryTitle}>{item.title}</h3> : null}
+                          {item.description ? <p className={styles.paragraph}>{item.description}</p> : null}
+
+                          {item.highlights.length ? (
+                            <ul className={styles.bulletList}>
+                              {item.highlights.map((highlight, highlightIndex) => (
+                                <li key={`${section.id}-project-highlight-${index}-${highlightIndex}`}>
+                                  {highlight}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+
+                          {item.tags.length ? <p className={styles.meta}>{item.tags.join(" • ")}</p> : null}
+
+                          {item.links.demo || item.links.code ? (
+                            <div className={styles.inlineLinks}>
+                              {item.links.demo ? (
+                                <a
+                                  href={normalizeExternalHref(item.links.demo)}
+                                  className={styles.textLink}
+                                  target="_blank"
+                                  rel="noreferrer noopener"
+                                >
+                                  {item.links.demo.replace(/^https?:\/\//, "")}
+                                </a>
+                              ) : null}
+                              {item.links.code ? (
+                                <a
+                                  href={normalizeExternalHref(item.links.code)}
+                                  className={styles.textLink}
+                                  target="_blank"
+                                  rel="noreferrer noopener"
+                                >
+                                  {item.links.code.replace(/^https?:\/\//, "")}
+                                </a>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
+
+              if (section.type === SectionType.Education) {
+                return (
+                  <section key={section.id} {...sectionProps} className={styles.section}>
+                    <header className={styles.sectionHeader}>
+                      {section.content.title ? <h2 className={styles.sectionTitle}>{section.content.title}</h2> : null}
+                    </header>
+
+                    <div className={styles.entryList}>
+                      {section.content.entries.map((entry, index) => (
+                        <article key={`${section.id}-education-${index}`} className={styles.entry}>
+                          {entry.school ? <h3 className={styles.entryTitle}>{entry.school}</h3> : null}
+                          {entry.majors.length ? <p className={styles.meta}>{entry.majors.join(", ")}</p> : null}
+                          {entry.minors.length ? <p className={styles.meta}>{entry.minors.join(", ")}</p> : null}
+                          {entry.expectedGrad ? <p className={styles.meta}>{entry.expectedGrad}</p> : null}
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
+
+              if (section.type === SectionType.Certifications) {
+                return (
+                  <section key={section.id} {...sectionProps} className={styles.section}>
+                    <header className={styles.sectionHeader}>
+                      {section.content.title ? <h2 className={styles.sectionTitle}>{section.content.title}</h2> : null}
+                    </header>
+
+                    <div className={styles.entryList}>
+                      {section.content.entries.map((entry, index) => (
+                        <article key={`${section.id}-certification-${index}`} className={styles.entry}>
+                          {entry.name ? <h3 className={styles.entryTitle}>{entry.name}</h3> : null}
+                          {entry.issuer || entry.year ? (
+                            <p className={styles.meta}>{[entry.issuer, entry.year].filter(Boolean).join(" • ")}</p>
+                          ) : null}
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                );
+              }
+
+              if (section.type === SectionType.Contact) {
+                const links = contactLinksFromContent(section.content);
+
+                return (
+                  <section key={section.id} {...sectionProps} className={styles.section}>
+                    <header className={styles.sectionHeader}>
+                      {section.content.title ? <h2 className={styles.sectionTitle}>{section.content.title}</h2> : null}
+                    </header>
+
+                    {section.content.address ? <p className={styles.paragraph}>{section.content.address}</p> : null}
+
+                    {links.length ? (
+                      <div className={styles.inlineLinks}>
+                        {links.map((link) => (
+                          <a
+                            key={`${section.id}-${link.href}`}
+                            href={link.href}
+                            className={styles.textLink}
+                            target={link.external ? "_blank" : undefined}
+                            rel={link.external ? "noreferrer noopener" : undefined}
+                          >
+                            {link.value}
+                          </a>
+                        ))}
+                      </div>
+                    ) : null}
+
+                    {section.content.ctaLabel && section.content.email ? (
+                      <a href={`mailto:${section.content.email}`} className={styles.textLink}>
+                        {section.content.ctaLabel}
+                      </a>
+                    ) : null}
+                  </section>
+                );
+              }
+
+              const titled = section.content as { title?: string };
+              return (
+                <section key={section.id} {...sectionProps} className={styles.section}>
+                  <header className={styles.sectionHeader}>
+                    {titled.title ? <h2 className={styles.sectionTitle}>{titled.title}</h2> : null}
+                  </header>
+                </section>
+              );
+            })}
+          </div>
+        </main>
+
+        <footer className={styles.footer}>
+          <div className={styles.contentColumn}>
+            <div className={styles.footerInner}>
+              {navItems.length ? (
+                <div className={styles.footerLinks}>
+                  {navItems.map((item) => (
+                    <a
+                      key={`footer-nav-${item.id}`}
+                      href={`#${item.id}`}
+                      className={styles.footerLink}
+                      onClick={(event) => handleNavClick(event, item.id)}
+                    >
+                      {item.label}
+                    </a>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </footer>
       </div>
     </div>
   );

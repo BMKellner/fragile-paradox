@@ -1,469 +1,597 @@
 .root {
-  --ed-fg: #1f150d;
-  --ed-muted: color-mix(in srgb, var(--ed-fg) 52%, transparent);
-  --ed-border: color-mix(in srgb, var(--ed-fg) 14%, transparent);
-  --ed-surface: color-mix(in srgb, var(--ed-bg) 92%, #ffffff 8%);
-  background: radial-gradient(circle at top left, color-mix(in srgb, var(--ed-accent) 10%, transparent), transparent 42%), var(--ed-bg);
-  color: var(--ed-fg);
+  --bg: var(--editorial-bg);
+  --ink: var(--editorial-ink);
+  --accent: var(--editorial-accent);
+  --accent-2: var(--editorial-accent-2);
+  --neutral: var(--editorial-neutral);
+  --fg: color-mix(in srgb, var(--ink) 90%, var(--bg));
+  --muted: color-mix(in srgb, var(--fg) 62%, var(--bg));
+  --border: color-mix(in srgb, var(--fg) 18%, var(--bg));
+  --card: color-mix(in srgb, var(--bg) 84%, var(--neutral));
+  --ring: color-mix(in srgb, var(--accent) 66%, var(--fg));
+
   min-height: 100vh;
-  font-family: "Newsreader", "Iowan Old Style", "Palatino Linotype", serif;
+  position: relative;
+  isolation: isolate;
+  overflow-x: clip;
+  color: var(--fg);
+  font-family: var(--font-geist-sans), "Inter", "Segoe UI", sans-serif;
+  font-size: clamp(1rem, 0.2vw + 0.96rem, 1.15rem);
+  line-height: 1.6;
 }
 
-.darkMode {
-  --ed-fg: #f8f3eb;
-  --ed-muted: color-mix(in srgb, var(--ed-fg) 64%, transparent);
-  --ed-border: color-mix(in srgb, var(--ed-fg) 20%, transparent);
-  --ed-surface: color-mix(in srgb, var(--ed-bg) 95%, #ffffff 5%);
+.backgroundLayer {
+  z-index: -1;
+  opacity: 0.92;
 }
 
-.layout {
-  min-height: 100vh;
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-.rail {
+.navWrap {
   position: sticky;
   top: 0;
-  z-index: 8;
-  backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--ed-border);
-  padding: 1rem;
-  display: grid;
-  gap: 0.65rem;
-  background: color-mix(in srgb, var(--ed-bg) 92%, #ffffff 8%);
+  z-index: 40;
+  padding: 1rem 1rem 0;
 }
 
-.railTop {
-  display: grid;
-  gap: 0.2rem;
+.nav {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 0.92rem 1.12rem;
+  display: flex;
+  align-items: center;
+  gap: 0.95rem;
+  background: color-mix(in srgb, var(--bg) 74%, transparent);
+  backdrop-filter: blur(16px) saturate(1.04);
+  -webkit-backdrop-filter: blur(16px) saturate(1.04);
+  box-shadow:
+    0 28px 56px -48px color-mix(in srgb, var(--accent) 40%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--fg) 12%, transparent);
 }
 
-.monogram {
-  margin: 0;
-  color: var(--ed-accent);
-  font-size: 0.72rem;
-  letter-spacing: 0.3em;
-  text-transform: uppercase;
-}
-
-.railTop h2 {
-  margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
-.railTop p {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--ed-muted);
-}
-
-.mobileToggle {
-  width: 2.25rem;
-  height: 2.25rem;
-  border: 1px solid var(--ed-border);
-  border-radius: 0.45rem;
-  background: transparent;
+.brand {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
+  gap: 0.72rem;
+  text-decoration: none;
   color: inherit;
+  min-width: 0;
 }
 
-.mobileToggle:focus-visible,
-.navLink:focus-visible,
-.primaryButton:focus-visible,
-.ghostButton:focus-visible,
-.inlineLink:focus-visible,
-.contactItem:focus-visible {
-  outline: 2px solid var(--ed-accent);
-  outline-offset: 2px;
+.brandBadge {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.78rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 56%, var(--border));
+  background: linear-gradient(
+    140deg,
+    color-mix(in srgb, var(--accent) 26%, transparent),
+    color-mix(in srgb, var(--accent-2) 16%, transparent)
+  );
+  color: color-mix(in srgb, var(--accent) 82%, var(--fg));
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  font-family: var(--font-geist-mono), "IBM Plex Mono", "SFMono-Regular", monospace;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
 }
 
-.railNav {
-  display: none;
-  gap: 0.45rem;
-  flex-wrap: wrap;
+.brandText {
+  display: grid;
+  min-width: 0;
 }
 
-.railNavOpen {
+.brandText strong {
+  font-size: 1.06rem;
+  line-height: 1.2;
+  font-weight: 640;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brandText span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.2;
+  letter-spacing: 0.02em;
+}
+
+.navLinks {
+  margin-left: auto;
   display: flex;
+  align-items: center;
+  gap: 0.52rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.navLinks::-webkit-scrollbar {
+  display: none;
 }
 
 .navLink {
-  border: 1px solid var(--ed-border);
-  border-radius: 999px;
-  background: transparent;
-  color: inherit;
-  padding: 0.38rem 0.68rem;
-  font-size: 0.76rem;
-  letter-spacing: 0.03em;
-  cursor: pointer;
+  text-decoration: none;
+  color: var(--muted);
+  font-size: 0.9rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  padding: 0.56rem 0.72rem;
+  border-radius: 0.72rem;
+  border: 1px solid transparent;
+  transition:
+    color 0.22s ease,
+    border-color 0.22s ease,
+    background-color 0.22s ease,
+    transform 0.22s ease;
+  white-space: nowrap;
 }
 
 .navLink:hover {
-  border-color: color-mix(in srgb, var(--ed-accent) 55%, var(--ed-border));
+  color: var(--fg);
+  border-color: color-mix(in srgb, var(--accent) 52%, var(--border));
+  background: color-mix(in srgb, var(--accent) 16%, var(--card));
+  box-shadow: 0 16px 28px -20px color-mix(in srgb, var(--accent) 85%, transparent);
+  transform: translateY(-2px);
 }
 
 .navLinkActive {
-  border-color: color-mix(in srgb, var(--ed-accent) 55%, var(--ed-border));
-  color: var(--ed-accent);
+  color: color-mix(in srgb, var(--accent) 82%, var(--fg));
+  border-color: color-mix(in srgb, var(--accent) 62%, var(--border));
+  background: color-mix(in srgb, var(--accent) 20%, var(--card));
+  box-shadow: 0 14px 28px -22px color-mix(in srgb, var(--accent) 90%, transparent);
 }
 
-.railFooter {
-  display: none;
-}
-
-.mainContent {
-  width: min(100%, 920px);
+.main {
+  width: min(1180px, calc(100% - 2rem));
   margin: 0 auto;
-  padding: clamp(1.1rem, 3vw, 2.8rem) clamp(1rem, 3vw, 2.2rem) 4rem;
+  padding: clamp(3rem, 7vw, 5.6rem) 0 5.4rem;
   display: grid;
-  gap: 1.1rem;
+  gap: clamp(3.4rem, 7vw, 6rem);
 }
 
 .hero,
 .section {
-  border-top: 1px solid var(--ed-border);
-  padding-top: 1rem;
+  scroll-margin-top: 7.4rem;
 }
 
 .hero {
   display: grid;
-  gap: 0.8rem;
+  gap: 1.1rem;
+  padding-top: clamp(0.8rem, 2.2vw, 1.9rem);
 }
 
-.kicker {
+.sectionLabel {
   margin: 0;
+  color: color-mix(in srgb, var(--accent) 72%, var(--fg));
+  font-size: 0.82rem;
+  font-family: var(--font-geist-mono), "IBM Plex Mono", "SFMono-Regular", monospace;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  letter-spacing: 0.25em;
-  color: var(--ed-accent);
-  font-size: 0.72rem;
-  font-family: "Satoshi", "Avenir Next", "Segoe UI", sans-serif;
+  font-weight: 620;
 }
 
-.hero h1 {
+.heroTitle {
   margin: 0;
-  font-size: clamp(2.2rem, 7vw, 4rem);
-  line-height: 0.98;
-  letter-spacing: -0.02em;
+  max-width: 16ch;
+  font-size: clamp(3.8rem, 9vw, 7.4rem);
+  line-height: 0.93;
+  letter-spacing: -0.04em;
+  font-weight: 650;
+  text-wrap: balance;
+  color: var(--fg);
 }
 
-.hero h2 {
+.heroRole {
   margin: 0;
-  font-size: clamp(1.06rem, 2vw, 1.3rem);
-  color: var(--ed-muted);
-  font-weight: 500;
+  font-size: clamp(1.56rem, 3vw, 2.9rem);
+  color: color-mix(in srgb, var(--fg) 86%, var(--bg));
+  letter-spacing: -0.014em;
+  font-weight: 560;
 }
 
 .heroSummary {
   margin: 0;
-  line-height: 1.76;
-  font-size: 1.02rem;
-  max-width: 62ch;
+  max-width: 58ch;
+  font-size: clamp(1.16rem, 1.56vw, 1.38rem);
+  line-height: 1.8;
+  color: var(--muted);
 }
 
-.heroActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-}
-
-.primaryButton,
-.ghostButton {
-  border-radius: 999px;
-  padding: 0.55rem 0.95rem;
-  font-size: 0.74rem;
-  letter-spacing: 0.07em;
-  font-family: "Satoshi", "Avenir Next", "Segoe UI", sans-serif;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.primaryButton {
-  border: 1px solid color-mix(in srgb, var(--ed-accent) 60%, transparent);
-  background: color-mix(in srgb, var(--ed-accent) 11%, transparent);
-  color: inherit;
-}
-
-.ghostButton {
-  border: 1px solid var(--ed-border);
-  background: transparent;
-  color: inherit;
+.section {
+  border-top: 1px solid var(--border);
+  padding-top: clamp(3rem, 5vw, 4.4rem);
+  display: grid;
+  gap: 1.5rem;
 }
 
 .sectionHeader {
   display: grid;
-  gap: 0.45rem;
-  margin-bottom: 0.8rem;
+  gap: 0.65rem;
 }
 
-.sectionHeader h2 {
+.sectionTitle {
   margin: 0;
-  font-size: clamp(1.28rem, 2vw, 1.8rem);
+  font-size: clamp(2rem, 4.8vw, 3rem);
+  line-height: 1.06;
+  letter-spacing: -0.025em;
 }
 
-.sectionHeader p {
-  margin: 0;
-  color: var(--ed-muted);
-  line-height: 1.66;
-  max-width: 62ch;
-}
-
-.twoColumn {
+.sectionStack {
   display: grid;
-  gap: 1rem;
+  gap: 1.1rem;
 }
 
 .card {
-  border: 1px solid var(--ed-border);
-  border-radius: 0.35rem;
-  padding: 1rem;
-  background: var(--ed-surface);
-}
-
-.card h3 {
-  margin: 0 0 0.4rem;
-  font-size: 1.03rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: clamp(1.1rem, 1.8vw, 1.4rem);
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--card) 86%, color-mix(in srgb, var(--accent) 8%, var(--neutral)) 14%) 0%,
+      color-mix(in srgb, var(--card) 96%, transparent) 100%
+    );
+  box-shadow:
+    0 34px 70px -56px color-mix(in srgb, var(--accent) 44%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--fg) 10%, transparent);
 }
 
 .card p {
   margin: 0;
-  line-height: 1.72;
+  color: var(--muted);
+  line-height: 1.78;
+  font-size: 1.06em;
 }
 
-.educationLine {
-  margin-top: 0.75rem;
-  border-top: 1px solid var(--ed-border);
-  padding-top: 0.75rem;
-  display: grid;
-  gap: 0.3rem;
+.card p + p {
+  margin-top: 0.85rem;
 }
 
-.educationLine h3 {
-  margin: 0;
-  font-size: 0.95rem;
+.interactiveCard {
+  transition:
+    transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.educationLine p {
-  color: var(--ed-muted);
+.interactiveCard:hover {
+  transform: translateY(-7px) scale(1.01);
+  border-color: color-mix(in srgb, var(--accent) 66%, var(--border));
+  box-shadow:
+    0 48px 88px -52px color-mix(in srgb, var(--accent) 86%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--fg) 18%, transparent);
+  filter: saturate(1.06);
+}
+
+.cardLabel {
+  margin: 0 0 0.7rem;
+  color: color-mix(in srgb, var(--fg) 88%, var(--accent));
+  font-family: var(--font-geist-mono), "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.84rem;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
 }
 
 .statsGrid {
   display: grid;
-  gap: 0.6rem;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.78rem;
 }
 
-.statCard {
-  border: 1px dashed var(--ed-border);
-  border-radius: 0.35rem;
-  padding: 0.75rem;
+.statItem {
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: 12px;
+  padding: 0.74rem;
+  background: color-mix(in srgb, var(--card) 92%, transparent);
 }
 
-.statCard p {
+.statValue {
   margin: 0;
-  color: var(--ed-muted);
-  font-size: 0.72rem;
-  letter-spacing: 0.06em;
+  color: var(--fg);
+  font-size: 1.1rem;
+  line-height: 1.2;
+  font-weight: 620;
+}
+
+.statLabel {
+  margin: 0.2rem 0 0;
+  font-size: 0.74rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.statCard h3 {
-  margin: 0.3rem 0 0;
-  font-size: 1.02rem;
-}
-
-.stackList,
-.skillGrid,
-.testimonialGrid,
-.timeline {
+.experienceList {
   display: grid;
-  gap: 0.75rem;
+  gap: 1.1rem;
 }
 
-.itemRow {
-  border-bottom: 1px solid var(--ed-border);
-  padding-bottom: 0.8rem;
-  display: grid;
-  gap: 0.65rem;
+.cardHeading {
+  margin: 0 0 0.52rem;
+  color: var(--fg);
+  font-size: clamp(1.24rem, 1.8vw, 1.45rem);
+  line-height: 1.26;
+  letter-spacing: -0.012em;
 }
 
-.itemRow:last-child {
-  border-bottom: none;
-  padding-bottom: 0;
-}
-
-.itemRow h3,
-.timelineHeading h3 {
-  margin: 0 0 0.4rem;
-  font-size: 1.05rem;
-}
-
-.itemRow p,
-.timelineCard p {
+.metaText {
   margin: 0;
-  color: var(--ed-muted);
-  line-height: 1.68;
+  color: var(--muted);
+  font-size: 0.98em;
+  line-height: 1.7;
 }
 
-.itemRow ul,
-.timelineCard ul {
-  margin: 0.6rem 0 0;
-  padding-left: 1rem;
-  display: grid;
-  gap: 0.35rem;
+.experienceCard {
+  position: relative;
+  padding-left: clamp(1.3rem, 2.1vw, 1.5rem);
 }
 
-.itemMeta,
-.linkRow,
-.metaRow,
-.tagRow,
-.contactRow {
+.experienceCard::before {
+  content: "";
+  position: absolute;
+  top: 1.08rem;
+  bottom: 1.08rem;
+  left: 0.62rem;
+  width: 1px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 65%, transparent), transparent);
+}
+
+.experienceCard::after {
+  content: "";
+  position: absolute;
+  top: 1.16rem;
+  left: 0.46rem;
+  width: 0.34rem;
+  height: 0.34rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 86%, var(--fg));
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.experienceTop {
   display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.8rem;
   flex-wrap: wrap;
-  gap: 0.4rem;
 }
 
-.tag {
-  border: 1px solid var(--ed-border);
+.experienceTop h3 {
+  margin: 0 0 0.52rem;
+  color: var(--fg);
+  font-size: clamp(1.24rem, 1.8vw, 1.45rem);
+  line-height: 1.26;
+  letter-spacing: -0.012em;
+}
+
+.experienceDate {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--font-geist-mono), "IBM Plex Mono", "SFMono-Regular", monospace;
+  font-size: 0.82rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.experienceBullets {
+  margin: 0.9rem 0 0;
+  padding-left: 1.22rem;
+  display: grid;
+  gap: 0.52rem;
+}
+
+.experienceBullets li {
+  color: var(--muted);
+  line-height: 1.72;
+  font-size: 1.02em;
+}
+
+.skillTrack {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.58rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.skillTrack::-webkit-scrollbar {
+  display: none;
+}
+
+.skillPill {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
   border-radius: 999px;
-  padding: 0.18rem 0.5rem;
-  font-size: 0.72rem;
-  color: var(--ed-muted);
-  font-family: "Satoshi", "Avenir Next", "Segoe UI", sans-serif;
+  padding: 0.44rem 0.78rem;
+  background: color-mix(in srgb, var(--card) 90%, transparent);
+  color: color-mix(in srgb, var(--fg) 90%, var(--accent));
+  font-size: 0.88rem;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
-.inlineLink,
-.contactItem {
+.projectHighlights {
+  margin: 0.72rem 0 0;
+  padding-left: 1.24rem;
+  display: grid;
+  gap: 0.44rem;
+}
+
+.projectHighlights li {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.linkRow {
+  margin-top: 0.9rem;
+  display: grid;
+  gap: 0.52rem;
+}
+
+.inlineLink {
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-radius: 11px;
+  padding: 0.56rem 0.68rem;
   text-decoration: none;
-  color: inherit;
-  border: 1px solid var(--ed-border);
-  border-radius: 999px;
-  padding: 0.27rem 0.5rem;
+  color: color-mix(in srgb, var(--fg) 90%, var(--accent));
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  font-size: 0.74rem;
-  font-family: "Satoshi", "Avenir Next", "Segoe UI", sans-serif;
-}
-
-.inlineLink:hover,
-.contactItem:hover {
-  border-color: color-mix(in srgb, var(--ed-accent) 58%, var(--ed-border));
-}
-
-.timeline {
-  border-left: 1px solid var(--ed-border);
-  padding-left: 0.9rem;
-}
-
-.timelineCard {
-  border: 1px solid var(--ed-border);
-  border-radius: 0.35rem;
-  padding: 0.85rem;
-  background: var(--ed-surface);
-}
-
-.timelineHeading {
-  display: flex;
-  align-items: baseline;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: 0.62rem;
+  transition:
+    transform 0.24s ease,
+    border-color 0.24s ease,
+    box-shadow 0.24s ease,
+    background-color 0.24s ease;
 }
 
-.metaRow {
-  justify-content: space-between;
-  color: var(--ed-muted);
-  font-size: 0.75rem;
-}
-
-.quoteIcon {
-  color: var(--ed-accent);
-}
-
-.note {
-  color: var(--ed-muted);
-  font-size: 0.78rem;
+.inlineLink:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--border));
+  background: color-mix(in srgb, var(--accent) 12%, var(--card));
+  box-shadow: 0 18px 30px -22px color-mix(in srgb, var(--accent) 90%, transparent);
 }
 
 .contactCard {
-  border: 1px solid var(--ed-border);
-  border-radius: 0.4rem;
-  padding: 0.95rem;
+  display: grid;
+}
+
+.contactLinks {
   display: grid;
   gap: 0.7rem;
-  background: var(--ed-surface);
 }
 
-.hero[data-reveal],
-.section[data-reveal] {
-  opacity: 0;
-  transform: translateY(16px);
-  transition: opacity 380ms ease, transform 380ms ease;
+.contactLink {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.72rem 0.86rem;
+  text-decoration: none;
+  color: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  transition:
+    transform 0.24s ease,
+    border-color 0.24s ease,
+    background-color 0.24s ease,
+    color 0.24s ease;
 }
 
-.hero[data-reveal][data-visible="true"],
-.section[data-reveal][data-visible="true"] {
-  opacity: 1;
-  transform: translateY(0);
+.contactLink:hover {
+  transform: translateY(-3px) scale(1.005);
+  border-color: color-mix(in srgb, var(--accent) 64%, var(--border));
+  background: color-mix(in srgb, var(--accent) 16%, var(--card));
+  box-shadow: 0 20px 34px -22px color-mix(in srgb, var(--accent) 90%, transparent);
+  color: var(--fg);
 }
 
-@media (min-width: 940px) {
-  .layout {
-    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+.contactLinkLeft,
+.contactLinkRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.48rem;
+  min-width: 0;
+}
+
+.contactLinkLeft {
+  color: color-mix(in srgb, var(--fg) 82%, var(--accent));
+  font-size: 0.92rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.contactLinkRight {
+  color: var(--muted);
+  font-size: 1rem;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.contactLinkRight span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.brand:focus-visible,
+.navLink:focus-visible,
+.contactLink:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 980px) {
+  .nav {
+    flex-wrap: wrap;
   }
 
-  .rail {
-    border-bottom: none;
-    border-right: 1px solid var(--ed-border);
-    min-height: 100vh;
-    align-content: start;
-    padding: clamp(1.2rem, 2.4vw, 2rem);
-    gap: 1rem;
+  .navLinks {
+    order: 3;
+    flex: 1 1 100%;
+    margin-left: 0;
+    padding-top: 0.2rem;
+  }
+}
+
+@media (max-width: 720px) {
+  .navWrap {
+    padding-inline: 0.5rem;
   }
 
-  .mobileToggle {
+  .main {
+    width: calc(100% - 1rem);
+  }
+
+  .nav {
+    padding: 0.8rem 0.8rem;
+  }
+
+  .brandText span {
     display: none;
   }
 
-  .railNav,
-  .railNavOpen {
-    display: grid;
-    gap: 0.35rem;
-  }
-
   .navLink {
-    text-align: left;
-    border-radius: 0.4rem;
-    padding: 0.45rem 0.6rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.05em;
+    padding: 0.5rem 0.64rem;
   }
 
-  .navLinkActive {
-    background: color-mix(in srgb, var(--ed-accent) 10%, transparent);
+  .statsGrid {
+    grid-template-columns: 1fr;
   }
 
-  .railFooter {
-    display: grid;
-    gap: 0.25rem;
-    margin-top: auto;
-    font-size: 0.72rem;
-    color: var(--ed-muted);
-    font-family: "Satoshi", "Avenir Next", "Segoe UI", sans-serif;
+  .contactLink {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
-  .twoColumn {
-    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  .contactLinkRight {
+    justify-content: flex-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navLink,
+  .interactiveCard,
+  .inlineLink,
+  .contactLink {
+    transition: none;
   }
 
-  .skillGrid,
-  .testimonialGrid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .itemRow {
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
+  .navLink:hover,
+  .interactiveCard:hover,
+  .inlineLink:hover,
+  .contactLink:hover {
+    transform: none;
+    filter: none;
   }
 }
