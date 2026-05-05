@@ -2,79 +2,7 @@
 
 Foliage is a full-stack web application that transforms resumes into beautiful, nature-inspired portfolio websites using AI-powered parsing and customizable templates.
 
-## Features
-
-- **AI-Powered Resume Parsing**: Advanced AI extracts information from PDF and DOCX resume files using OpenAI GPT-4o
-- **Portfolio Generation**: Automatically generate professional portfolio websites from parsed resume data
-- **Multiple Templates**: Choose from various portfolio templates:
-  - Modern Minimal
-  - Classic Professional
-  - Creative Bold
-  - Elegant Sophisticated
-- **User Authentication**: Secure authentication powered by Supabase
-- **Portfolio Management**: Create, preview, publish, and manage multiple portfolios
-- **File Upload**: Support for PDF and DOCX resume formats
-- **SEO Optimized**: Built-in SEO best practices for better discoverability
-- **Shareable Links**: Get unique links to share your portfolio with anyone
-
-## Tech Stack
-
-### Frontend
-- **Next.js 15** - React framework with App Router
-- **React 19** - UI library
-- **TypeScript** - Type safety
-- **Tailwind CSS 4** - Styling
-- **Supabase** - Authentication and database
-- **Radix UI** - Accessible component primitives
-- **Lucide React** - Icons
-
-### Backend
-- **FastAPI** - Python web framework
-- **OpenAI API** - AI-powered resume parsing
-- **Supabase** - Database and authentication
-- **Uvicorn** - ASGI server
-- **pdfminer.six** - PDF text extraction
-- **python-docx** - DOCX text extraction
-
-## Project Structure
-
-```
-fragile-paradox/
-├── frontend/                 # Next.js frontend application
-│   ├── src/
-│   │   ├── app/             # Next.js app router pages
-│   │   │   ├── auth/        # Authentication routes
-│   │   │   ├── dashboard/   # User dashboard
-│   │   │   ├── templates/   # Portfolio template selection
-│   │   │   ├── upload/      # Resume upload page
-│   │   │   └── preview/     # Portfolio preview
-│   │   ├── components/      # React components
-│   │   │   ├── PortfolioTemplates/  # Portfolio template components
-│   │   │   └── ResumeHandling/      # Resume upload components
-│   │   ├── hooks/           # Custom React hooks
-│   │   ├── utils/           # Utility functions
-│   │   └── constants/       # Constants and types
-│   └── package.json
-│
-├── backend/                  # FastAPI backend application
-│   ├── app/
-│   │   ├── api/             # API routes
-│   │   │   └── routes/      # Route handlers
-│   │   ├── core/            # Core business logic
-│   │   │   ├── resume_parser.py    # AI resume parsing
-│   │   │   ├── openai_client.py    # OpenAI integration
-│   │   │   └── supabase_client.py  # Supabase integration
-│   │   ├── models/          # Pydantic models
-│   │   └── main.py          # FastAPI application entry point
-│   ├── migrations/          # Database migrations
-│   └── requirements.txt
-│
-└── supabase/                # Supabase configuration
-    ├── migrations/          # Database migrations
-    └── config.toml
-```
-
-## Getting Started
+## Setup and Installation
 
 ### Prerequisites
 
@@ -83,36 +11,14 @@ fragile-paradox/
 - **Supabase** account and project
 - **OpenAI API** key
 
-### Environment Variables
-
-#### Backend (.env in `backend/` directory)
-
-```env
-OPENAI_API_KEY=your_openai_api_key
-SUPABASE_URL=your_supabase_url
-SUPABASE_PUB_KEY=your_supabase_public_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-```
-
-#### Frontend
-
-The frontend uses Supabase environment variables. Create a `.env.local` file in the `frontend/` directory:
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-### Installation
-
-1. **Clone the repository**
+### 1) Clone the repository
 
 ```bash
 git clone <repository-url>
 cd fragile-paradox
 ```
 
-2. **Set up the backend**
+### 2) Set up backend dependencies
 
 ```bash
 cd backend
@@ -121,22 +27,50 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-3. **Set up the frontend**
+### 3) Set up frontend dependencies
 
 ```bash
 cd frontend
 npm install
 ```
 
-4. **Set up Supabase**
+### 4) Set up Supabase
 
 - Create a Supabase project
-- Run the migrations in `supabase/migrations/`
-- Configure your Supabase credentials in environment variables
+- Run migrations from `supabase/migrations/`
+- Ensure a storage bucket named `users` exists (used for resumes and profile pictures)
 
-### Running the Application
+## Environment Variables (No Secret Values)
 
-1. **Start the backend server**
+Create env files in each app directory.
+
+### Backend (`backend/.env`)
+
+```env
+OPENAI_API_KEY=your_openai_api_key
+SUPABASE_URL=your_supabase_project_url
+SUPABASE_PUB_KEY=your_supabase_public_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+```
+
+### Frontend (`frontend/.env.local`)
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+NEXT_PUBLIC_CANVAS_EDITOR=true
+SUPABASE_JWT_SECRET=your_supabase_jwt_secret
+```
+
+Notes:
+- `NEXT_PUBLIC_BACKEND_URL` is used by the Next.js backend proxy route at `frontend/src/app/api/backend/[...path]/route.ts`.
+- `NEXT_PUBLIC_CANVAS_EDITOR` defaults to enabled unless explicitly set to `false`.
+- `SUPABASE_JWT_SECRET` is server-only usage in frontend code for JWT verification.
+
+## Running the Project Locally
+
+### Start backend
 
 ```bash
 cd backend
@@ -145,35 +79,170 @@ make run
 uvicorn app.main:app --reload --port 8000
 ```
 
-The backend will be available at `http://localhost:8000`
+Backend URL: `http://localhost:8000`
 
-2. **Start the frontend development server**
+### Start frontend
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:3002`
+Frontend URL: `http://localhost:3002`
+
+## Deployment Instructions
+
+### Frontend (Vercel)
+
+The frontend is configured for Vercel deployment.
+
+Recommended environment variables in Vercel:
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_BACKEND_URL` (point to deployed backend URL)
+- `NEXT_PUBLIC_CANVAS_EDITOR` (optional)
+- `SUPABASE_JWT_SECRET`
+
+### Backend (Render and other FastAPI hosts)
+
+The repository includes `render.yaml` for Render deployment of the backend service (`backend/`).
+
+Configured backend env vars in `render.yaml`:
+- `OPENAI_API_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_PUB_KEY`
+- `SUPABASE_SERVICE_ROLE_KEY`
+
+The backend can also be deployed to Railway, Heroku, AWS, GCP, or Azure as a standard FastAPI app.
 
 ## API Endpoints
 
-The backend provides the following main API routes:
+All endpoints below are backend-native paths (served from `http://localhost:8000`). Most routes require `Authorization: Bearer <supabase_access_token>`.
 
-- `/api/resumes/` - Resume upload and parsing
-- `/api/users/` - User management
-- `/api/profiles/` - User profile management
-- `/api/portfolios/` - Portfolio CRUD operations
+### Health
+- `GET /liveliness` - basic health check (`{"ping":"pong"}`)
 
-## Database Schema
+### Resumes (`/resumes`)
+- `GET /resumes/` - list current user's resumes (`limit`, `offset`)
+- `GET /resumes/{resume_id}` - get one resume
+- `GET /resumes/{resume_id}/download` - download original uploaded file
+- `POST /resumes/` - upload and parse a resume (`multipart/form-data`, PDF/DOCX)
+- `DELETE /resumes/{resume_id}` - delete resume and storage object
 
-The application uses Supabase (PostgreSQL) with the following main tables:
+### Users (`/users`)
+- `GET /users/` - get current user row
+- `PATCH /users/` - update current user (`name`, `email`, `role`)
+- `POST /users/pfp` - upload profile picture (JPEG/PNG)
+- `GET /users/pfp` - fetch profile picture
 
-- `profiles` - User profile information
-- `portfolios` - Portfolio/website data
-- `resumes` - Parsed resume data
+### Profiles (`/profiles`)
+- `GET /profiles/me` - get current user's profile
+- `POST /profiles/me` - create current user's profile
+- `PUT /profiles/me` - update current user's profile (or create if missing)
+- `DELETE /profiles/me` - delete current user's profile
 
-See `supabase/migrations/` for the complete schema.
+### Portfolios (`/portfolios`)
+- `GET /portfolios/` - list current user's portfolios (`limit`, `offset`)
+- `GET /portfolios/{portfolio_id}` - get one portfolio
+- `POST /portfolios/` - create portfolio
+- `PUT /portfolios/{portfolio_id}` - update portfolio
+- `DELETE /portfolios/{portfolio_id}` - delete portfolio
+- `PATCH /portfolios/{portfolio_id}/publish` - toggle publish status
+- `GET /portfolios/{portfolio_id}/template-config` - get template config (`data.__template_config`)
+- `PUT /portfolios/{portfolio_id}/template-config` - create/update template config
+
+## Database Schema Overview
+
+Supabase (PostgreSQL) is the source of truth. Schema is defined in `supabase/migrations/`.
+
+### `users`
+- `id` (uuid, PK, FK -> `auth.users.id`)
+- `name` (text, not null)
+- `email` (text, unique, not null)
+- `role` (text, not null, default `regular`)
+
+### `resumes`
+- `id` (uuid, PK)
+- `created_at` (timestamptz, default `now()`)
+- `user_id` (uuid, FK -> `users.id`)
+- `title` (text)
+- `file_path` (text, unique)
+- `data` (jsonb, parsed resume payload including normalized seed)
+
+### `profiles`
+- `id` (uuid, PK)
+- `user_id` (uuid, FK -> `auth.users.id`, unique)
+- `email` (text, not null)
+- `full_name`, `phone`, `location`, `bio`, `linkedin`, `github`, `website`, `title`, `company` (text, nullable)
+- `created_at`, `updated_at` (timestamptz)
+
+### `portfolios`
+- `id` (uuid, PK)
+- `user_id` (uuid, FK -> `auth.users.id`)
+- `name` (text, not null)
+- `template_id` (text, not null)
+- `data` (jsonb, not null, default `{}`)
+- `color` (text, default `blue`)
+- `display_mode` (text, default `light`)
+- `is_published` (boolean, default `false`)
+- `created_at`, `updated_at` (timestamptz)
+
+### Security and policies
+- RLS is enabled on `users`, `resumes`, `profiles`, and `portfolios`.
+- Policies restrict users to operate on their own records.
+
+## Project Structure
+
+```text
+fragile-paradox/
+├── README.md                         # Main project documentation
+├── render.yaml                       # Render backend deployment config
+├── docs/
+│   └── canonical-parsing-template-contract-v1.md
+├── backend/                          # FastAPI backend application
+│   ├── app/
+│   │   ├── main.py                   # FastAPI app + CORS + route mounting
+│   │   ├── api/
+│   │   │   ├── deps.py               # Auth dependency (Bearer token verification)
+│   │   │   ├── main.py               # API router registration
+│   │   │   └── routes/               # Route handlers
+│   │   ├── core/
+│   │   │   ├── config.py             # Environment settings
+│   │   │   ├── openai_client.py      # OpenAI client wiring
+│   │   │   ├── resume_parser.py      # AI parsing logic
+│   │   │   ├── resume_normalizer.py  # Canonical seed builder
+│   │   │   ├── supabase_client.py    # Supabase client wiring
+│   │   │   └── text_extract.py       # PDF/DOCX text extraction
+│   │   └── models/                   # Pydantic request/response/data models
+│   ├── migrations/                   # Legacy SQL migration(s)
+│   ├── requirements.txt
+│   └── Makefile
+├── frontend/                         # Next.js frontend application
+│   ├── src/
+│   │   ├── app/                      # App Router pages + API proxy route
+│   │   ├── components/               # UI components and templates
+│   │   ├── hooks/                    # Custom React hooks
+│   │   ├── lib/                      # Client-side domain helpers
+│   │   └── utils/                    # Shared utility modules (incl. Supabase)
+│   ├── package.json
+│   └── README.md
+├── supabase/
+│   ├── config.toml
+│   └── migrations/                   # Source-of-truth Supabase schema history
+└── skills/
+    └── react-best-practices/
+```
+
+## Explanation of Major Modules and Services
+
+- **`backend/app/api/routes/resumes.py`**: Handles upload, parsing, resume CRUD, and storage file lifecycle.
+- **`backend/app/core/resume_parser.py`**: Converts extracted resume text into structured data with OpenAI.
+- **`backend/app/core/resume_normalizer.py`**: Produces canonical template seed (`__normalized_seed`) for consistent rendering.
+- **`backend/app/api/routes/portfolios.py`**: Portfolio CRUD, publish toggling, and template-config persistence.
+- **`frontend/src/components/PortfolioTemplates/`**: Template implementations used for generated portfolio rendering.
+- **`frontend/src/lib/template-map.tsx`**: Registers template components and names used by UI/template selection.
+- **`frontend/src/app/api/backend/[...path]/route.ts`**: Next.js proxy that forwards frontend API calls to the FastAPI backend.
+- **Supabase service**: Provides auth (`auth.users`), Postgres storage of app entities, and object storage for uploaded files.
 
 ## Customization
 
@@ -193,43 +262,44 @@ See the architecture reference for the current parser/normalization/template def
 
 The resume parsing logic is in `backend/app/core/resume_parser.py`. You can modify the OpenAI prompt or the parsing schema in `backend/app/models/resumes.py`.
 
-## Development
+## Features
 
-### Backend Development
+- **AI-Powered Resume Parsing**: Advanced AI extracts information from PDF and DOCX resume files using OpenAI GPT-4o
+- **Portfolio Generation**: Automatically generate professional portfolio websites from parsed resume data
+- **Multiple Templates**: Choose from various portfolio templates:
+  - Modern Minimal
+  - Classic Professional
+  - Creative Bold
+  - Elegant Sophisticated
+- **User Authentication**: Secure authentication powered by Supabase
+- **Portfolio Management**: Create, preview, publish, and manage multiple portfolios
+- **File Upload**: Support for PDF and DOCX resume formats
+- **SEO Optimized**: Built-in SEO best practices for better discoverability
+- **Shareable Links**: Get unique links to share your portfolio with anyone
 
-```bash
-cd backend
-make run  # Runs with auto-reload
-```
+## High-Level Architecture
 
-### Frontend Development
+- **Frontend (`frontend/`)**: Next.js 15 App Router UI for auth, upload, editing, preview, and template rendering
+- **Backend (`backend/`)**: FastAPI service for authenticated API endpoints, resume parsing, and storage/database orchestration
+- **Database/Auth/Storage (`supabase/`)**: Supabase PostgreSQL tables + RLS policies + object storage bucket (`users`)
+- **AI Flow**: Uploaded resume text is extracted (`pdfminer.six` / `python-docx`) and parsed with OpenAI into structured JSON
+- **Publishing Flow**: Portfolio records are stored in Supabase and toggled publish/unpublish from the backend API
 
-```bash
-cd frontend
-npm run dev  # Runs on port 3002 with Turbopack
-```
+## Tech Stack
 
-### Linting
-
-```bash
-# Frontend
-cd frontend
-npm run lint
-
-# Backend
-# Use your preferred Python linter (pylint, flake8, etc.)
-```
-
-## Deployment
-
-### Frontend (Vercel)
-
-The frontend is configured for Vercel deployment. The project includes a `render.yaml` for Render deployment as well.
+### Frontend
+- **Next.js 15** - React framework with App Router
+- **React 19** - UI library
+- **TypeScript** - Type safety
+- **Tailwind CSS 4** - Styling
+- **Supabase** - Authentication and database
+- **Radix UI** - Accessible component primitives
+- **Lucide React** - Icons
 
 ### Backend
-
-The backend can be deployed to any platform that supports Python/FastAPI:
-- Render
-- Railway
-- Heroku
-- AWS/GCP/Azure
+- **FastAPI** - Python web framework
+- **OpenAI API** - AI-powered resume parsing
+- **Supabase** - Database and authentication
+- **Uvicorn** - ASGI server
+- **pdfminer.six** - PDF text extraction
+- **python-docx** - DOCX text extraction
