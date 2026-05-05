@@ -1,15 +1,14 @@
 from datetime import datetime
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel
 
 
-Visibility = Literal["public", "private"]
 
 
 class LayoutBase(BaseModel):
     json_data: Dict[str, Any]
-    visibility: Visibility
+    is_public: bool
 
 
 class LayoutCreate(LayoutBase):
@@ -21,6 +20,8 @@ class Layout(LayoutBase):
     creator_id: str
     created_at: datetime
     updated_at: datetime
+    name: str
+    description: Optional[str] = None
 
     class Config:
         from_attributes = True
