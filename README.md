@@ -42,26 +42,7 @@ npm install
 
 ## Environment Variables (No Secret Values)
 
-Create env files in each app directory.
-
-### Backend (`backend/.env`)
-
-```env
-OPENAI_API_KEY=your_openai_api_key
-SUPABASE_URL=your_supabase_project_url
-SUPABASE_PUB_KEY=your_supabase_public_key
-SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
-```
-
-### Frontend (`frontend/.env.local`)
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
-NEXT_PUBLIC_CANVAS_EDITOR=true
-SUPABASE_JWT_SECRET=your_supabase_jwt_secret
-```
+Create env files in each app directory following the examples (`backend/.env.example` and `frontend/.env.local.example`).
 
 Notes:
 - `NEXT_PUBLIC_BACKEND_URL` is used by the Next.js backend proxy route at `frontend/src/app/api/backend/[...path]/route.ts`.
@@ -293,18 +274,9 @@ The resume parsing logic is in `backend/app/core/resume_parser.py`. You can modi
 - The frontend README under `frontend/README.md` may lag behind app-specific behavior if not updated alongside feature work.
 - Deployment and local setup assume Supabase-hosted auth/storage; running without Supabase is not currently supported.
 
-## Future Work Recommendations
-
-- Add end-to-end tests for upload -> parse -> portfolio create -> publish flows.
-- Add role-based admin tools for moderation and support workflows.
-- Expand parser schema and prompts to better handle non-traditional career paths and international formats.
-- Add background job processing for large file parsing and retry handling.
-- Add richer observability (structured logging, tracing, and dashboard-level metrics).
-
 ## Additional Documentation
 
 - `docs/developer-guide.md` - developer workflow, conventions, formatting, and organization standards.
-- `docs/stakeholder-guide.md` - product, operations, and stakeholder-facing overview.
 - `docs/known-limitations.md` - current known issues and constraints.
 - `docs/future-work.md` - prioritized roadmap recommendations.
 - `backend/.env.example` and `frontend/.env.local.example` - environment variable templates without secret values.
