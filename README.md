@@ -285,6 +285,30 @@ The resume parsing logic is in `backend/app/core/resume_parser.py`. You can modi
 - **AI Flow**: Uploaded resume text is extracted (`pdfminer.six` / `python-docx`) and parsed with OpenAI into structured JSON
 - **Publishing Flow**: Portfolio records are stored in Supabase and toggled publish/unpublish from the backend API
 
+## Known Bugs and Limitations
+
+- Resume parsing quality depends on source document quality and may require manual edits for heavily stylized resumes.
+- Parser and normalizer are optimized for English resumes; multilingual parsing is currently best-effort.
+- Upload support is limited to PDF and DOCX.
+- The frontend README under `frontend/README.md` may lag behind app-specific behavior if not updated alongside feature work.
+- Deployment and local setup assume Supabase-hosted auth/storage; running without Supabase is not currently supported.
+
+## Future Work Recommendations
+
+- Add end-to-end tests for upload -> parse -> portfolio create -> publish flows.
+- Add role-based admin tools for moderation and support workflows.
+- Expand parser schema and prompts to better handle non-traditional career paths and international formats.
+- Add background job processing for large file parsing and retry handling.
+- Add richer observability (structured logging, tracing, and dashboard-level metrics).
+
+## Additional Documentation
+
+- `docs/developer-guide.md` - developer workflow, conventions, formatting, and organization standards.
+- `docs/stakeholder-guide.md` - product, operations, and stakeholder-facing overview.
+- `docs/known-limitations.md` - current known issues and constraints.
+- `docs/future-work.md` - prioritized roadmap recommendations.
+- `backend/.env.example` and `frontend/.env.local.example` - environment variable templates without secret values.
+
 ## Tech Stack
 
 ### Frontend
