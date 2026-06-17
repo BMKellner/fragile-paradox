@@ -45,6 +45,8 @@ yarn-error.log*
 .env*
 frontend/.env*
 backend/.env*
+!frontend/.env.local.example
+!backend/.env.example
 
 # backend specific
 **/__pycache__/

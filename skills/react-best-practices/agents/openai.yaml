@@ -1,0 +1,4 @@
+interface:
+  display_name: "React Best Practices"
+  short_description: "Modern React + TypeScript engineering standards"
+  default_prompt: "Use $react-best-practices to review and refactor this React code for correctness, maintainability, performance, and accessibility."

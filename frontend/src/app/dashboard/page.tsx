@@ -21,6 +21,8 @@ import {
 import Header from "@/components/Header";
 import { useState, useEffect } from "react";
 import { PortfolioDataWithCustomTemplate } from "@/lib/custom-template";
+import { templateNames } from "@/lib/template-map";
+import { clearPortfolioSessionForNewDraft } from "@/lib/portfolio-workflow-storage";
 
 interface Website {
   id: string;
@@ -34,40 +36,29 @@ interface Website {
   updated_at: string;
 }
 
-const templateNames: Record<string, string> = {
-  '1': 'Modern Minimal',
-  '2': 'Classic Professional',
-  '3': 'Creative Bold',
-  '4': 'Elegant Sophisticated',
-  '5': 'SideRail Pro',
-  '6': 'Editorial Story',
-  '7': 'IDE Clean',
-  '8': 'Timeline Narrative',
-  '9': 'Bold Brand',
-  '10': 'Minimal Creator Hub',
-};
-
 export default function DashboardPage() {
   const router = useRouter();
   const info = useUser();
   const session = createClient();
   const [websites, setWebsites] = useState<Website[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!info.user) return;
+      setIsLoading(true);
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       try {
         const supabaseSession = await session.auth.getSession();
         const token = supabaseSession.data.session?.access_token;
         if (!token) return;
 
-        const url = process.env.NEXT_PUBLIC_BACKEND_URL;
-        const response = await fetch(`${url}/portfolios/`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const response = await fetch(`/api/backend/portfolios/`, {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
         });
 
         if (response.ok) {
@@ -75,17 +66,32 @@ export default function DashboardPage() {
           setWebsites(data || []);
         }
       } catch (error) {
-        console.error('Error fetching websites:', error);
+        // Backend unreachable — show empty state gracefully
+        if ((error as Error)?.name !== 'AbortError') {
+          console.error('Error fetching websites:', error);
+        }
       } finally {
+        clearTimeout(timeoutId);
         setIsLoading(false);
       }
     };
 
-    if (info.user) {
-      fetchData();
+    if (info.loading) return;
+
+    if (!info.user) {
+      setIsLoading(false);
+      return;
     }
+
+    fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [info.user]);
+  }, [info.loading, info.user]);
+
+  useEffect(() => {
+    if (!info.loading && !info.user) {
+      router.replace('/signin?next=/dashboard');
+    }
+  }, [info.loading, info.user, router]);
 
   const handleDeleteWebsite = async (websiteId: string) => {
     if (!confirm('Are you sure you want to delete this website?')) return;
@@ -95,7 +101,7 @@ export default function DashboardPage() {
       const token = supabaseSession.data.session?.access_token;
       if (!token) return;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/${websiteId}`, {
+      const response = await fetch(`/api/backend/portfolios/${websiteId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${token}`,
@@ -123,6 +129,12 @@ export default function DashboardPage() {
       localStorage.setItem('templateConfig', JSON.stringify(website.data.__template_config));
     } else {
       localStorage.removeItem('templateConfig');
+    }
+
+    if (website.data.__editor_canvas) {
+      localStorage.setItem('editorCanvas', JSON.stringify(website.data.__editor_canvas));
+    } else {
+      localStorage.removeItem('editorCanvas');
     }
 
     if (website.data.__custom_template?.sections && website.template_id === 'custom') {
@@ -254,6 +266,11 @@ export default function DashboardPage() {
     }
   };
 
+  const handleStartNewPortfolio = () => {
+    clearPortfolioSessionForNewDraft();
+    router.push('/upload');
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -267,7 +284,7 @@ export default function DashboardPage() {
     return `${Math.floor(diffDays / 30)} months ago`;
   };
 
-  if (info.loading || isLoading) {
+  if (info.loading || (info.user && isLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -279,7 +296,6 @@ export default function DashboardPage() {
   }
 
   if (!info.user) {
-    router.push('/signin?next=/dashboard');
     return null;
   }
 
@@ -297,7 +313,7 @@ export default function DashboardPage() {
               <p className="text-muted-foreground mt-2">Manage your saved portfolio versions and continue editing.</p>
             </div>
             <Button
-              onClick={() => router.push('/upload')}
+              onClick={handleStartNewPortfolio}
               size="lg"
               className="gap-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-[var(--color-primary-foreground)]"
             >
@@ -333,7 +349,7 @@ export default function DashboardPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <CardTitle className="text-3xl">Recent Portfolios</CardTitle>
-                    <CardDescription>Open, download, or remove saved items.</CardDescription>
+                    <CardDescription>Open, download, or remove saved items. New uploads appear here after you save.</CardDescription>
                   </div>
                   <Compass className="w-5 h-5 text-[var(--color-primary)]" />
                 </div>
@@ -380,7 +396,7 @@ export default function DashboardPage() {
                     <Sparkles className="w-8 h-8 mx-auto mb-3 text-[var(--color-primary)]" />
                     <h3 className="text-2xl mb-2">No portfolios yet</h3>
                     <p className="text-sm text-muted-foreground mb-4">Create your first portfolio to start building your workspace.</p>
-                    <Button onClick={() => router.push('/upload')} className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-[var(--color-primary-foreground)]">
+                    <Button onClick={handleStartNewPortfolio} className="bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-[var(--color-primary-foreground)]">
                       <Plus className="w-4 h-4 mr-2" />
                       Create Portfolio
                     </Button>
@@ -398,7 +414,7 @@ export default function DashboardPage() {
                 <Button
                   className="w-full justify-start gap-2 border-[var(--color-primary)]/35 hover:bg-[var(--color-primary)]/10"
                   variant="outline"
-                  onClick={() => router.push('/upload')}
+                  onClick={handleStartNewPortfolio}
                 >
                   <Plus className="w-4 h-4 text-[var(--color-primary)]" />
                   New Portfolio

@@ -6,54 +6,97 @@ import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
-  FileText, 
+  CheckCircle2,
   ChevronRight,
   Loader2,
-  Sprout,
-  Leaf
+  Sprout
 } from "lucide-react";
 import Header from "@/components/Header";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
+import ResumeDropzone from "@/components/ResumeHandling/ResumeDropzone";
+import {
+  DEFAULT_RESUME_MAX_SIZE_BYTES,
+  DEFAULT_RESUME_MAX_SIZE_MB,
+  validateResumeFile,
+} from "@/lib/resume-file";
+import { seedResumeForNewDraft } from "@/lib/portfolio-workflow-storage";
+
+type UploadState = "idle" | "ready" | "uploading" | "error" | "success";
 
 export default function UploadPage() {
   const router = useRouter();
   const info = useUser();
   const session = createClient();
-  const [file, setFile] = useState<File | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadState, setUploadState] = useState<UploadState>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      const allowedTypes = ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      if (!allowedTypes.includes(selectedFile.type)) {
-        setError('Please upload a PDF or DOCX file only.');
-        return;
-      }
-      setFile(selectedFile);
-      setError(null);
+  const isUploading = uploadState === "uploading";
+  const isSuccess = uploadState === "success";
+  const isSubmitDisabled = !selectedFile || isUploading || isSuccess;
+
+  const handleFileSelected = (file: File) => {
+    if (isUploading || isSuccess) {
+      return;
     }
+
+    const validationError = validateResumeFile(
+      file,
+      DEFAULT_RESUME_MAX_SIZE_BYTES
+    );
+
+    if (validationError) {
+      setSelectedFile(null);
+      setUploadState("error");
+      setError(validationError);
+      return;
+    }
+
+    setSelectedFile(file);
+    setError(null);
+    setUploadState("ready");
+  };
+
+  const handleClearFile = () => {
+    if (isUploading || isSuccess) {
+      return;
+    }
+
+    setSelectedFile(null);
+    setError(null);
+    setUploadState("idle");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) {
-      setError('Please select a file to upload.');
+    if (!selectedFile) {
+      setUploadState("idle");
+      setError("Select a file to continue.");
       return;
     }
 
-    setLoading(true);
+    const validationError = validateResumeFile(
+      selectedFile,
+      DEFAULT_RESUME_MAX_SIZE_BYTES
+    );
+    if (validationError) {
+      setUploadState("error");
+      setError(validationError);
+      return;
+    }
+
+    setUploadState("uploading");
     setError(null);
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", selectedFile);
 
       // Get auth session for the API call
       const sessionData = await session.auth.getSession();
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/resumes`, {
+      const response = await fetch(`/api/backend/resumes`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${sessionData.data.session?.access_token}`
@@ -64,18 +107,19 @@ export default function UploadPage() {
       const result = await response.json();
 
       if (response.ok && result.data) {
-        localStorage.setItem('resumeData', JSON.stringify(result.data));
+        setUploadState("success");
+        seedResumeForNewDraft(result.data);
+        await new Promise((resolve) => setTimeout(resolve, 700));
         router.push('/templates');
       } else {
+        setUploadState("error");
         setError(result.error || 'An error occurred while processing the resume.');
       }
     } catch {
+      setUploadState("error");
       setError('Failed to connect to the server. Make sure the backend is running.');
-    } finally {
-      setLoading(false);
     }
   };
-
 
   if (info.loading) {
     return (
@@ -98,103 +142,108 @@ export default function UploadPage() {
       <Header currentPage="upload" />
 
       {/* Main Content */}
-      <main className="py-16">
-        <div className="container-base max-w-2xl">
+      <main className="py-10 md:py-12">
+        <div className="container-base max-w-4xl">
           <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center gap-2 mb-4">
-              <Sprout className="w-10 h-10 text-[var(--color-primary)]" />
+            <div className="inline-flex items-center justify-center gap-2 mb-5">
+              <Sprout className="w-11 h-11 text-[var(--color-primary)]" />
             </div>
-            <h2 className="text-3xl font-bold mb-2">Plant Your Story</h2>
-            <p className="text-muted-foreground">
-              Upload your resume and watch your portfolio grow
+            <h2 className="text-4xl md:text-5xl font-bold mb-3">
+              Turn your{" "}
+              <span className="gradient-text word-glow-cycle">Resume</span>
+              {" "}into a{" "}
+              <span className="gradient-text word-glow-cycle word-glow-delay">
+                Portfolio
+              </span>
+            </h2>
+            <p className="text-base md:text-lg text-muted-foreground max-w-2xl mx-auto">
+              Upload a PDF or DOCX and generate a shareable site in minutes.
             </p>
           </div>
 
           {/* Upload Card */}
-          <Card className="shadow-lg border border-[var(--color-border)]/80 bg-[var(--color-card)]/78 backdrop-blur-sm">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-2xl">
-                <Sprout className="w-6 h-6 text-[var(--color-primary)]" />
+          <Card className="mx-auto w-full max-w-2xl shadow-lg border border-[var(--color-border)]/80 bg-[var(--color-card)]/78 backdrop-blur-sm">
+            <CardHeader className="text-center items-center">
+              <CardTitle className="flex items-center justify-center gap-2 text-3xl">
+                <Sprout className="w-7 h-7 text-[var(--color-primary)]" />
                 Upload Your Resume
               </CardTitle>
-              <CardDescription>
-                Upload a PDF or DOCX file. Our AI will cultivate your information into a beautiful portfolio.
+              <CardDescription className="text-base leading-relaxed max-w-xl mx-auto">
+                Drop your file below and we&apos;ll transform your experience into portfolio-ready sections.
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept=".pdf,.docx"
-                    onChange={handleFileChange}
-                    className="w-full p-8 border-2 border-dashed border-[var(--color-border)] rounded-lg cursor-pointer transition-all bg-[var(--color-background)]/55 hover:border-[var(--color-primary)]/55 hover:bg-[var(--color-accent)]/45 focus:border-[var(--color-primary)] focus:outline-none focus:ring-2 focus:ring-[var(--color-ring)] focus:ring-offset-2 focus:ring-offset-[var(--color-background)] file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-[var(--color-primary)] file:text-[var(--color-primary-foreground)] hover:file:bg-[var(--color-primary)]/90"
-                  />
-                </div>
-                
-                {file && (
-                  <div className="flex items-center gap-2 p-3 bg-[var(--color-accent)]/45 border border-[var(--color-border)] rounded-lg">
-                    <FileText className="w-4 h-4 text-[var(--color-primary)]" />
-                    <span className="text-sm flex-1 text-[var(--color-foreground)]">
-                      {file.name} <span className="text-[var(--color-primary)]">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
-                    </span>
-                  </div>
-                )}
+              <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+                <ResumeDropzone
+                  selectedFile={selectedFile}
+                  onFileSelected={handleFileSelected}
+                  onClear={handleClearFile}
+                  error={error}
+                  maxSizeMB={DEFAULT_RESUME_MAX_SIZE_MB}
+                />
 
                 <Button 
                   type="submit" 
-                  disabled={!file || loading}
-                  className="w-full bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 text-[var(--color-primary-foreground)] shadow-lg"
+                  disabled={isSubmitDisabled}
+                  className={cn(
+                    "mx-auto flex h-16 w-full max-w-2xl rounded-xl bg-[var(--color-primary)] text-lg text-[var(--color-primary-foreground)] shadow-lg transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-60",
+                    !isSubmitDisabled &&
+                      "hover:bg-[var(--color-primary)]/90 hover:shadow-[0_12px_24px_-14px_var(--color-primary)] active:scale-[0.99]"
+                  )}
                   size="lg"
+                  aria-label="Generate portfolio from resume"
                 >
-                  {loading ? (
+                  {isUploading ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Cultivating...
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : isSuccess ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      Done
                     </>
                   ) : (
                     <>
-                      <Sprout className="w-4 h-4 mr-2" />
-                      Parse & Grow
-                      <ChevronRight className="w-4 h-4 ml-2" />
+                      <Sprout className="w-4 h-4" />
+                      Generate Portfolio
+                      <ChevronRight className="w-4 h-4" />
                     </>
                   )}
                 </Button>
 
-                {error && (
-                  <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
-                    <p className="text-sm text-destructive">
-                      <span className="font-medium">Error:</span> {error}
-                    </p>
-                  </div>
+                {!selectedFile && !isUploading && !isSuccess && !error && (
+                  <p
+                    className="mx-auto max-w-2xl text-sm text-[var(--color-muted-foreground)]"
+                    aria-live="polite"
+                  >
+                    Select a file to continue.
+                  </p>
                 )}
+
+                {isSuccess && (
+                  <p
+                    role="status"
+                    aria-live="polite"
+                    className="mx-auto max-w-2xl text-sm font-medium text-[var(--color-primary)]"
+                  >
+                    Portfolio generated. Redirecting...
+                  </p>
+                )}
+
               </form>
             </CardContent>
           </Card>
-
-          {/* Info Section */}
-          <div className="mt-8 p-6 panel-soft">
-            <h3 className="font-semibold mb-3 flex items-center gap-2 text-[var(--color-foreground)]">
-              <Leaf className="w-5 h-5 text-[var(--color-primary)]" />
-              Your Growth Journey
-            </h3>
-            <ul className="space-y-3 text-sm text-[var(--color-muted-foreground)]">
-              <li className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] flex items-center justify-center text-xs font-semibold">1</span>
-                <span>AI parses your resume, extracting every detail like nutrients from rich soil</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] flex items-center justify-center text-xs font-semibold">2</span>
-                <span>Choose from nature-inspired templates that let your story bloom</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-[var(--color-primary)] text-[var(--color-primary-foreground)] flex items-center justify-center text-xs font-semibold">3</span>
-                <span>Customize and publish your portfolio, ready to branch out and grow</span>
-              </li>
-            </ul>
-          </div>
         </div>
       </main>
     </div>
   );
 }
+
+/*
+- [ ] Drag & drop works
+- [ ] File selection shows filename/size
+- [ ] CTA disabled until valid file
+- [ ] Uploading / error / success states visible
+- [ ] Mobile layout works
+*/

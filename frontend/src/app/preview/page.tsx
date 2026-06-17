@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, type ComponentType } from "react";
-import dynamic from "next/dynamic";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/use-user";
 import { createClient } from "@/utils/supabase/client";
@@ -22,6 +21,11 @@ import {
   type TemplateConfig,
 } from "@/lib/template-config";
 import { fetchTemplateConfig, saveTemplateConfig } from "@/lib/template-config-api";
+import { templateComponentMap, templateNames } from "@/lib/template-map";
+import {
+  clearPortfolioLinkageKeepTemplateChoice,
+  clearPortfolioSessionForNewDraft,
+} from "@/lib/portfolio-workflow-storage";
 
 // personalInformation={personal_information}
 //          overviewData={overview_data}
@@ -42,66 +46,6 @@ interface CustomSection {
     spacing?: 'compact' | 'normal' | 'spacious';
   };
 }
-
-type TemplateComponentProps = {
-  personalInformation?: ParsedResume["personal_information"];
-  overviewData?: ParsedResume["overview"];
-  projects?: ParsedResume["projects"];
-  experience?: ParsedResume["experience"];
-  skills?: ParsedResume["skills"];
-  mainColor: string;
-  backgroundColor: string;
-  templateConfig?: TemplateConfig;
-};
-
-const templateLoadFallback = () => (
-  <div className="rounded-lg border border-dashed border-[var(--color-border)] p-6 text-sm text-muted-foreground">
-    Loading portfolio template...
-  </div>
-);
-
-const templateComponentMap: Record<string, ComponentType<TemplateComponentProps>> = {
-  "1": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ModernMinimalist"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "2": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ClassicProfessional"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "3": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/CreativeBold"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "4": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/ElegantSophisticated"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "5": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/SideRailPro"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "6": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/EditorialStory"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "7": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/IDEClean"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "8": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/TimelineNarrative"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "9": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/BoldBrand"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-  "10": dynamic<TemplateComponentProps>(() => import("@/components/PortfolioTemplates/MinimalCreatorHub"), {
-    ssr: false,
-    loading: templateLoadFallback,
-  }),
-};
 
 const LIGHT_DISPLAY_BG = "#F8FAFC";
 const DARK_DISPLAY_BG = "#111111";
@@ -507,10 +451,7 @@ export default function PreviewPage() {
 
 
   const handleStartOver = () => {
-    localStorage.removeItem('resumeData');
-    localStorage.removeItem('selectedTemplate');
-    localStorage.removeItem('currentPortfolioId');
-    localStorage.removeItem('templateConfig');
+    clearPortfolioSessionForNewDraft();
     router.push('/upload');
   };
 
@@ -528,7 +469,7 @@ export default function PreviewPage() {
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/resumes/`, {
+      const response = await fetch(`/api/backend/resumes/`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -568,7 +509,7 @@ export default function PreviewPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/resumes/${selectedResumeId}/download`,
+        `/api/backend/resumes/${selectedResumeId}/download`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -610,23 +551,11 @@ export default function PreviewPage() {
     const selected = resumeOptions.find((resume) => resume.id === selectedResumeId);
     if (!selected) return;
 
+    clearPortfolioLinkageKeepTemplateChoice();
     setResumeData(selected.data);
+    setTemplateConfig(null);
     localStorage.setItem("resumeData", JSON.stringify(selected.data));
     setShowResumeModal(false);
-  };
-
-
-  const templateNames: Record<string, string> = {
-    '1': 'Modern Minimal',
-    '2': 'Classic Professional', 
-    '3': 'Creative Bold',
-    '4': 'Elegant Sophisticated',
-    '5': 'SideRail Pro',
-    '6': 'Editorial Story',
-    '7': 'IDE Clean',
-    '8': 'Timeline Narrative',
-    '9': 'Bold Brand',
-    '10': 'Minimal Creator Hub',
   };
 
   if (info.loading) {
@@ -693,20 +622,6 @@ export default function PreviewPage() {
         return;
       }
 
-      // Find template name
-      const templateNames: Record<string, string> = {
-        '1': 'Modern Minimal',
-        '2': 'Classic Professional',
-        '3': 'Creative Bold',
-        '4': 'Elegant Sophisticated',
-        '5': 'SideRail Pro',
-        '6': 'Editorial Story',
-        '7': 'IDE Clean',
-        '8': 'Timeline Narrative',
-        '9': 'Bold Brand',
-        '10': 'Minimal Creator Hub',
-        'custom': 'Custom Template'
-      };
       const templateName = templateNames[selectedTemplate] || 'Portfolio';
 
       // Check if editing existing portfolio
@@ -724,6 +639,8 @@ export default function PreviewPage() {
               },
             })
           : null;
+      const editorCanvasRaw = localStorage.getItem('editorCanvas');
+      const editorCanvas = editorCanvasRaw ? JSON.parse(editorCanvasRaw) : undefined;
 
       // Prepare portfolio data
       const customSectionsRaw = localStorage.getItem('customSections');
@@ -742,10 +659,12 @@ export default function PreviewPage() {
           ? {
               ...resumeData,
               __custom_template: serializedCustomTemplate ?? undefined,
+              __editor_canvas: editorCanvas,
             }
           : {
               ...resumeData,
               __template_config: currentTemplateConfig ?? undefined,
+              __editor_canvas: editorCanvas,
             };
 
       if (serializedCustomTemplate) {
@@ -768,7 +687,7 @@ export default function PreviewPage() {
 
       if (existingPortfolioId) {
         // Try to update existing portfolio
-        const updateResponse = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/${existingPortfolioId}`, {
+        const updateResponse = await fetch(`/api/backend/portfolios/${existingPortfolioId}`, {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
@@ -780,7 +699,7 @@ export default function PreviewPage() {
         // If portfolio not found (404), create a new one instead
         if (updateResponse.status === 404) {
           localStorage.removeItem('currentPortfolioId');
-          response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/`, {
+          response = await fetch(`/api/backend/portfolios/`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -793,7 +712,7 @@ export default function PreviewPage() {
         }
       } else {
         // Create new portfolio
-        response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/portfolios/`, {
+        response = await fetch(`/api/backend/portfolios/`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
